@@ -1,0 +1,14 @@
+extern. vector_new ‡(: Int)
+extern. vector_push ‡(Int Int : #())
+extern. vector_len ‡(Int : Int)
+extern. vector_get ‡(Int Int : Int)
+
+let. list→vector λ.{a 'List(Int)}
+    let. v vector_new()
+    for[Int](a λ.(x 'Int vector_push(v x)))
+    v
+
+let. vector→list λ.{v 'Int}
+    let. mut, a empty[Int]
+    for_ι(vector_len(v) λ.(i 'Int set.(a push[Int](a vector_get(v i)))))
+    a

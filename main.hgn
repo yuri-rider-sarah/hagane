@@ -1,0 +1,5 @@
+extern. file_contents ‡(Int : Int)
+
+let. filename "Hello, world!"
+let. s vector→list(file_contents(list→vector("main.hgn")))
+for[Int](s print_byte)
