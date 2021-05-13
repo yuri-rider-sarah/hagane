@@ -12,3 +12,6 @@ let. vector→list λ.{v 'Int}
     let. mut, a empty[Int]
     for_ι(vector_len(v) λ.(i 'Int set.(a push[Int](a vector_get(v i)))))
     a
+
+extern. utf8_decode ‡(Int : Int)
+extern. utf8_encode ‡(Int : Int)

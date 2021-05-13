@@ -1,8 +1,0 @@
-let. for_ι λ.{n 'Int f '‡(Int : #())}
-    let. mut, i 0
-    while. <(i n)
-        f(i)
-        set. i +(i 1)
-
-let. ∀,{T} for λ.{a 'List(T) f '‡(T : #())}
-    for_ι(len[T](a) λ.(i 'Int f(get[T](a i))))

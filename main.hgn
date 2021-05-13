@@ -1,6 +1,4 @@
 extern. file_contents ‡(Int : Int)
-extern. utf8_decode ‡(Int : Int)
-extern. utf8_encode ‡(Int : Int)
 
 let. filename "Hello, world!"
 let. s vector→list(utf8_encode(utf8_decode(file_contents(list→vector("main.hgn")))))

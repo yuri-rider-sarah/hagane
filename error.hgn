@@ -1,0 +1,21 @@
+extern. vector_string_error ‡(Int : #())
+
+type. FilePos FilePos(List(Int) Int Int)
+
+type. Error
+    UnexpectedChar(Option(Int))
+
+let. string_error λ.{str 'List(Int)}
+    vector_string_error(utf8_encode(list→vector(str)))
+
+let. file_pos_string λ.{file_pos 'FilePos}
+    let. FilePos(file_name line col) file_pos
+    ++[Int](file_name ++[Int](":" ++[Int](int→string(line) ++[Int](":" int→string(col)))))
+
+let. error_string λ.{err 'Error}
+    match. err
+    .UnexpectedChar(Some(c)) ++[Int]("Unexpected character: " ++[Int](list.(c) ++[Int]("(" ++[Int](int→string(c) ")"))))
+    .UnexpectedChar(None()) "Unexpected end of file"
+
+let. error λ.{err 'Error file_pos 'FilePos}
+    string_error(++[Int]("Error at " ++[Int](file_pos_string(file_pos) ++[Int](": " error_string(err)))))

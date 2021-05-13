@@ -1,0 +1,13 @@
+extern. is_ident_character_table_get ‡(Int : Int)
+
+let. is_ident_character λ.{c 'Int}
+    ≥(is_ident_character_table_get(c) 1)
+
+let. is_starting_ident_character λ.{c 'Int}
+    ≥(is_ident_character_table_get(c) 2)
+
+let. white_space_chars
+    list.(9 10 11 12 13 32 133 160 5760 8192 8193 8194 8195 8196 8197 8198 8199 8200 8201 8202 8232 8233 8239 8287 12288)
+
+let. is_white_space λ.{c 'Int}
+    ∈(c white_space_chars)

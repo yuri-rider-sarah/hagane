@@ -1,3 +1,4 @@
 *.o
 _hagane
 hagane
+char_types_data.h

@@ -1,0 +1,75 @@
+let. ¬ λ.{x 'Bool}
+    if. x ⊥ ⊤
+
+let. ∧ λ.{x 'Bool y 'Bool}
+    if. x y ⊥
+
+let. ∨ λ.{x 'Bool y 'Bool}
+    if. x ⊤ y
+
+type. ∀,{T} Option
+    Some(T)
+    None()
+
+let. ∀,{T} default λ.{v 'T x 'Option(T)}
+    match. x
+    .Some(x) x
+    .None() v
+
+let. for_ι λ.{n 'Int f '‡(Int : #())}
+    let. mut, i 0
+    while. <(i n)
+        f(i)
+        set. i +(i 1)
+
+let. ∀,{T} for λ.{xs 'List(T) f '‡(T : #())}
+    for_ι(len[T](xs) λ.(i 'Int f(get[T](xs i))))
+
+let. ∀,{T} last λ.{xs 'List(T)}
+    if. >(len[T](xs) 0)
+    then, Some[T](get[T](xs -(len[T](xs) 1)))
+    else, None[T]()
+
+let. ∈ λ.{x 'Int ys 'List(Int)}
+    let. mut, r ⊥
+    for[Int](ys λ.(y 'Int
+        if. =(y x)
+        then, set. r ⊤
+        else, #()
+    ))
+    r
+
+let. ∉ λ.{x 'Int ys 'List(Int)}
+    ¬(∈(x ys))
+
+let. =list λ.{xs 'List(Int) ys 'List(Int)}
+    if. =(len[Int](xs) len[Int](ys))
+        let. mut, r ⊤
+        for_ι(len[Int](xs) λ.(i 'Int
+            if. ≠(get[Int](xs i) get[Int](ys i))
+            then, set. r ⊥
+            else, #()
+        ))
+        r
+    else, ⊥
+
+let. ∀,{T} ++ λ.{xs 'List(T) ys 'List(T)}
+    let. mut, xs xs
+    for[T](ys λ.(y 'T set.(xs push[T](xs y))))
+    xs
+
+let. int→string λ.{n 'Int}
+    let. mut, n n
+    let. mut, s empty[Int]
+    let. mut, s cond.
+        .>(n 0)
+            empty[Int]
+        .<(n 0)
+            set. n -(0 n)
+            "-"
+        .=(n 0)
+            "0"
+    while. >(n 0)
+        set. s ++[Int](list.(+(#!0 %(n 10))) s)
+        set. n /(n 10)
+    s
