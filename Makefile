@@ -1,10 +1,10 @@
 TARGET = hagane
 HAGANE = ./_hagane
 CXX = clang++
-CXXFLAGS = -O3 -Wall -Wconversion
-HGN_FLAGS = -O3
+CXXFLAGS = -Wall -Wconversion
+HGN_FLAGS =
 
-HGN_SRC = std.hgn vector.hgn error.hgn char_types.hgn lexer.hgn main.hgn
+HGN_SRC = std.hgn vector.hgn error.hgn char_types.hgn lexer.hgn parser.hgn main.hgn
 
 HEADERS = $(filter-out char_types_data.h,$(wildcard *.h))
 OBJECTS = $(patsubst %.cpp,%.o,$(wildcard *.cpp)) /usr/lib/libstdc++.a

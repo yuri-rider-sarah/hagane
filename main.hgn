@@ -1,5 +1,17 @@
 extern. file_contents ‡(Int : Int)
 
-let. filename "Hello, world!"
-let. s vector→list(utf8_encode(utf8_decode(file_contents(list→vector("main.hgn")))))
-for[Int](s print_byte)
+let. argv map_ι[List(Int)](-(get_argc() 1) λ.(i 'Int map_ι[Int](get_argv_len(+(i 1)) λ.(j 'Int get_argv_byte(+(i 1) j)))))
+
+let. files map[List(Int) #(List(Int) List(Int))](argv λ.(filename 'List(Int)
+    #(filename vector→list(utf8_decode(file_contents(list→vector(filename)))))
+))
+let. mut, lexer lexer(files)
+let. mut, exprs empty[Expr]
+while.
+    match. read_token(lexer)
+    .#(_ Eof() _) ⊥
+    ._ ⊤
+do,
+    let. #(lexer′ expr) read_block_expr(lexer)
+    set. lexer lexer′
+    set. exprs push[Expr](exprs expr)

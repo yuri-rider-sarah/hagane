@@ -1,9 +1,9 @@
 type. Token
-    IntLiteral(Int)
+    IntLiteralToken(Int)
     CharLiteral(Int)
     StringLiteral(List(Int))
-    Ident(List(Int))
-    Wildcard()
+    IdentToken(List(Int))
+    WildcardToken()
     PriKeyword(List(Int))
     SecKeyword(List(Int))
     LParen()
@@ -38,6 +38,9 @@ type. Lexer Lexer(
     Bool          ※ at_line_start
 )
 
+let. lexer λ.{files 'List(#(List(Int) List(Int)))}
+    Lexer(CharReader(files 0 0 1 1) empty[Int] None[Int]() empty[FilePos] 0 ⊤)
+
 let. newline_chars list.(10 11 12 13 133 8232 8233)
 
 let. read_char λ.{chars 'CharReader}
@@ -62,17 +65,6 @@ let. read_char λ.{lexer 'Lexer}
     #(Lexer(chars′ indents indent_char rindents this_indent_depth at_line_start) c file_pos)
 
 let. after_ident_chars list.(#!( #!) #![ #!] #!{ #!} #!' #!: #!※)
-
-let. check_after_ident λ.{lexer 'Lexer}
-    let. #(_ c file_pos) read_char(lexer)
-    match. c
-    .Some(c)
-        if. ∨(is_white_space(c) ∈(c after_ident_chars))
-            error(UnexpectedChar(Some[Int](c)) file_pos)
-        else,
-            #()
-    .None()
-        #()
 
 let. read_quoted_char λ.{lexer 'Lexer}
     let. mut, lexer lexer
@@ -120,7 +112,7 @@ set. read_int_literal λ.{lexer 'Lexer n 'Int}
     let. #(lexer′ c file_pos) read_char(lexer)
     match. c
     .Some(c)
-        if. ∧(≤(#!0 c) ≥(c #!9))
+        if. ∧(≤(#!0 c) ≤(c #!9))
             set. lexer lexer′
             read_int_literal(lexer +(*(n 10) -(c #!0)))
         else,
@@ -142,6 +134,17 @@ set. read_identifier λ.{lexer 'Lexer s 'List(Int)}
     .None()
         #(lexer s)
 
+let. check_after_ident λ.{lexer 'Lexer}
+    let. #(_ c file_pos) read_char(lexer)
+    match. c
+    .Some(c)
+        if. ∨(is_white_space(c) ∈(c after_ident_chars))
+            #()
+        else,
+            error(UnexpectedChar(Some[Int](c)) file_pos)
+    .None()
+        #()
+
 let. read_token_char λ.{lexer 'Lexer}
     let. mut, lexer lexer
     set. lexer
@@ -154,8 +157,8 @@ let. read_token_char λ.{lexer 'Lexer}
     .Some(#!)) #(lexer RParen() file_pos)
     .Some(#![) #(lexer LBracket() file_pos)
     .Some(#!]) #(lexer RBracket() file_pos)
-    .Some(#!{) #(lexer LParen() file_pos)
-    .Some(#!}) #(lexer RParen() file_pos)
+    .Some(#!{) #(lexer LBrace() file_pos)
+    .Some(#!}) #(lexer RBrace() file_pos)
     .Some(#!') #(lexer Apostrophe() file_pos)
     .Some(#!:) #(lexer Colon() file_pos)
     .Some(#!‡) #(lexer DoubleDagger() file_pos)
@@ -176,17 +179,17 @@ let. read_token_char λ.{lexer 'Lexer}
         #(lexer StringLiteral(str) file_pos)
     .Some(c)
         cond.
-        .∧(≤(#!0 c) ≥(c #!9))
+        .∧(≤(#!0 c) ≤(c #!9))
             let. #(lexer′ n) read_int_literal(lexer -(c #!0))
             set. lexer lexer′
             check_after_ident(lexer)
-            #(lexer IntLiteral(n) file_pos)
+            #(lexer IntLiteralToken(n) file_pos)
         .is_starting_ident_character(c)
             let. #(lexer′ s) read_identifier(lexer list.(c))
             set. lexer lexer′
             if. =list(s "_")
                 check_after_ident(lexer)
-                #(lexer Wildcard() file_pos)
+                #(lexer WildcardToken() file_pos)
             else,
                 match. read_char(lexer)
                 .#(lexer′ Some(#!.) _)
@@ -199,7 +202,7 @@ let. read_token_char λ.{lexer 'Lexer}
                     #(lexer SecKeyword(s) file_pos)
                 .#(_ _ _)
                     check_after_ident(lexer)
-                    #(lexer Ident(s) file_pos)
+                    #(lexer IdentToken(s) file_pos)
         .⊤
             error(UnexpectedChar(Some[Int](c)) file_pos)
             #(lexer Eof() file_pos)
@@ -281,8 +284,7 @@ set. read_token_indent λ.{lexer 'Lexer or_indent 'Option(Int)}
     let. mut, lexer lexer
     let. #(lexer′ c file_pos) read_char(lexer)
     match. c
-    .Some(c)
-        cond.
+    .Some(c) cond.
         .=(c #!※)
             set. lexer lexer′
             set. lexer skip_comment(lexer)
@@ -320,3 +322,20 @@ let. read_token λ.{lexer 'Lexer}
 
 let. read_token_or_indent λ.{lexer 'Lexer last_indent_depth 'Int}
     read_token′(lexer Some[Int](last_indent_depth))
+
+let. lexer_indent_depth λ.{lexer 'Lexer}
+    let. Lexer(_ _ _ _ this_indent_depth _) lexer
+    this_indent_depth
+
+let. mut, lexer_at_line_start λ.{lexer 'Lexer} ⊤
+set. lexer_at_line_start λ.{lexer 'Lexer}
+    let. Lexer(_ _ _ _ _ at_line_start) lexer
+    if. at_line_start then, ⊤
+    else,
+        let. #(lexer′ c _) read_char(lexer)
+        match. c
+        .Some(c) cond.
+            .∨(=(c #!※) ∈(c newline_chars)) ⊤
+            .is_white_space(c) lexer_at_line_start(lexer′)
+            .⊤ ⊥
+        .None() ⊤

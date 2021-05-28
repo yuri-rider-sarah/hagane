@@ -4,6 +4,10 @@ type. FilePos FilePos(List(Int) Int Int)
 
 type. Error
     UnexpectedChar(Option(Int))
+    UnexpectedToken(Token)
+    InvalidExpr(List(Int))
+    InvalidPattern()
+    InvalidType()
 
 let. string_error λ.{str 'List(Int)}
     vector_string_error(utf8_encode(list→vector(str)))
@@ -14,8 +18,12 @@ let. file_pos_string λ.{file_pos 'FilePos}
 
 let. error_string λ.{err 'Error}
     match. err
-    .UnexpectedChar(Some(c)) ++[Int]("Unexpected character: " ++[Int](list.(c) ++[Int]("(" ++[Int](int→string(c) ")"))))
+    .UnexpectedChar(Some(c)) ++[Int]("Unexpected character: " ++[Int](list.(c) ++[Int](" (" ++[Int](int→string(c) ")"))))
     .UnexpectedChar(None()) "Unexpected end of file"
+    .UnexpectedToken(token) "Unexpected token"
+    .InvalidExpr(kw) ++[Int]("Invalid " ++[Int](kw " expression"))
+    .InvalidPattern() "Invalid pattern"
+    .InvalidType() "Invalid type"
 
 let. error λ.{err 'Error file_pos 'FilePos}
-    string_error(++[Int]("Error at " ++[Int](file_pos_string(file_pos) ++[Int](": " error_string(err)))))
+    string_error(++[Int](file_pos_string(file_pos) ++[Int](": " error_string(err))))

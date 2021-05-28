@@ -25,6 +25,16 @@ let. for_ι λ.{n 'Int f '‡(Int : #())}
 let. ∀,{T} for λ.{xs 'List(T) f '‡(T : #())}
     for_ι(len[T](xs) λ.(i 'Int f(get[T](xs i))))
 
+let. ∀,{T U} map λ.{xs 'List(T) f '‡(T : U)}
+    let. mut, ys empty[U]
+    for[T](xs λ.(x 'T set.(ys push[U](ys f(x)))))
+    ys
+
+let. ∀,{T} map_ι λ.{n 'Int f '‡(Int : T)}
+    let. mut, ys empty[T]
+    for_ι(n λ.(i 'Int set.(ys push[T](ys f(i)))))
+    ys
+
 let. ∀,{T} last λ.{xs 'List(T)}
     if. >(len[T](xs) 0)
     then, Some[T](get[T](xs -(len[T](xs) 1)))
