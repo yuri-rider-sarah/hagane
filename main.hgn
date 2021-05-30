@@ -12,6 +12,7 @@ while.
     .#(_ Eof() _) ⊥
     ._ ⊤
 do,
-    let. #(lexer′ expr) read_block_expr(lexer)
+    let. #(lexer′ raw_expr) read_block_expr(lexer)
     set. lexer lexer′
+    let. expr raw_expr→expr(raw_expr)
     set. exprs push[Expr](exprs expr)
