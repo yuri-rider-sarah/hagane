@@ -6,7 +6,7 @@ let. files map[List(Int) #(List(Int) List(Int))](argv λ.(filename 'List(Int)
     #(filename vector→list(utf8_decode(file_contents(list→vector(filename)))))
 ))
 let. mut, lexer lexer(files)
-let. mut, exprs empty[Expr]
+let. mut, statements empty[Statement]
 while.
     match. read_token(lexer)
     .#(_ Eof() _) ⊥
@@ -14,5 +14,5 @@ while.
 do,
     let. #(lexer′ raw_expr) read_block_expr(lexer)
     set. lexer lexer′
-    let. expr raw_expr→expr(raw_expr)
-    set. exprs push[Expr](exprs expr)
+    let. statement raw_expr→statement(raw_expr)
+    set. statements push[Statement](statements statement)

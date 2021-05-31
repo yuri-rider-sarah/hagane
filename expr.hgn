@@ -1,3 +1,11 @@
+type. Statement
+    ExprStatement(Expr)
+    Let(Pattern Expr)
+    Let∀(List(List(Int)) Pattern Expr)
+    LetMut(List(Int) Expr)
+    Type(List(Int) List(List(Int)) List(#(List(Int) List(Type))))
+    Extern(List(Int) Type)
+
 type. ExprData
     IntLiteral(Int)
     Ident(List(Int))
@@ -6,19 +14,14 @@ type. ExprData
     FunctionExpr(List(Expr) Expr)
     Apply(Expr List(Expr))
     Typed(Expr Type)
-    Let(Pattern Expr)
-    Let∀(List(List(Int)) Pattern Expr)
-    LetMut(List(Int) Expr)
     Set(List(Int) Expr)
     If(Expr Expr Expr)
     While(Expr Expr)
-    Do(List(Expr))
+    Do(List(Statement))
     Lambda(List(Pattern) Expr)
     Cond(List(#(Expr Expr)))
-    Type(List(Int) List(List(Int)) List(#(List(Int) List(Type))))
     Match(Expr List(#(Pattern Expr)))
     ListLiteral(List(Expr))
-    Extern(List(Int) Type)
 
 type. Expr Expr(ExprData FilePos)
 
@@ -78,21 +81,25 @@ set. raw_expr→pattern λ.{expr 'RawExpr}
             WildcardPattern()
     Pattern(pattern_data file_pos)
 
+let. mut, clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} Wildcard()
+let. mut, clauses→statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} ExprStatement(dummy_expr)
 let. mut, raw_expr→expr λ.{raw_expr 'RawExpr} dummy_expr
+let. mut, raw_expr→expr λ.{raw_expr 'RawExpr} dummy_expr
+let. mut, raw_expr→statement λ.{raw_expr 'RawExpr} ExprStatement(dummy_expr)
 
-let. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
+let. raw_expr→string λ.{expr 'RawExpr kw 'List(Int) file_pos 'FilePos}
+    match. expr
+    .RawExpr(RawIdent(s) _) s
+    ._
+        error(InvalidExpr(kw) file_pos)
+        empty[Int]
 
-    let. raw_expr→string λ.{expr 'RawExpr}
-        match. expr
-        .RawExpr(RawIdent(s) _) s
-        ._
-            error(InvalidExpr(kw) file_pos)
-            empty[Int]
+let. block→expr λ.{exprs 'List(RawExpr) file_pos 'FilePos}
+    Expr(Do(map[RawExpr Statement](exprs raw_expr→statement)) file_pos)
 
-    let. block→expr λ.{exprs 'List(RawExpr)}
-        match. exprs
-        .list.(expr) raw_expr→expr(expr)
-        ._ Expr(Do(map[RawExpr Expr](exprs raw_expr→expr)) file_pos)
+set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
+    let. raw_expr→string λ.{expr 'RawExpr} raw_expr→string(expr kw file_pos)
+    let. block→expr λ.{exprs 'List(RawExpr)} block→expr(exprs file_pos)
 
     let. clause→expr λ.{clause 'Clause}
         match. clause
@@ -102,16 +109,10 @@ let. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
             dummy_expr
 
     match. #(kw clauses)
-    .#("let" list.(Block(list.(var)) Block(val)))
-        Let(raw_expr→pattern(var) block→expr(val))
-    .#("let" list.(SecKeywordClause("∀") Block(type_param_exprs) Block(list.(var)) Block(val)))
-        Let∀(map[RawExpr List(Int)](type_param_exprs raw_expr→string) raw_expr→pattern(var) block→expr(val))
-    .#("let" list.(SecKeywordClause("mut") Block(list.(RawExpr(RawIdent(var) _))) Block(val)))
-        LetMut(var block→expr(val))
     .#("set" list.(Block(list.(RawExpr(RawIdent(var) _))) Block(val)))
-        LetMut(var block→expr(val))
+        Set(var block→expr(val))
     .#("do" list.(Block(exprs)))
-        Do(map[RawExpr Expr](exprs raw_expr→expr))
+        Do(map[RawExpr Statement](exprs raw_expr→statement))
     .#("if" list.(Block(cond) Block(then) Block(else)))
         If(block→expr(cond) block→expr(then) block→expr(else))
     .#("if" list.(Block(cond) SecKeywordClause("then") Block(then) Block(else)))
@@ -140,6 +141,35 @@ let. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
                 #(dummy_expr dummy_expr)
         ))
         Cond(cases)
+    .#("match" _)
+        if. ≠(%(len[Clause](clauses) 2) 1)
+            error(InvalidExpr(kw) file_pos)
+        else, #()
+        let. val clause→expr(get[Clause](clauses 0))
+        let. cases map_ι[#(Pattern Expr)](/(len[Clause](clauses) 2) λ.(i 'Int
+            match. #(get[Clause](clauses +(*(2 i) 1)) get[Clause](clauses +(*(2 i) 2)))
+            .#(Label(pattern_expr) Block(body)) #(raw_expr→pattern(pattern_expr) block→expr(body))
+            ._
+                error(InvalidExpr(kw) file_pos)
+                #(dummy_pattern dummy_expr)
+        ))
+        Match(val cases)
+    .#("list" _)
+        ListLiteral(map[Clause Expr](clauses clause→expr))
+    ._
+        error(InvalidExpr(kw) file_pos)
+        Wildcard()
+
+set. clauses→statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
+    let. raw_expr→string λ.{expr 'RawExpr} raw_expr→string(expr kw file_pos)
+    let. block→expr λ.{exprs 'List(RawExpr)} block→expr(exprs file_pos)
+    match. #(kw clauses)
+    .#("let" list.(Block(list.(var)) Block(val)))
+        Let(raw_expr→pattern(var) block→expr(val))
+    .#("let" list.(SecKeywordClause("∀") Block(type_param_exprs) Block(list.(var)) Block(val)))
+        Let∀(map[RawExpr List(Int)](type_param_exprs raw_expr→string) raw_expr→pattern(var) block→expr(val))
+    .#("let" list.(SecKeywordClause("mut") Block(list.(RawExpr(RawIdent(var) _))) Block(val)))
+        LetMut(var block→expr(val))
     .#("type" list.(Block(list.(RawExpr(RawIdent(name) _))) Block(variant_exprs)))
         let. variants map[RawExpr #(List(Int) List(Type))](variant_exprs λ.(expr 'RawExpr
             match. expr
@@ -161,26 +191,9 @@ let. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
                 #(empty[Int] empty[Type])
         ))
         Type(name type_params variants)
-    .#("match" _)
-        if. ≠(%(len[Clause](clauses) 2) 1)
-            error(InvalidExpr(kw) file_pos)
-        else, #()
-        let. val clause→expr(get[Clause](clauses 0))
-        let. cases map_ι[#(Pattern Expr)](/(len[Clause](clauses) 2) λ.(i 'Int
-            match. #(get[Clause](clauses +(*(2 i) 1)) get[Clause](clauses +(*(2 i) 2)))
-            .#(Label(pattern_expr) Block(body)) #(raw_expr→pattern(pattern_expr) block→expr(body))
-            ._
-                error(InvalidExpr(kw) file_pos)
-                #(dummy_pattern dummy_expr)
-        ))
-        Match(val cases)
-    .#("list" _)
-        ListLiteral(map[Clause Expr](clauses clause→expr))
     .#("extern" list.(Block(list.(RawExpr(RawIdent(name) _))) Block(list.(type_expr))))
         Extern(name raw_expr→type(type_expr))
-    ._
-        error(InvalidExpr(kw) file_pos)
-        Wildcard()
+    ._ ExprStatement(Expr(clauses→expr_data(kw clauses file_pos) file_pos))
 
 set. raw_expr→expr λ.{raw_expr 'RawExpr}
     let. RawExpr(raw_expr_data file_pos) raw_expr
@@ -196,3 +209,9 @@ set. raw_expr→expr λ.{raw_expr 'RawExpr}
         .RawApply(func args) Apply(raw_expr→expr(func) map[RawExpr Expr](args raw_expr→expr))
         .SpecialExpr(kw clauses) clauses→expr_data(kw clauses file_pos)
     Expr(expr_data file_pos)
+
+set. raw_expr→statement λ.{raw_expr 'RawExpr}
+    let. RawExpr(raw_expr_data file_pos) raw_expr
+    match. raw_expr_data
+    .SpecialExpr(kw clauses) clauses→statement(kw clauses file_pos)
+    ._ ExprStatement(raw_expr→expr(raw_expr))
