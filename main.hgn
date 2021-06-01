@@ -6,13 +6,13 @@ let. files map[List(Int) #(List(Int) List(Int))](argv λ.(filename 'List(Int)
     #(filename vector→list(utf8_decode(file_contents(list→vector(filename)))))
 ))
 let. mut, lexer lexer(files)
-let. mut, statements empty[Statement]
+let. mut, statements empty[U_Statement]
 while.
     match. read_token(lexer)
     .#(_ Eof() _) ⊥
     ._ ⊤
 do,
-    let. #(lexer′ raw_expr) read_block_expr(lexer)
+    let. #(lexer′ r_expr) read_block_expr(lexer)
     set. lexer lexer′
-    let. statement raw_expr→statement(raw_expr)
-    set. statements push[Statement](statements statement)
+    let. statement r_expr→u_statement(r_expr)
+    set. statements push[U_Statement](statements statement)
