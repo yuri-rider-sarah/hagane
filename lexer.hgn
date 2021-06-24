@@ -50,7 +50,7 @@ let. read_char λ.{chars 'CharReader}
         let. c get[Int](cs char_i)
         let. #(file_i′ char_i′ line′ col′)
             if. <(+(char_i 1) len[Int](cs))
-                let. #(line′ col′) if. ∈(c newline_chars)
+                let. #(line′ col′) if. ∈[Int](c newline_chars =)
                     then, #(+(line 1) 1)
                     else, #(line +(col 1))
                 #(file_i +(char_i 1) line′ col′)
@@ -138,7 +138,7 @@ let. check_after_ident λ.{lexer 'Lexer}
     let. #(_ c file_pos) read_char(lexer)
     match. c
     .Some(c)
-        if. ∨(is_white_space(c) ∈(c after_ident_chars))
+        if. ∨(is_white_space(c) ∈[Int](c after_ident_chars =))
             #()
         else,
             error(UnexpectedChar(Some[Int](c)) file_pos)
@@ -187,7 +187,7 @@ let. read_token_char λ.{lexer 'Lexer}
         .is_starting_ident_character(c)
             let. #(lexer′ s) read_identifier(lexer list.(c))
             set. lexer lexer′
-            if. =list(s "_")
+            if. =list[Int](s "_" =)
                 check_after_ident(lexer)
                 #(lexer WildcardToken() file_pos)
             else,
@@ -236,7 +236,7 @@ set. skip_comment λ.{lexer 'Lexer}
     let. mut, lexer lexer
     match. read_char(lexer)
     .#(lexer′ Some(c) _)
-        if. ∈(c newline_chars)
+        if. ∈[Int](c newline_chars =)
             lexer
         else,
             set. lexer lexer′
@@ -253,7 +253,7 @@ set. read_indent λ.{lexer 'Lexer indent_depth 'Int}
             set. lexer lexer′
             set. lexer skip_comment(lexer)
             read_indent(lexer 0)
-        .∈(c newline_chars)
+        .∈[Int](c newline_chars =)
             set. lexer lexer′
             read_indent(lexer 0)
         .is_white_space(c)
@@ -289,7 +289,7 @@ set. read_token_indent λ.{lexer 'Lexer or_indent 'Option(Int)}
             set. lexer lexer′
             set. lexer skip_comment(lexer)
             read_token_indent(lexer or_indent)
-        .∈(c newline_chars)
+        .∈[Int](c newline_chars =)
             set. lexer lexer′
             let. #(lexer′ indent_depth) read_indent(lexer 0)
             set. lexer lexer′
@@ -335,7 +335,7 @@ set. lexer_at_line_start λ.{lexer 'Lexer}
         let. #(lexer′ c _) read_char(lexer)
         match. c
         .Some(c) cond.
-            .∨(=(c #!※) ∈(c newline_chars)) ⊤
+            .∨(=(c #!※) ∈[Int](c newline_chars =)) ⊤
             .is_white_space(c) lexer_at_line_start(lexer′)
             .⊤ ⊥
         .None() ⊤

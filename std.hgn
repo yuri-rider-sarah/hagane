@@ -25,6 +25,12 @@ let. for_ι λ.{n 'Int f '‡(Int : #())}
 let. ∀,{T} for λ.{xs 'List(T) f '‡(T : #())}
     for_ι(len[T](xs) λ.(i 'Int f(get[T](xs i))))
 
+let. ∀,{T U} for2 λ.{xs 'List(T) ys 'List(U) f '‡(T U : #())}
+    if. =(len[T](xs) len[U](ys))
+        for_ι(len[T](xs) λ.(i 'Int f(get[T](xs i) get[U](ys i))))
+        Some[#()](#())
+    else, None[#()]()
+
 let. ∀,{T U} map λ.{xs 'List(T) f '‡(T : U)}
     let. mut, ys empty[U]
     for[T](xs λ.(x 'T set.(ys push[U](ys f(x)))))
@@ -40,33 +46,64 @@ let. ∀,{T} last λ.{xs 'List(T)}
     then, Some[T](get[T](xs -(len[T](xs) 1)))
     else, None[T]()
 
-let. ∈ λ.{x 'Int ys 'List(Int)}
+let. ∀,{T} ∈ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
     let. mut, r ⊥
-    for[Int](ys λ.(y 'Int
-        if. =(y x)
+    for[T](ys λ.(y 'T
+        if. =T(y x)
         then, set. r ⊤
         else, #()
     ))
     r
 
-let. ∉ λ.{x 'Int ys 'List(Int)}
-    ¬(∈(x ys))
+let. ∀,{T} ∉ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
+    ¬(∈[T](x ys =T))
 
-let. =list λ.{xs 'List(Int) ys 'List(Int)}
-    if. =(len[Int](xs) len[Int](ys))
+let. ∀,{T} =list λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
+    if. =(len[T](xs) len[T](ys))
         let. mut, r ⊤
-        for_ι(len[Int](xs) λ.(i 'Int
-            if. ≠(get[Int](xs i) get[Int](ys i))
+        for_ι(len[T](xs) λ.(i 'Int
+            if. ¬(=T(get[T](xs i) get[T](ys i)))
             then, set. r ⊥
             else, #()
         ))
         r
     else, ⊥
 
+let. ∀,{T} filter λ.{xs 'List(T) f '‡(T : Bool)}
+    let. mut, r empty[T]
+    for[T](xs λ.(x 'T set.(r if.(f(x) push[T](r x) r))))
+    r
+
+let. ∀,{T} \ λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
+    filter[T](xs λ.(x 'T ∉[T](x ys =T)))
+
 let. ∀,{T} ++ λ.{xs 'List(T) ys 'List(T)}
-    let. mut, xs xs
-    for[T](ys λ.(y 'T set.(xs push[T](xs y))))
-    xs
+    let. mut, r xs
+    for[T](ys λ.(y 'T set.(r push[T](r y))))
+    r
+
+let. ∀,{T} concat λ.{xss 'List(List(T))}
+    let. mut, r empty[T]
+    for[List(T)](xss λ.(xs 'List(T) set.(r ++[T](r xs))))
+    r
+
+let. ∀,{T} intercalate λ.{xss 'List(List(T)) sep 'List(T)}
+    if. =(len[List(T)](xss) 0)
+        empty[T]
+    else,
+        let. mut, r get[List(T)](xss 0)
+        for_ι(-(len[List(T)](xss) 1) λ.(i 'Int set.(r ++[T](r ++[T](sep get[List(T)](xss +(i 1)))))))
+        r
+
+let. ∀,{T U} unzip λ.{xs 'List(#(T U))}
+    let. mut, xs1 empty[T]
+    let. mut, xs2 empty[U]
+    for[#(T U)](xs λ.(x '#(T U)
+        let. #(x1 x2) x
+        set. xs1 push[T](xs1 x1)
+        set. xs2 push[U](xs2 x2)
+    ))
+    #(xs1 xs2)
 
 let. int→string λ.{n 'Int}
     let. mut, n n

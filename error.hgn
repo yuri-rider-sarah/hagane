@@ -2,28 +2,65 @@ extern. vector_string_error ‡(Int : #())
 
 type. FilePos FilePos(List(Int) Int Int)
 
+type. PartialType
+    P_Var(Int)
+    P_Named(List(Int))
+    P_Applied(List(Int) List(PartialType))
+    P_TupleType(List(PartialType))
+    P_Function(List(PartialType) PartialType)
+
+let. mut, partial_type→string λ.{type 'PartialType} empty[Int]
+set. partial_type→string λ.{type 'PartialType}
+    match. type
+    .P_Var(n) ++[Int]("?" int→string(n))
+    .P_Named(name) name
+    .P_Applied(name types) concat[Int](list.(
+    name "(" intercalate[Int](map[PartialType List(Int)](types partial_type→string) " ") ")"
+    ))
+    .P_TupleType(types) concat[Int](list.(
+    "#(" intercalate[Int](map[PartialType List(Int)](types partial_type→string) " ") ")"
+    ))
+    .P_Function(params ret) concat[Int](list.(
+    "‡(" concat[Int](map[PartialType List(Int)](params λ.(p 'PartialType ++[Int](partial_type→string(p) " ")))) ": " partial_type→string(ret) ")"
+    ))
+
 type. Error
     UnexpectedChar(Option(Int))
     UnexpectedToken(Token)
     InvalidExpr(List(Int))
     InvalidPattern()
     InvalidType()
+    UnboundVariable(List(Int))
+    UnboundType(List(Int))
+    IncorrectTypeArity(Int Int)
+    ConflictingType(PartialType PartialType)
+    AssignToConst(List(Int))
+    UnusedTypeParam(List(Int))
 
 let. string_error λ.{str 'List(Int)}
     vector_string_error(utf8_encode(list→vector(str)))
 
 let. file_pos_string λ.{file_pos 'FilePos}
     let. FilePos(file_name line col) file_pos
-    ++[Int](file_name ++[Int](":" ++[Int](int→string(line) ++[Int](":" int→string(col)))))
+    concat[Int](list.(file_name ":" int→string(line) ":" int→string(col)))
 
 let. error_string λ.{err 'Error}
     match. err
-    .UnexpectedChar(Some(c)) ++[Int]("Unexpected character: " ++[Int](list.(c) ++[Int](" (" ++[Int](int→string(c) ")"))))
+    .UnexpectedChar(Some(c)) concat[Int](list.("Unexpected character: " list.(c) " (" int→string(c) ")"))
     .UnexpectedChar(None()) "Unexpected end of file"
     .UnexpectedToken(token) "Unexpected token"
-    .InvalidExpr(kw) ++[Int]("Invalid " ++[Int](kw " expression"))
+    .InvalidExpr(kw) concat[Int](list.("Invalid " kw " expression"))
     .InvalidPattern() "Invalid pattern"
     .InvalidType() "Invalid type"
+    .UnboundVariable(name) ++[Int]("Unbound variable: " name)
+    .UnboundType(name) ++[Int]("Unbound type: " name)
+    .IncorrectTypeArity(n1 n2) concat[Int](list.("Incorrect number of type arguments: expected " int→string(n1) ", got " int→string(n2)))
+    .ConflictingType(t1 t2) concat[Int](list.("Conflicting type: expected " partial_type→string(t1) ", got " partial_type→string(t2)))
+    .AssignToConst(name) ++[Int]("Assignment to constant variable " name)
+    .UnusedTypeParam(name) ++[Int]("Unused type parameter " name)
 
 let. error λ.{err 'Error file_pos 'FilePos}
-    string_error(++[Int](file_pos_string(file_pos) ++[Int](": " error_string(err))))
+    string_error(concat[Int](list.(file_pos_string(file_pos) ": " error_string(err))))
+
+let. unreachable λ.{err 'List(Int)}
+    string_error(++[Int]("Internal compiler error: Unreachable code: " err))
