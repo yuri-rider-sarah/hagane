@@ -186,6 +186,8 @@ let. t_type new_type_name(None[List(Int)]() 0)
 let. t_tv new_type_var_with_type(I_Named(t_type))
 let. list_tv new_type_var_with_type(I_Applied(list_type list.(t_tv)))
 
+let. builtin_types list.(int_type bool_type list_type)
+
 let. empty_i_context I_Context(
     list.(
     VarBinding("⊤" empty[TypeName] bool_tv)
@@ -215,7 +217,7 @@ let. empty_i_context I_Context(
     VarBinding("get_argv_len" empty[TypeName] new_type_var_with_type(I_Function(list.(int_tv) int_tv)))
     VarBinding("get_argv_byte" empty[TypeName] new_type_var_with_type(I_Function(list.(int_tv int_tv) int_tv)))
     )
-    list.(int_type bool_type list_type)
+    builtin_types
 )
 
 let. i_add_let_binding λ.{context 'I_Context var 'VarBinding}

@@ -36,6 +36,8 @@ type. Error
     ConflictingType(PartialType PartialType)
     AssignToConst(List(Int))
     UnusedTypeParam(List(Int))
+    AmbiguousType(PartialType)
+    LeakedType(List(Int))
 
 let. string_error λ.{str 'List(Int)}
     vector_string_error(utf8_encode(list→vector(str)))
@@ -58,6 +60,8 @@ let. error_string λ.{err 'Error}
     .ConflictingType(t1 t2) concat[Int](list.("Conflicting type: expected " partial_type→string(t1) ", got " partial_type→string(t2)))
     .AssignToConst(name) ++[Int]("Assignment to constant variable " name)
     .UnusedTypeParam(name) ++[Int]("Unused type parameter " name)
+    .AmbiguousType(t) ++[Int]("Ambiguous type " partial_type→string(t))
+    .LeakedType(name) ++[Int]("Inferred type contains leaked type " name)
 
 let. error λ.{err 'Error file_pos 'FilePos}
     string_error(concat[Int](list.(file_pos_string(file_pos) ": " error_string(err))))

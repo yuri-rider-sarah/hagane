@@ -17,3 +17,4 @@ do,
     let. u_statement r_expr→u_statement(r_expr)
     set. u_statements push[U_Statement](u_statements u_statement)
 let. i_statements u_statements→i_statements(u_statements empty_i_context new_type_var() FilePos(get[List(Int)](argv 0) 1 1))
+let. t_statements i_statements→t_statements(i_statements empty_t_context)

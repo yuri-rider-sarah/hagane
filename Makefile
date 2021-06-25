@@ -4,7 +4,7 @@ CXX = clang++
 CXXFLAGS = -Wall -Wconversion
 HGN_FLAGS =
 
-HGN_SRC = std.hgn vector.hgn error.hgn char_types.hgn lexer.hgn parser.hgn expr.hgn infer.hgn main.hgn
+HGN_SRC = std.hgn vector.hgn error.hgn char_types.hgn lexer.hgn parser.hgn expr.hgn infer_prop.hgn infer_fin.hgn main.hgn
 
 HEADERS = $(filter-out char_types_data.h,$(wildcard *.h))
 OBJECTS = $(patsubst %.cpp,%.o,$(wildcard *.cpp)) /usr/lib/libstdc++.a
