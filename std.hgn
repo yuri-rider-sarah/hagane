@@ -107,7 +107,6 @@ let. ∀,{T U} unzip λ.{xs 'List(#(T U))}
 
 let. int→string λ.{n 'Int}
     let. mut, n n
-    let. mut, s empty[Int]
     let. mut, s cond.
         .>(n 0)
             empty[Int]
