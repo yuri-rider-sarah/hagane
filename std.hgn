@@ -58,6 +58,15 @@ let. ∀,{T} ∈ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
 let. ∀,{T} ∉ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
     ¬(∈[T](x ys =T))
 
+let. ∀,{T} dedup λ.{xs 'List(T) =T '‡(T T : Bool)}
+    let. mut, r empty[T]
+    for[T](xs λ.(x 'T
+        if. ∉[T](x r =T)
+        then, set. r push[T](r x)
+        else, #()
+    ))
+    r
+
 let. ∀,{T} =list λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
     if. =(len[T](xs) len[T](ys))
         let. mut, r ⊤
