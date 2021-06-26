@@ -91,6 +91,12 @@ set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
     T_Expr(t_expr_data type_var→t_type(i_type context file_pos) file_pos)
 
 set. i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_Context}
+    let. mut, context context
+    for[I_Statement](i_statements λ.(i_statement 'I_Statement
+        match. i_statement
+        .I_TypeStatement(type _ _) set. context t_add_type_binding(context type)
+        ._ #()
+    ))
     ※ A dummy file_pos is used since the errors shouldn't ever occur.
     let. file_pos FilePos("[INTERNAL COMPILER ERROR]" 0 0)
     let. mut, context context
