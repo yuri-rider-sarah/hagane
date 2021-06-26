@@ -375,6 +375,7 @@ set. u_expr→i_expr λ.{expr 'U_Expr context 'I_Context}
             let. i_body u_expr→i_expr(u_body context)
             set_type(i_expr_type(i_cond) I_Named(bool_type) i_expr_file_pos(i_cond))
             set_type(i_expr_type(i_body) I_TupleType(empty[TypeVar]) i_expr_file_pos(i_cond))
+            set_type(this_type I_TupleType(empty[TypeVar]) file_pos)
             I_While(i_cond i_body)
         .U_Do(u_statements)
             I_Do(u_statements→i_statements(u_statements context this_type file_pos))
