@@ -8,7 +8,7 @@ type. I_Statement
 
 type. I_ExprData
     I_IntLiteral(Int)
-    I_Ident(List(Int))
+    I_Ident(List(Int) List(TypeVar))
     I_Tuple(List(I_Expr))
     I_Apply(I_Expr List(I_Expr))
     I_Set(List(Int) I_Expr)
@@ -27,7 +27,7 @@ type. I_PatternData
     I_IdentPattern(List(Int))
     I_WildcardPattern()
     I_TuplePattern(List(I_Pattern))
-    I_VariantPattern(List(Int) List(I_Pattern))
+    I_VariantPattern(List(Int) List(I_Pattern) List(TypeVar))
     I_ListPattern(List(I_Pattern))
 
 type. I_Pattern I_Pattern(I_PatternData TypeVar FilePos)
@@ -287,7 +287,10 @@ set. substitute_type_names λ.{subs 'List(#(TypeName TypeVar)) tv 'TypeVar}
 
 let. instantiate_params λ.{type_params 'List(TypeName) tv 'TypeVar}
     let. subs map[TypeName #(TypeName TypeVar)](type_params λ.(tn 'TypeName #(tn new_type_var())))
-    substitute_type_names(subs tv)
+    #(substitute_type_names(subs tv) map[#(TypeName TypeVar) TypeVar](subs λ.(sub '#(TypeName TypeVar)
+        let. #(_ tv) sub
+        tv
+    )))
 
 let. mut, type_referenced_types′ λ.{tv 'TypeVar} empty[TypeVar]
 set. type_referenced_types′ λ.{tv 'TypeVar}
@@ -340,9 +343,9 @@ set. u_expr→i_expr λ.{expr 'U_Expr context 'I_Context}
             I_IntLiteral(n)
         .U_Ident(name)
             let. #(type_params type) variable_type(name context file_pos)
-            let. var_type instantiate_params(type_params type)
+            let. #(var_type type_args) instantiate_params(type_params type)
             unify_type(this_type var_type file_pos)
-            I_Ident(name)
+            I_Ident(name type_args)
         .U_Tuple(u_exprs)
             let. i_exprs map[U_Expr I_Expr](u_exprs λ.(e 'U_Expr u_expr→i_expr(e context)))
             set_type(this_type I_TupleType(map[I_Expr TypeVar](i_exprs i_expr_type)) file_pos)
@@ -538,9 +541,9 @@ set. u_pattern→i_pattern λ.{u_pattern 'U_Pattern context 'I_Context}
         .U_VariantPattern(ctor u_args)
             let. #(i_args bindings) u_patterns→i_patterns(u_args context)
             let. #(type_params type) variable_type(ctor context file_pos)
-            let. ctor_type instantiate_params(type_params type)
+            let. #(ctor_type type_args) instantiate_params(type_params type)
             set_type(ctor_type I_Function(map[I_Pattern TypeVar](i_args i_pattern_type) this_type) file_pos)
-            #(I_VariantPattern(ctor i_args) bindings)
+            #(I_VariantPattern(ctor i_args type_args) bindings)
         .U_ListPattern(u_patterns)
             let. #(i_patterns bindings) u_patterns→i_patterns(u_patterns context)
             let. elem_type new_type_var()

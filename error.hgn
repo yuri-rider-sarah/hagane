@@ -35,9 +35,11 @@ type. Error
     IncorrectTypeArity(Int Int)
     ConflictingType(PartialType PartialType)
     AssignToConst(List(Int))
+    NotACtor(List(Int))
     UnusedTypeParam(List(Int))
     AmbiguousType(PartialType)
     LeakedType(List(Int))
+    InvalidExternType(List(Int))
 
 let. string_error λ.{str 'List(Int)}
     vector_string_error(utf8_encode(list→vector(str)))
@@ -59,12 +61,14 @@ let. error_string λ.{err 'Error}
     .IncorrectTypeArity(n1 n2) concat[Int](list.("Incorrect number of type arguments: expected " int→string(n1) ", got " int→string(n2)))
     .ConflictingType(t1 t2) concat[Int](list.("Conflicting type: expected " partial_type→string(t1) ", got " partial_type→string(t2)))
     .AssignToConst(name) ++[Int]("Assignment to constant variable " name)
+    .NotACtor(name) ++[Int](name " is not a constructor")
     .UnusedTypeParam(name) ++[Int]("Unused type parameter " name)
     .AmbiguousType(t) ++[Int]("Ambiguous type " partial_type→string(t))
     .LeakedType(name) ++[Int]("Inferred type contains leaked type " name)
+    .InvalidExternType(name) ++[Int]("Invalid extern type for variable " name)
 
 let. error λ.{err 'Error file_pos 'FilePos}
     string_error(concat[Int](list.(file_pos_string(file_pos) ": " error_string(err))))
 
 let. unreachable λ.{err 'List(Int)}
-    string_error(++[Int]("Internal compiler error: Unreachable code: " err))
+    string_error(++[Int]("Internal compiler error: " err))

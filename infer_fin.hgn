@@ -8,7 +8,7 @@ type. T_Statement
 
 type. T_ExprData
     T_IntLiteral(Int)
-    T_Ident(List(Int))
+    T_Ident(List(Int) List(T_Type))
     T_Tuple(List(T_Expr))
     T_Apply(T_Expr List(T_Expr))
     T_Set(List(Int) T_Expr)
@@ -27,7 +27,7 @@ type. T_PatternData
     T_IdentPattern(List(Int))
     T_WildcardPattern()
     T_TuplePattern(List(T_Pattern))
-    T_VariantPattern(List(Int) List(T_Pattern))
+    T_VariantPattern(List(Int) List(T_Pattern) List(T_Type))
     T_ListPattern(List(T_Pattern))
 
 type. T_Pattern T_Pattern(T_PatternData T_Type FilePos)
@@ -36,6 +36,10 @@ type. T_Type
     T_Named(Int List(T_Type))
     T_TupleType(List(T_Type))
     T_Function(List(T_Type) T_Type)
+
+let. t_expr_file_pos λ.{expr 'T_Expr}
+    let. T_Expr(_ _ file_pos) expr
+    file_pos
 
 type. T_Context T_Context(List(TypeName))
 
@@ -71,7 +75,7 @@ set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
     let. I_Expr(i_expr_data i_type file_pos) i_expr
     let. t_expr_data match. i_expr_data
         .I_IntLiteral(n) T_IntLiteral(n)
-        .I_Ident(name) T_Ident(name)
+        .I_Ident(name i_type_args) T_Ident(name map[TypeVar T_Type](i_type_args λ.(t 'TypeVar type_var→t_type(t context file_pos))))
         .I_Tuple(i_exprs) T_Tuple(i_exprs→t_exprs(i_exprs context))
         .I_Apply(i_func i_args) T_Apply(i_expr→t_expr(i_func context) i_exprs→t_exprs(i_args context))
         .I_Set(name i_expr) T_Set(name i_expr→t_expr(i_expr context))
@@ -131,7 +135,7 @@ set. i_pattern→t_pattern λ.{i_pattern 'I_Pattern context 'T_Context}
         .I_IdentPattern(name) T_IdentPattern(name)
         .I_WildcardPattern() T_WildcardPattern()
         .I_TuplePattern(i_patterns) T_TuplePattern(i_patterns→t_patterns(i_patterns context))
-        .I_VariantPattern(ctor i_args) T_VariantPattern(ctor i_patterns→t_patterns(i_args context))
+        .I_VariantPattern(ctor i_args i_type_args) T_VariantPattern(ctor i_patterns→t_patterns(i_args context) map[TypeVar T_Type](i_type_args λ.(t 'TypeVar type_var→t_type(t context file_pos))))
         .I_ListPattern(i_patterns) T_ListPattern(i_patterns→t_patterns(i_patterns context))
     T_Pattern(t_pattern_data type_var→t_type(i_type context file_pos) file_pos)
 
