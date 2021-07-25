@@ -35,6 +35,13 @@ static StructType *list_type;
 static Function *box_rc_decr;
 static Function *cell_rc_decr;
 
+static Value *cg_gep(Value *val, vector<Value *> idx_) {
+    vector<Value *> idx = {builder->getInt64(0)};
+    for (Value *v : idx_)
+        idx.push_back(v);
+    return builder->CreateInBoundsGEP(val, idx);
+}
+
 extern "C" void llvm_init() {
     InitializeAllTargetInfos();
     InitializeAllTargets();
@@ -114,12 +121,12 @@ static Value *codegen_malloc(Type *type) {
 
 static void codegen_box_header_init(Value *val, Value *dtor) {
     val = builder->CreateBitCast(val, PointerType::getUnqual(box_header_type));
-    builder->CreateStore(builder->getInt64(0), builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(0)}));
-    builder->CreateStore(dtor, builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1)}));
+    builder->CreateStore(builder->getInt64(0), builder->CreateStructGEP(val, 0));
+    builder->CreateStore(dtor, builder->CreateStructGEP(val, 1));
 }
 
 extern "C" void codegen_rc_incr(Value *val) {
-    Value *rc_ptr = builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(0)});
+    Value *rc_ptr = builder->CreateStructGEP(val, 0);
     Value *rc = builder->CreateLoad(rc_ptr);
     builder->CreateStore(builder->CreateAdd(rc, builder->getInt64(1)), rc_ptr);
 }
@@ -132,21 +139,21 @@ static Value *codegen_boxed_fuction(Function *func) {
     Type *type = StructType::get(*context, {box_header_type, PointerType::getUnqual(func->getFunctionType())});
     Value *val = codegen_malloc(type);
     codegen_box_header_init(val, base_dtor);
-    builder->CreateStore(func, builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1)}));
+    builder->CreateStore(func, builder->CreateStructGEP(val, 1));
     return builder->CreateBitCast(val, box_type);
 }
 
 extern "C" Value *codegen_const_bool(u64 value) {
     Value *val = codegen_malloc(StructType::get(*context, {box_header_type, Type::getInt1Ty(*context)}));
     codegen_box_header_init(val, base_dtor);
-    builder->CreateStore(builder->getInt1(value), builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1)}));
+    builder->CreateStore(builder->getInt1(value), builder->CreateStructGEP(val, 1));
     return builder->CreateBitCast(val, box_type);
 }
 
 extern "C" Value *codegen_const_int(u64 value) {
     Value *val = codegen_malloc(StructType::get(*context, {box_header_type, Type::getInt64Ty(*context)}));
     codegen_box_header_init(val, base_dtor);
-    builder->CreateStore(builder->getInt64(value), builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1)}));
+    builder->CreateStore(builder->getInt64(value), builder->CreateStructGEP(val, 1));
     return builder->CreateBitCast(val, box_type);
 }
 
@@ -163,7 +170,7 @@ static Value *codegen_tuple_(vector<Value *> elems, i64 tag) {
     builder->SetInsertPoint(BasicBlock::Create(*context, "", dtor));
     Value *dtor_val = builder->CreateBitCast(dtor->getArg(0), PointerType::getUnqual(type));
     for (size_t i = 0; i < elems.size(); i++)
-        codegen_rc_decr(builder->CreateLoad(builder->CreateGEP(dtor_val, {builder->getInt64(0), builder->getInt32(1 + i)})));
+        codegen_rc_decr(builder->CreateLoad(builder->CreateStructGEP(dtor_val, 1 + i)));
     builder->CreateCall(free_func->getFunctionType(), free_func, {builder->CreateBitCast(dtor_val, Type::getInt8PtrTy(*context))});
     builder->CreateRetVoid();
     builder->SetInsertPoint(saved_bb);
@@ -172,9 +179,9 @@ static Value *codegen_tuple_(vector<Value *> elems, i64 tag) {
     Value *val = codegen_malloc(type);
     codegen_box_header_init(val, dtor);
     if (tag >= 0)
-        builder->CreateStore(builder->getInt64(tag), builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(0), builder->getInt32(1)}));
+        builder->CreateStore(builder->getInt64(tag), cg_gep(val, {builder->getInt32(0), builder->getInt32(1)}));
     for (size_t i = 0; i < elems.size(); i++)
-        builder->CreateStore(elems[i], builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1 + i)}));
+        builder->CreateStore(elems[i], builder->CreateStructGEP(val, 1 + i));
     return builder->CreateBitCast(val, box_type);
 }
 
@@ -186,16 +193,16 @@ extern "C" Value *codegen_list(vector<Value *> *elems) {
     Value *data_size = builder->CreateMul(ConstantExpr::getSizeOf(box_type), builder->getInt64(elems->size()));
     Value *val = codegen_malloc(builder->CreateAdd(ConstantExpr::getOffsetOf(list_type, 3), data_size), list_type);
     codegen_box_header_init(val, list_dtor);
-    builder->CreateStore(builder->getInt64(elems->size()), builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1)}));
-    builder->CreateStore(builder->getInt64(elems->size()), builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(2)}));
+    builder->CreateStore(builder->getInt64(elems->size()), builder->CreateStructGEP(val, 1));
+    builder->CreateStore(builder->getInt64(elems->size()), builder->CreateStructGEP(val, 2));
     for (size_t i = 0; i < elems->size(); i++) {
-        builder->CreateStore((*elems)[i], builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(3), builder->getInt64(i)}));
+        builder->CreateStore((*elems)[i], cg_gep(val, {builder->getInt32(3), builder->getInt64(i)}));
     }
     return val;
 }
 
 extern "C" void codegen_cell_rc_incr(Value *ptr) {
-    Value *rc_ptr = builder->CreateGEP(ptr, {builder->getInt64(0), builder->getInt32(0)});
+    Value *rc_ptr = builder->CreateStructGEP(ptr, 0);
     builder->CreateStore(builder->CreateAdd(builder->CreateLoad(rc_ptr), builder->getInt64(1)), rc_ptr);
 }
 
@@ -205,17 +212,17 @@ extern "C" void codegen_cell_rc_decr(Value *ptr) {
 
 extern "C" Value *codegen_create_mut_var(Value *val) {
     Value *ptr = codegen_malloc(cell_type);
-    builder->CreateStore(builder->getInt64(0), builder->CreateGEP(ptr, {builder->getInt64(0), builder->getInt32(0)}));
-    builder->CreateStore(val, builder->CreateGEP(ptr, {builder->getInt64(0), builder->getInt32(1)}));
+    builder->CreateStore(builder->getInt64(0), builder->CreateStructGEP(ptr, 0));
+    builder->CreateStore(val, builder->CreateStructGEP(ptr, 1));
     return ptr;
 }
 
 extern "C" Value *codegen_load_mut_var(Value *ptr) {
-    return builder->CreateLoad(builder->CreateGEP(ptr, {builder->getInt64(0), builder->getInt32(1)}));
+    return builder->CreateLoad(builder->CreateStructGEP(ptr, 1));
 }
 
 extern "C" void codegen_store_mut_var(Value *ptr, Value *val) {
-    builder->CreateStore(val, builder->CreateGEP(ptr, {builder->getInt64(0), builder->getInt32(1)}));
+    builder->CreateStore(val, builder->CreateStructGEP(ptr, 1));
 }
 
 extern "C" void codegen_unreachable() {
@@ -228,7 +235,7 @@ extern "C" void codegen_br(BasicBlock *bb) {
 
 extern "C" void codegen_cond_br(Value *cond, BasicBlock *then, BasicBlock *else_) {
     cond = builder->CreateBitCast(cond, PointerType::getUnqual(StructType::get(*context, {box_header_type, Type::getInt1Ty(*context)})));
-    Value *cond_i1 = builder->CreateLoad(builder->CreateGEP(cond, {builder->getInt64(0), builder->getInt32(1)}));
+    Value *cond_i1 = builder->CreateLoad(builder->CreateStructGEP(cond, 1));
     builder->CreateCondBr(cond_i1, then, else_);
 }
 
@@ -243,9 +250,7 @@ extern "C" void phi_add_incoming(PHINode *phi, Value *val, BasicBlock *bb) {
 extern "C" Value *codegen_apply(Value *func_val, vector<Value *> *args) {
     FunctionType *func_type = get_function_type(args->size());
     Type *func_header_type = StructType::get(*context, {box_header_type, PointerType::getUnqual(func_type)});
-    Value *func = builder->CreateLoad(builder->CreateGEP(
-        builder->CreateBitCast(func_val, PointerType::getUnqual(func_header_type)),
-        {builder->getInt64(0), builder->getInt32(1)}));
+    Value *func = builder->CreateLoad(builder->CreateStructGEP(builder->CreateBitCast(func_val, PointerType::getUnqual(func_header_type)), 1));
     args->push_back(func_val);
     Value *val = builder->CreateCall(func_type, func, *args);
     args->pop_back();
@@ -269,7 +274,7 @@ extern "C" Value *codegen_get_captures(Type *captures_type) {
 }
 
 extern "C" Value *codegen_extract_capture(Value *captures, u64 i) {
-    return builder->CreateLoad(builder->CreateGEP(captures, {builder->getInt64(0), builder->getInt32(1 + i)}));
+    return builder->CreateLoad(builder->CreateStructGEP(captures, 1 + i));
 }
 
 extern "C" void codegen_ret(Value *val) {
@@ -283,7 +288,7 @@ extern "C" Value *codegen_func_val(Function *func, vector<Value *> *captures, Ty
     builder->SetInsertPoint(BasicBlock::Create(*context, "", dtor));
     Value *dtor_val = builder->CreateBitCast(dtor->getArg(0), PointerType::getUnqual(type));
     for (size_t i = 0; i < captures->size(); i++) {
-        Value *capture = builder->CreateLoad(builder->CreateGEP(dtor_val, {builder->getInt64(0), builder->getInt32(1 + i)}));
+        Value *capture = builder->CreateLoad(builder->CreateStructGEP(dtor_val, 1 + i));
         if (capture->getType() == box_type)
             codegen_rc_decr(capture);
         else
@@ -296,9 +301,9 @@ extern "C" Value *codegen_func_val(Function *func, vector<Value *> *captures, Ty
     // Build value
     Value *val = codegen_malloc(type);
     codegen_box_header_init(val, dtor);
-    builder->CreateStore(func, builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(0), builder->getInt32(1)}));
+    builder->CreateStore(func, cg_gep(val, {builder->getInt32(0), builder->getInt32(1)}));
     for (size_t i = 0; i < captures->size(); i++)
-        builder->CreateStore((*captures)[i], builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1 + i)}));
+        builder->CreateStore((*captures)[i], builder->CreateStructGEP(val, 1 + i));
     return builder->CreateBitCast(val, box_type);
 }
 
@@ -338,7 +343,7 @@ extern "C" void bind_pattern_end(PatternEnd *pattern_end, BasicBlock *fail_block
 
 extern "C" PatternEnd *codegen_int_pattern_test(Value *val, u64 n) {
     val = builder->CreateBitCast(val, PointerType::getUnqual(StructType::get(*context, {box_header_type, Type::getInt64Ty(*context)})));
-    Value *val_i64 = builder->CreateLoad(builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1)}));
+    Value *val_i64 = builder->CreateLoad(builder->CreateStructGEP(val, 1));
     Value *eq_test = builder->CreateICmpEQ(val_i64, builder->getInt64(n));
     BasicBlock *parent_block = builder->GetInsertBlock();
     BasicBlock *success_block = BasicBlock::Create(*context, "", parent_block->getParent());
@@ -363,7 +368,7 @@ extern "C" Value *codegen_tagged_cast(Value *val, u64 n) {
 }
 
 extern "C" PatternEnd *codegen_tag_check(Value *val, u64 tag) {
-    Value *val_tag = builder->CreateLoad(builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(0), builder->getInt32(1)}));
+    Value *val_tag = builder->CreateLoad(cg_gep(val, {builder->getInt32(0), builder->getInt32(1)}));
     Value *tag_test = builder->CreateICmpEQ(val_tag, builder->getInt64(tag));
     BasicBlock *parent_block = builder->GetInsertBlock();
     BasicBlock *success_block = BasicBlock::Create(*context, "", parent_block->getParent());
@@ -372,7 +377,7 @@ extern "C" PatternEnd *codegen_tag_check(Value *val, u64 tag) {
 }
 
 extern "C" Value *codegen_tuple_get(Value *val, u64 i) {
-    return builder->CreateLoad(builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1 + i)}));
+    return builder->CreateLoad(builder->CreateStructGEP(val, 1 + i));
 }
 
 extern "C" Value *codegen_list_cast(Value *val) {
@@ -380,7 +385,7 @@ extern "C" Value *codegen_list_cast(Value *val) {
 }
 
 extern "C" PatternEnd *codegen_len_check(Value *val, u64 len) {
-    Value *val_len = builder->CreateLoad(builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(1)}));
+    Value *val_len = builder->CreateLoad(builder->CreateStructGEP(val, 1));
     Value *len_test = builder->CreateICmpEQ(val_len, builder->getInt64(len));
     BasicBlock *parent_block = builder->GetInsertBlock();
     BasicBlock *success_block = BasicBlock::Create(*context, "", parent_block->getParent());
@@ -389,7 +394,7 @@ extern "C" PatternEnd *codegen_len_check(Value *val, u64 len) {
 }
 
 extern "C" Value *codegen_list_get(Value *val, u64 i) {
-    return builder->CreateLoad(builder->CreateGEP(val, {builder->getInt64(0), builder->getInt32(3), builder->getInt64(i)}));
+    return builder->CreateLoad(cg_gep(val, {builder->getInt32(3), builder->getInt64(i)}));
 }
 
 extern "C" Value *codegen_extern(vector<u64> *name_vector, u64 params, u64 ret_int) {
@@ -412,13 +417,13 @@ extern "C" Value *codegen_extern(vector<u64> *name_vector, u64 params, u64 ret_i
     vector<Value *> extern_func_args;
     for (u64 i = 0; i < params; i++) {
         Value *arg = builder->CreateBitCast(func->getArg(i), PointerType::getUnqual(StructType::get(*context, {box_header_type, Type::getInt64Ty(*context)})));
-        extern_func_args.push_back(builder->CreateLoad(builder->CreateGEP(arg, {builder->getInt64(0), builder->getInt32(1)})));
+        extern_func_args.push_back(builder->CreateLoad(builder->CreateStructGEP(arg, 1)));
     }
     Value *extern_func_ret = builder->CreateCall(extern_func->getFunctionType(), extern_func, extern_func_args);
     if (ret_int) {
         Value *ret = codegen_malloc(StructType::get(*context, {box_header_type, Type::getInt64Ty(*context)}));
         codegen_box_header_init(ret, base_dtor);
-        builder->CreateStore(extern_func_ret, builder->CreateGEP(ret, {builder->getInt64(0), builder->getInt32(1)}));
+        builder->CreateStore(extern_func_ret, builder->CreateStructGEP(ret, 1));
         builder->CreateRet(builder->CreateBitCast(ret, box_type));
     } else {
         builder->CreateRet(codegen_tuple_({}, -1));
