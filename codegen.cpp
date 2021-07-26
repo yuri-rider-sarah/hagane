@@ -1,6 +1,7 @@
 #include "global.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -13,6 +14,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 #include <iostream>
 
@@ -21,6 +24,7 @@ using namespace llvm;
 static LLVMContext *context;
 static IRBuilder<> *builder;
 static Module *module_;
+static TargetMachine *target_machine;
 
 static Function *malloc_func;
 static Function *free_func;
@@ -95,7 +99,7 @@ extern "C" void llvm_init() {
         errs() << "Error looking up target: " << error << "\n";
         exit(1);
     }
-    TargetMachine *target_machine = target->createTargetMachine(target_triple, "generic", "", TargetOptions(), Optional<Reloc::Model>(Reloc::PIC_));
+    target_machine = target->createTargetMachine(target_triple, "generic", "", TargetOptions(), Optional<Reloc::Model>(Reloc::PIC_));
     DataLayout data_layout = target_machine->createDataLayout();
     context = new LLVMContext();
     SMDiagnostic err;
@@ -466,8 +470,29 @@ extern "C" Value *codegen_extern(vector<u64> *name_vector, u64 params, u64 ret_i
 
 extern "C" void llvm_fin() {
     cg_ret_void();
+    outs() << "\n=== Unoptimized IR:\n\n";
     module_->print(outs(), nullptr);
     if (verifyModule(*module_, &errs()) == true) {
         exit(1);
     }
+    legacy::PassManager pm;
+    PassManagerBuilder pmb;
+    pmb.OptLevel = 3;
+    pmb.Inliner = createFunctionInliningPass();
+    pmb.populateModulePassManager(pm);
+    error_code file_ec;
+    raw_fd_ostream file("out.o", file_ec);
+    if (file_ec) {
+        errs() << "Failed to open file: " << file_ec.message() << "\n";
+        exit(1);
+    }
+    target_machine->addPassesToEmitFile(pm, file, nullptr, CGFT_ObjectFile);
+    pm.run(*module_);
+    outs() << "\n=== Optimized IR:\n\n";
+    module_->print(outs(), nullptr);
+    string command = "clang program_main.c out.o -o out";
+    int linker_ret = system(command.c_str());
+    remove("out.o");
+    if (linker_ret != 0)
+        exit(1);
 }
