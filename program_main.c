@@ -8,6 +8,10 @@ static void error(char *msg) {
     exit(1);
 }
 
+void overflow_error(void) {
+    error("Arithmetic overflow");
+}
+
 void div_by_zero_error(void) {
     error("Division by zero");
 }

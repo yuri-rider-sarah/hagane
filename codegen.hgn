@@ -37,6 +37,9 @@ extern. codegen_list_cast ‡(Int : Int)
 extern. codegen_len_check ‡(Int Int : Int)
 extern. codegen_list_get ‡(Int Int : Int)
 extern. codegen_extern ‡(Int Int Int : Int)
+extern. codegen_arith_primitive ‡(Int : Int)
+extern. codegen_div_primitive ‡(Int : Int)
+extern. codegen_cmp_primitive ‡(Int : Int)
 
 let. begin_new_block λ.{}
     let. bb create_block()
@@ -76,6 +79,17 @@ let. get_empty_c_context λ.{}
         list.(
         #("⊤" C_ConstVar(codegen_const_bool(1)))
         #("⊥" C_ConstVar(codegen_const_bool(0)))
+        #("+" C_ConstVar(codegen_arith_primitive(0)))
+        #("-" C_ConstVar(codegen_arith_primitive(1)))
+        #("*" C_ConstVar(codegen_arith_primitive(2)))
+        #("/" C_ConstVar(codegen_div_primitive(0)))
+        #("%" C_ConstVar(codegen_div_primitive(1)))
+        #("=" C_ConstVar(codegen_cmp_primitive(0)))
+        #("≠" C_ConstVar(codegen_cmp_primitive(1)))
+        #("<" C_ConstVar(codegen_cmp_primitive(2)))
+        #("≤" C_ConstVar(codegen_cmp_primitive(3)))
+        #(">" C_ConstVar(codegen_cmp_primitive(4)))
+        #("≥" C_ConstVar(codegen_cmp_primitive(5)))
         )
     )
 
