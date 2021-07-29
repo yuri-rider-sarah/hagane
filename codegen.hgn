@@ -79,6 +79,9 @@ let. c_lookup_var λ.{name 'List(Int) context 'C_Context}
         unreachable("Variable not found in context")
         C_ConstVar(0)
 
+let. extern_binding λ.{name 'List(Int) num_params 'Int ret_int 'Int}
+    #(name C_ConstVar(codegen_extern(list→vector(name) num_params ret_int)))
+
 let. get_empty_c_context λ.{}
     C_Context(
         list.(
@@ -101,6 +104,13 @@ let. get_empty_c_context λ.{}
         #("put" C_ConstVar(codegen_put_primitive()))
         #("push" C_ConstVar(codegen_push_primitive()))
         #("pop" C_ConstVar(codegen_pop_primitive()))
+        extern_binding("print_int" 1 0)
+        extern_binding("read_int" 0 1)
+        extern_binding("print_byte" 1 0)
+        extern_binding("read_byte" 0 1)
+        extern_binding("get_argc" 0 1)
+        extern_binding("get_argv_len" 1 1)
+        extern_binding("get_argv_byte" 2 1)
         )
     )
 
