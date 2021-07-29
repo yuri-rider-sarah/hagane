@@ -1,5 +1,5 @@
 TARGET = hagane
-HAGANE = ./_hagane
+HAGANE = hagane-0.0.5
 CXX = clang++
 CXXFLAGS = -Wall
 HGN_FLAGS =
