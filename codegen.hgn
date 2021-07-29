@@ -66,7 +66,7 @@ let. c_add_let_binding λ.{context 'C_Context name 'List(Int) var 'C_Variable}
 
 let. c_lookup_var λ.{name 'List(Int) context 'C_Context}
     let. mut, r None[C_Variable]()
-    let. C_Context(vars _) context
+    let. C_Context(vars) context
     for[#(List(Int) C_Variable)](vars λ.(var '#(List(Int) C_Variable)
         let. #(name′ val) var
         if. =list[Int](name′ name =)
@@ -305,7 +305,7 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
                 let. TypeName(int_type_index) int_type
                 for[T_Type](params λ.(param 'T_Type
                     match. param
-                    .T_Named(i)
+                    .T_Named(i _)
                         if. ≠(i int_type_index)
                             error(InvalidExternType(name) file_pos)
                         else, #()
@@ -313,7 +313,7 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
                         error(InvalidExternType(name) file_pos)
                 ))
                 let. ret_int match. ret
-                    .T_Named(i)
+                    .T_Named(i _)
                         if. ≠(i int_type_index)
                             error(InvalidExternType(name) file_pos)
                         else, #()
