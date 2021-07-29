@@ -17,7 +17,7 @@ void div_by_zero_error(void) {
 }
 
 void bounds_error(void) {
-    error("List index out of bounds");
+    error("List index out of range");
 }
 
 static void *s_malloc(size_t n) {

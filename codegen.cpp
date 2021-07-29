@@ -40,6 +40,7 @@ static Function *box_rc_decr;
 static Function *cell_rc_decr;
 static Function *overflow_error_func;
 static Function *div_by_zero_error_func;
+static Function *bounds_error_func;
 
 static StructType *struct_type(ArrayRef<Type *> elems) {
     return StructType::get(*context, elems);
@@ -77,6 +78,8 @@ static Value *cg_call(Function *func, ArrayRef<Value *> args) {
 #define cg_mul builder->CreateMul
 #define cg_icmp_eq builder->CreateICmpEQ
 #define cg_icmp_sge builder->CreateICmpSGE
+#define cg_icmp_ult builder->CreateICmpULT
+#define cg_icmp_uge builder->CreateICmpUGE
 
 static Value *cg_gep(Value *val, vector<Value *> idx_) {
     vector<Value *> idx = {cg_i64(0)};
@@ -147,6 +150,7 @@ extern "C" void llvm_init() {
     FunctionType *error_func_type = FunctionType::get(Type::getVoidTy(*context), false);
     overflow_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "overflow_error", module_);
     div_by_zero_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "div_by_zero_error", module_);
+    bounds_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "bounds_error", module_);
 }
 
 extern "C" BasicBlock *create_block() {
@@ -244,16 +248,20 @@ extern "C" Value *codegen_tuple(vector<Value *> *elems) {
     return codegen_tuple_(*elems, -1);
 }
 
+static Value *codegen_malloc_list(Value *size) {
+    Value *data_size = cg_mul(ConstantExpr::getSizeOf(box_type), size);
+    return codegen_malloc(cg_add(ConstantExpr::getOffsetOf(list_type, 3), data_size), list_type);
+}
+
 extern "C" Value *codegen_list(vector<Value *> *elems) {
-    Value *data_size = cg_mul(ConstantExpr::getSizeOf(box_type), cg_i64(elems->size()));
-    Value *val = codegen_malloc(cg_add(ConstantExpr::getOffsetOf(list_type, 3), data_size), list_type);
+    Value *val = codegen_malloc_list(cg_i64(elems->size()));
     codegen_box_header_init(val, list_dtor);
     cg_store(cg_i64(elems->size()), cg_sgep(val, 1));
     cg_store(cg_i64(elems->size()), cg_sgep(val, 2));
     for (size_t i = 0; i < elems->size(); i++) {
         cg_store((*elems)[i], cg_gep(val, {cg_i32(3), cg_i64(i)}));
     }
-    return val;
+    return cg_bitcast(val, box_type);
 }
 
 extern "C" void codegen_cell_rc_incr(Value *ptr) {
@@ -509,7 +517,7 @@ extern "C" Value *codegen_arith_primitive(u64 op) {
     set_insert_block(exit_block);
     cg_ret(codegen_boxed(cg_extract_value(r, {0})));
 
-     set_insert_block(saved_bb);
+    set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
 }
 
@@ -594,6 +602,128 @@ extern "C" Value *codegen_cmp_primitive(u64 pred) {
     Value *a = cg_load(cg_sgep(cg_bitcast(func->getArg(0), pointer_type(struct_type({box_header_type, i64_type}))), 1));
     Value *b = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
     cg_ret(codegen_boxed(builder->CreateICmp(cmp_predicates[pred], a, b)));
+    set_insert_block(saved_bb);
+    return codegen_boxed_fuction(func);
+}
+
+extern "C" Value *codegen_len_primitive() {
+    BasicBlock *saved_bb = builder->GetInsertBlock();
+    Function *func = create_function(get_function_type(1));
+    set_insert_block(create_basic_block(func));
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
+    cg_ret(codegen_boxed(cg_load(cg_sgep(l, 1))));
+    set_insert_block(saved_bb);
+    return codegen_boxed_fuction(func);
+}
+
+extern "C" Value *codegen_get_primitive() {
+    BasicBlock *saved_bb = builder->GetInsertBlock();
+    Function *func = create_function(get_function_type(2));
+    BasicBlock *entry_block = create_basic_block(func);
+    BasicBlock *out_of_range_block = create_basic_block(func);
+    BasicBlock *exit_block = create_basic_block(func);
+
+    set_insert_block(entry_block);
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
+    Value *i = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    Value *len = cg_load(cg_sgep(l, 1));
+    cg_cond_br(cg_icmp_uge(i, len), out_of_range_block, exit_block);
+
+    set_insert_block(out_of_range_block);
+    cg_call(bounds_error_func, {});
+    cg_unreachable();
+
+    set_insert_block(exit_block);
+    cg_ret(cg_load(cg_gep(l, {cg_i32(3), i})));
+    set_insert_block(saved_bb);
+    return codegen_boxed_fuction(func);
+}
+
+static void codegen_copy_loop(Value *len, Value *src, Value *dest) {
+    BasicBlock *parent_block = get_insert_block();
+    BasicBlock *copy_check_block = create_basic_block(parent_block->getParent());
+    BasicBlock *copy_loop_block = create_basic_block(parent_block->getParent());
+    BasicBlock *exit_block = create_basic_block(parent_block->getParent());
+    cg_br(copy_check_block);
+
+    // blocks defined out of order so variables are declared before use
+    set_insert_block(copy_check_block);
+    PHINode *ci = cg_phi(i64_type, 2);
+
+    set_insert_block(copy_loop_block);
+    cg_store(cg_load(cg_gep(src, {ci})), cg_gep(dest, {ci}));
+    Value *ci1 = cg_add(ci, cg_i64(1));
+    cg_br(copy_check_block);
+
+    set_insert_block(copy_check_block);
+    ci->addIncoming(cg_i64(0), parent_block);
+    ci->addIncoming(ci1, copy_loop_block);
+    cg_cond_br(cg_icmp_ult(ci, len), copy_loop_block, exit_block);
+
+    set_insert_block(exit_block);
+}
+
+extern "C" Value *codegen_put_primitive() {
+    BasicBlock *saved_bb = builder->GetInsertBlock();
+    Function *func = create_function(get_function_type(3));
+    BasicBlock *entry_block = create_basic_block(func);
+    BasicBlock *out_of_range_block = create_basic_block(func);
+    BasicBlock *alloc_block = create_basic_block(func);
+
+    set_insert_block(entry_block);
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
+    Value *i = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    Value *len = cg_load(cg_sgep(l, 1));
+    cg_cond_br(cg_icmp_uge(i, len), out_of_range_block, alloc_block);
+
+    set_insert_block(out_of_range_block);
+    cg_call(bounds_error_func, {});
+    cg_unreachable();
+
+    set_insert_block(alloc_block);
+    Value *val = codegen_malloc_list(len);
+    codegen_box_header_init(val, list_dtor);
+    cg_store(len, cg_sgep(val, 1));
+    cg_store(len, cg_sgep(val, 2));
+
+    codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3));
+    cg_store(cg_bitcast(func->getArg(2), box_type), cg_gep(val, {cg_i32(3), i}));
+    cg_ret(cg_bitcast(val, box_type));
+    set_insert_block(saved_bb);
+    return codegen_boxed_fuction(func);
+}
+
+extern "C" Value *codegen_push_primitive() {
+    BasicBlock *saved_bb = builder->GetInsertBlock();
+    Function *func = create_function(get_function_type(2));
+    set_insert_block(create_basic_block(func));
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
+    Value *len = cg_load(cg_sgep(l, 1));
+    Value *new_len = cg_add(len, cg_i64(1));
+    Value *val = codegen_malloc_list(new_len);
+    codegen_box_header_init(val, list_dtor);
+    cg_store(new_len, cg_sgep(val, 1));
+    cg_store(new_len, cg_sgep(val, 2));
+    codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3));
+    cg_store(cg_bitcast(func->getArg(1), box_type), cg_gep(val, {cg_i32(3), len}));
+    cg_ret(cg_bitcast(val, box_type));
+    set_insert_block(saved_bb);
+    return codegen_boxed_fuction(func);
+}
+
+extern "C" Value *codegen_pop_primitive() {
+    BasicBlock *saved_bb = builder->GetInsertBlock();
+    Function *func = create_function(get_function_type(1));
+    set_insert_block(create_basic_block(func));
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
+    Value *len = cg_load(cg_sgep(l, 1));
+    Value *new_len = cg_sub(len, cg_i64(1));
+    Value *val = codegen_malloc_list(new_len);
+    codegen_box_header_init(val, list_dtor);
+    cg_store(new_len, cg_sgep(val, 1));
+    cg_store(new_len, cg_sgep(val, 2));
+    codegen_copy_loop(new_len, cg_sgep(l, 3), cg_sgep(val, 3));
+    cg_ret(cg_bitcast(val, box_type));
     set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
 }
