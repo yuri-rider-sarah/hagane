@@ -728,17 +728,20 @@ extern "C" Value *codegen_pop_primitive() {
     return codegen_boxed_fuction(func);
 }
 
-extern "C" void llvm_fin() {
+extern "C" void llvm_fin(u64 opt_level, u64 print_ir_unpot, u64 print_ir, vector<vector<u64> *> *cc_args, vector<u64> *output_file) {
     cg_ret_void();
-    outs() << "\n=== Unoptimized IR:\n\n";
-    module_->print(outs(), nullptr);
+    if (print_ir_unpot) {
+        errs() << "\n=== Unoptimized IR:\n\n";
+        module_->print(errs(), nullptr);
+    }
     if (verifyModule(*module_, &errs()) == true) {
         exit(1);
     }
     legacy::PassManager pm;
     PassManagerBuilder pmb;
-    pmb.OptLevel = 3;
-    pmb.Inliner = createFunctionInliningPass();
+    pmb.OptLevel = opt_level;
+    if (opt_level >= 2)
+        pmb.Inliner = createFunctionInliningPass();
     pmb.populateModulePassManager(pm);
     error_code file_ec;
     raw_fd_ostream file("out.o", file_ec);
@@ -748,9 +751,18 @@ extern "C" void llvm_fin() {
     }
     target_machine->addPassesToEmitFile(pm, file, nullptr, CGFT_ObjectFile);
     pm.run(*module_);
-    outs() << "\n=== Optimized IR:\n\n";
-    module_->print(outs(), nullptr);
-    string command = "clang program_main.c out.o -o out";
+    if (print_ir) {
+        errs() << "\n=== Optimized IR:\n\n";
+        module_->print(errs(), nullptr);
+    }
+    string command = "clang program_main.c out.o -o ";
+    for (u64 c : *output_file)
+        command.push_back(c);
+    for (vector<u64> *cc_arg : *cc_args) {
+        command.push_back(' ');
+        for (u64 c : *cc_arg)
+            command.push_back(c);
+    }
     int linker_ret = system(command.c_str());
     remove("out.o");
     if (linker_ret != 0)

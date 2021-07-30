@@ -1,10 +1,36 @@
 extern. file_contents ‡(Int : Int)
 extern. llvm_init ‡(: #())
-extern. llvm_fin ‡(: #())
+extern. llvm_fin ‡(Int Int Int Int Int : #())
 
 let. argv map_ι[List(Int)](-(get_argc() 1) λ.(i 'Int map_ι[Int](get_argv_len(+(i 1)) λ.(j 'Int get_argv_byte(+(i 1) j)))))
 
-let. files map[List(Int) #(List(Int) List(Int))](argv λ.(filename 'List(Int)
+let. mut, filenames empty[List(Int)]
+let. mut, opt_level 0
+let. mut, print_ir_unopt ⊥
+let. mut, print_ir ⊥
+let. mut, cc_args empty[List(Int)]
+let. mut, output_file "out"
+
+for[List(Int)](argv λ.(arg 'List(Int)
+    if. if.(>(len[Int](arg) 0) =(get[Int](arg 0) #!-) ⊥)
+    then, match. arg
+        ."-O0" set. opt_level 0
+        ."-O1" set. opt_level 1
+        ."-O2" set. opt_level 2
+        ."-O3" set. opt_level 3
+        ."-print-ir-unopt" set. print_ir_unopt ⊤
+        ."-print-ir" set. print_ir ⊤
+        ._
+            if. >(len[Int](arg) 1)
+                match. get[Int](arg 1)
+                .#!L set. cc_args push[List(Int)](cc_args drop[Int](arg 2))
+                .#!o set. output_file drop[Int](arg 2)
+                ._ string_error(++[Int]("Invalid argument: " arg))
+            else, string_error(++[Int]("Invalid argument: " arg))
+    else, set. filenames push[List(Int)](filenames arg)
+))
+
+let. files map[List(Int) #(List(Int) List(Int))](filenames λ.(filename 'List(Int)
     #(filename vector→list(utf8_decode(file_contents(list→vector(filename)))))
 ))
 let. mut, lexer lexer(files)
@@ -22,4 +48,4 @@ let. i_statements u_statements→i_statements(u_statements empty_i_context new_t
 let. t_statements i_statements→t_statements(i_statements empty_t_context)
 llvm_init()
 codegen_statements(t_statements get_empty_c_context())
-llvm_fin()
+llvm_fin(opt_level if.(print_ir_unopt 1 0) if.(print_ir 1 0) list→vector(map[List(Int) Int](cc_args λ.(x 'List(Int) utf8_encode(list→vector(x))))) utf8_encode(list→vector(output_file)))

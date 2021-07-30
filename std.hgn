@@ -46,6 +46,14 @@ let. ∀,{T} last λ.{xs 'List(T)}
     then, Some[T](get[T](xs -(len[T](xs) 1)))
     else, None[T]()
 
+let. ∀,{T} drop λ.{xs 'List(T) n 'Int}
+    let. mut, r empty[T]
+    let. mut, i n
+    while. <(i len[T](xs))
+        set. r push[T](r get[T](xs i))
+        set. i +(i 1)
+    r
+
 let. ∀,{T} ∈ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
     let. mut, r ⊥
     for[T](ys λ.(y 'T
