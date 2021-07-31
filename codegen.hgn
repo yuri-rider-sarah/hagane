@@ -56,6 +56,12 @@ type. C_Variable
     C_MutVar(Int)
     C_Ctor(Int Option(Int))
 
+let. codegen_var_rc_incr λ.{var 'C_Variable}
+    match. var
+    .C_ConstVar(val) codegen_rc_incr(val)
+    .C_MutVar(var) codegen_cell_rc_incr(var)
+    .C_Ctor(val _) codegen_rc_incr(val)
+
 type. C_Context C_Context(
     List(#(List(Int) C_Variable)) ※ vars
 )
@@ -123,17 +129,22 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
     match. expr_data
     .T_IntLiteral(n) codegen_const_int(n)
     .T_Ident(name _)
-        match. c_lookup_var(name context)
-        .C_ConstVar(val) val
-        .C_MutVar(var) codegen_load_mut_var(var)
-        .C_Ctor(ctor _) ctor
+        let. val match. c_lookup_var(name context)
+            .C_ConstVar(val) val
+            .C_MutVar(var) codegen_load_mut_var(var)
+            .C_Ctor(ctor _) ctor
+        codegen_rc_incr(val)
+        val
     .T_Tuple(exprs)
         codegen_tuple(list→vector(map[T_Expr Int](exprs λ.(e 'T_Expr codegen_expr(e context)))))
     .T_Apply(func args)
         codegen_apply(codegen_expr(func context) list→vector(map[T_Expr Int](args λ.(e 'T_Expr codegen_expr(e context)))))
     .T_Set(name expr)
         match. c_lookup_var(name context)
-        .C_MutVar(var) codegen_store_mut_var(var codegen_expr(expr context))
+        .C_MutVar(var)
+            let. val codegen_expr(expr context)
+            codegen_rc_decr(codegen_load_mut_var(var))
+            codegen_store_mut_var(var val)
         ._ error(AssignToConst(name) file_pos)
         codegen_tuple(list→vector(empty[Int]))
     .T_If(cond then else)
@@ -164,7 +175,7 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         let. cond_val codegen_expr(cond context)
         let. cond_val_block get_insert_block()
         let. body_block begin_new_block()
-        codegen_expr(body context)
+        codegen_rc_decr(codegen_expr(body context))
         codegen_br(cond_block)
         let. merge_block create_block()
         set_insert_block(cond_val_block)
@@ -178,14 +189,20 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         let. outer_captures list→vector(map[#(List(Int) C_Variable) Int](vars λ.(binding '#(List(Int) C_Variable)
             let. #(_ var) binding
             match. var
-            .C_ConstVar(val) val
-            .C_MutVar(ptr) ptr
-            .C_Ctor(ctor _) ctor
+            .C_ConstVar(val)
+                codegen_rc_incr(val)
+                val
+            .C_MutVar(ptr)
+                codegen_cell_rc_incr(ptr)
+                ptr
+            .C_Ctor(ctor _)
+                codegen_rc_incr(ctor)
+                ctor
         )))
         let. captures_type get_captures_type(len[T_Pattern](params) outer_captures)
         let. func begin_new_function(len[T_Pattern](params))
         let. inner_captures codegen_get_captures(captures_type)
-        let. context′ C_Context(++[#(List(Int) C_Variable)](
+        let. vars′ ++[#(List(Int) C_Variable)](
             map_ι[#(List(Int) C_Variable)](len[#(List(Int) C_Variable)](vars) λ.(i 'Int
                 let. cap codegen_extract_capture(inner_captures i)
                 let. #(name var) get[#(List(Int) C_Variable)](vars i)
@@ -193,17 +210,30 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
                     .C_ConstVar(_) C_ConstVar(cap)
                     .C_MutVar(_) C_MutVar(cap)
                     .C_Ctor(_ tag) C_Ctor(cap tag)
+                codegen_var_rc_incr(var′)
                 #(name var′)
             ))
             concat[#(List(Int) C_Variable)](map_ι[List(#(List(Int) C_Variable))](len[T_Pattern](params) λ.(i 'Int
-                let. #(bindings pattern_ends) codegen_pattern_test(codegen_get_arg(i) get[T_Pattern](params i) context)
+                let. arg codegen_get_arg(i)
+                let. #(bindings pattern_ends) codegen_pattern_test(arg get[T_Pattern](params i) context)
                 if. ≠(len[Int](pattern_ends) 0)
                     unreachable("pattern_ends not empty")
                 else, #()
+                for[#(List(Int) C_Variable)](bindings λ.(binding '#(List(Int) C_Variable)
+                    let. #(_ var) binding
+                    codegen_var_rc_incr(var)
+                ))
+                codegen_rc_decr(arg)
                 bindings
             )))
-        ))
+        )
+        let. context′ C_Context(vars′)
+        codegen_rc_decr(inner_captures)
         let. ret_val codegen_expr(body context′)
+        for[#(List(Int) C_Variable)](vars′ λ.(binding '#(List(Int) C_Variable)
+            let. #(_ var) binding
+            codegen_var_rc_incr(var)
+        ))
         codegen_ret(ret_val)
         set_insert_block(parent_block)
         codegen_func_val(func outer_captures captures_type)
@@ -240,8 +270,10 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
             let. mut, context′ context
             for[#(List(Int) C_Variable)](bindings λ.(bind '#(List(Int) C_Variable)
                 let. #(name var) bind
+                codegen_var_rc_incr(var)
                 set. context′ c_add_let_binding(context′ name var)
             ))
+            codegen_rc_decr(matched_val)
             let. body_val codegen_expr(body context′)
             let. body_end get_insert_block()
             let. next_block create_block()
@@ -264,9 +296,6 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         phi
     .T_ListLiteral(exprs)
         codegen_list(list→vector(map[T_Expr Int](exprs λ.(e 'T_Expr codegen_expr(e context)))))
-    ._
-        unreachable("unimplemented (codegen_expr)")
-        0
 
 set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
     let. mut, context context
@@ -274,17 +303,22 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
     for[T_Statement](statements λ.(statement 'T_Statement
         match. statement
         .T_ExprStatement(expr)
+            match. block_val
+            .Some(val) codegen_rc_decr(val)
+            .None() #()
             set. block_val Some[Int](codegen_expr(expr context))
-            #()
         .T_Let(pattern expr)
-            let. #(bindings pattern_ends) codegen_pattern_test(codegen_expr(expr context) pattern context)
+            let. val codegen_expr(expr context)
+            let. #(bindings pattern_ends) codegen_pattern_test(val pattern context)
             if. ≠(len[Int](pattern_ends) 0)
                 unreachable("pattern_ends not empty")
             else, #()
             for[#(List(Int) C_Variable)](bindings λ.(bind '#(List(Int) C_Variable)
                 let. #(name var) bind
+                codegen_var_rc_incr(var)
                 set. context c_add_let_binding(context name var)
             ))
+            codegen_rc_decr(val)
         .T_Let∀(_ name expr)
             set. context c_add_let_binding(context name C_ConstVar(codegen_expr(expr context)))
         .T_LetMut(name expr)
@@ -325,9 +359,6 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
                 set. context c_add_let_binding(context name C_ConstVar(codegen_extern(utf8_encode(list→vector(name)) len[T_Type](params) if.(ret_int 1 0))))
             ._
                 error(InvalidExternType(name) file_pos)
-        ._
-            unreachable("unimplemented (codegen_statements)")
-            #()
     ))
     match. block_val
     .Some(block_val) block_val

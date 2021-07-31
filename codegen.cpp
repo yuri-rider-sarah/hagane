@@ -258,9 +258,8 @@ extern "C" Value *codegen_list(vector<Value *> *elems) {
     codegen_box_header_init(val, list_dtor);
     cg_store(cg_i64(elems->size()), cg_sgep(val, 1));
     cg_store(cg_i64(elems->size()), cg_sgep(val, 2));
-    for (size_t i = 0; i < elems->size(); i++) {
+    for (size_t i = 0; i < elems->size(); i++)
         cg_store((*elems)[i], cg_gep(val, {cg_i32(3), cg_i64(i)}));
-    }
     return cg_bitcast(val, box_type);
 }
 
@@ -299,6 +298,7 @@ extern "C" void codegen_br(BasicBlock *bb) {
 extern "C" void codegen_cond_br(Value *cond, BasicBlock *then, BasicBlock *else_) {
     cond = cg_bitcast(cond, pointer_type(struct_type({box_header_type, i1_type})));
     Value *cond_i1 = cg_load(cg_sgep(cond, 1));
+    codegen_rc_decr(cond);
     cg_cond_br(cond_i1, then, else_);
 }
 
@@ -481,6 +481,7 @@ extern "C" Value *codegen_extern(vector<u64> *name_vector, u64 params, u64 ret_i
     for (u64 i = 0; i < params; i++) {
         Value *arg = cg_bitcast(func->getArg(i), pointer_type(struct_type({box_header_type, i64_type})));
         extern_func_args.push_back(cg_load(cg_sgep(arg, 1)));
+        codegen_rc_decr(func->getArg(i));
     }
     Value *extern_func_ret = cg_call(extern_func, extern_func_args);
     if (ret_int)
