@@ -1,4 +1,4 @@
-extern. vector_string_error ‡(Int : #())
+extern. vector_string_error ‡(Int Int : #())
 
 type. FilePos FilePos(List(Int) Int Int)
 
@@ -41,8 +41,8 @@ type. Error
     LeakedType(List(Int))
     InvalidExternType(List(Int))
 
-let. string_error λ.{str 'List(Int)}
-    vector_string_error(utf8_encode(list→vector(str)))
+let. string_error λ.{str 'List(Int) internal 'Int}
+    vector_string_error(utf8_encode(list→vector(str)) internal)
 
 let. file_pos_string λ.{file_pos 'FilePos}
     let. FilePos(file_name line col) file_pos
@@ -68,7 +68,7 @@ let. error_string λ.{err 'Error}
     .InvalidExternType(name) ++[Int]("Invalid extern type for variable " name)
 
 let. error λ.{err 'Error file_pos 'FilePos}
-    string_error(concat[Int](list.(file_pos_string(file_pos) ": " error_string(err))))
+    string_error(concat[Int](list.(file_pos_string(file_pos) ": " error_string(err))) 0)
 
 let. unreachable λ.{err 'List(Int)}
-    string_error(++[Int]("Internal compiler error: " err))
+    string_error(++[Int]("Internal compiler error: " err) 1)

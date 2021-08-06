@@ -41,10 +41,13 @@ def run_test(test_name):
         else:
             break
     output_path = test_path + '.out'
-    compile_stderr_arg = subprocess.DEVNULL if expected_result == 'cfail' else None
+    compile_stderr_arg = subprocess.PIPE if expected_result == 'cfail' else None
     compile_result = subprocess.run([compiler, test_path, '-o' + output_path], stderr=compile_stderr_arg)
     if expected_result == 'cfail':
-        success = compile_result.returncode != 0
+        if compile_result.returncode not in [0, 1]:
+            sys.stderr.buffer.write(compile_result.stderr)
+            sys.stderr.buffer.flush()
+        success = compile_result.returncode == 1
     else:
         if compile_result.returncode == 0:
             program_stderr_arg = subprocess.DEVNULL if expected_result == 'fail' else None
