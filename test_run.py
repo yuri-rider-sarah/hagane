@@ -54,16 +54,17 @@ def run_test(test_name):
                 success = program_result.returncode != 0
             else:
                 success = program_result.returncode == 0
-            try:
-                program_stdout = program_result.stdout.decode('utf-8')
-                if program_stdout != expected_output:
+            if success:
+                try:
+                    program_stdout = program_result.stdout.decode('utf-8')
+                    if program_stdout != expected_output:
+                        print('Got output:')
+                        print(program_stdout)
+                        success = False
+                except UnicodeDecodeError:
                     print('Got output:')
-                    print(program_stdout)
+                    print(program_result.stdout)
                     success = False
-            except UnicodeDecodeError:
-                print('Got output:')
-                print(program_result.stdout)
-                success = False
         else:
             success = False
     try:
