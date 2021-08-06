@@ -177,25 +177,27 @@ let. unify_type_value′ λ.{t1 'I_Type t2 'I_Type err 'Error file_pos 'FilePos}
         error(err file_pos)
 
 set. unify_type′ λ.{tv1 'TypeVar tv2 'TypeVar err 'Error file_pos 'FilePos}
-    let. TypeVar(tvi1) tv1
-    let. TypeVar(tvi2) tv2
-    let. t1 get[I_Type](type_variables tvi1)
-    let. t2 get[I_Type](type_variables tvi2)
-    match. #(t1 t2)
-    .#(I_Any() _) assign_type_var(tv1 I_Equal(tv2) file_pos)
-    .#(_ I_Any()) assign_type_var(tv2 I_Equal(tv1) file_pos)
-    .#(I_Equal(tv1′) _) unify_type′(tv1′ tv2 err file_pos)
-    .#(_ I_Equal(tv2′)) unify_type′(tv1 tv2′ err file_pos)
-    ._ unify_type_value′(t1 t2 err file_pos)
+    if. =type_var(tv1 tv2) #()
+    else,
+        let. TypeVar(tvi1) tv1
+        let. TypeVar(tvi2) tv2
+        let. t1 get[I_Type](type_variables tvi1)
+        let. t2 get[I_Type](type_variables tvi2)
+        match. #(t1 t2)
+        .#(I_Equal(tv1′) _) unify_type′(tv1′ tv2 err file_pos)
+        .#(_ I_Equal(tv2′)) unify_type′(tv1 tv2′ err file_pos)
+        .#(I_Any() _) assign_type_var(tv1 I_Equal(tv2) file_pos)
+        .#(_ I_Any()) assign_type_var(tv2 I_Equal(tv1) file_pos)
+        ._ unify_type_value′(t1 t2 err file_pos)
 
 set. set_type′ λ.{tv1 'TypeVar t2 'I_Type err 'Error file_pos 'FilePos}
     let. TypeVar(tvi1) tv1
     let. t1 get[I_Type](type_variables tvi1)
     match. #(t1 t2)
-    .#(I_Any() _) assign_type_var(tv1 t2 file_pos)
-    .#(_ I_Any()) #()
     .#(I_Equal(tv1′) _) set_type′(tv1′ t2 err file_pos)
     .#(_ I_Equal(tv2′)) unify_type′(tv1 tv2′ err file_pos)
+    .#(I_Any() _) assign_type_var(tv1 t2 file_pos)
+    .#(_ I_Any()) #()
     ._ unify_type_value′(t1 t2 err file_pos)
 
 let. unify_type λ.{tv1 'TypeVar tv2 'TypeVar file_pos 'FilePos}
