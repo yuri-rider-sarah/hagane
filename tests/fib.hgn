@@ -1,4 +1,4 @@
-※ 7540113804746346429
+※ 4660046610375530309
 let. mut, fib λ.{n 'Int} n
 set. fib λ.{n 'Int}
     let. mut, a 0
@@ -11,4 +11,4 @@ set. fib λ.{n 'Int}
         set. i +(i 1)
     a
 
-print_int(fib(92))
+print_int(fib(91))
