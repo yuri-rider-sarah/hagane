@@ -1,7 +1,5 @@
 ※ 3
-type. ∀,{T} Option
-    Some(T)
-    None()
+type. ∀,{T} Pair Pair(T)
 
-let. Some(x) Some[Int](+(1 2))
+let. Pair(x) Pair[Int](+(1 2))
 print_int(x)

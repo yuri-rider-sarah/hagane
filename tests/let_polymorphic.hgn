@@ -19,7 +19,7 @@ let. ∀,{T} foreach λ.{a 'List(T) f '‡(T : #())}
     #()
 
 let. ∀,{T U V} ∘ λ.{f '‡(U : V) g '‡(T : U)}
-    λ.({x 'T} f(g(x)) 'V)
+    λ.({x 'T} f(g(x)))
 
 let. succ λ.{n 'Int} +(n 1)
 
@@ -33,7 +33,7 @@ set. a push[Int](a 1)
 set. a push[Int](a 2)
 set. a push[Int](a 3)
 let. b map[Int Int](a ∘[Int Int Int](succ square))
-let. c map[Int Int](a ∘[Int Bool Int](bool→int λ.(n'Int ⇒, =(%(n 2) 0) 'Bool)))
+let. c map[Int Int](a ∘[Int Bool Int](bool→int λ.(n'Int ⇒, =(%(n 2) 0))))
 
 foreach[Int](b print_int)
 foreach[Int](c print_int)

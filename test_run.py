@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import ast
 import os
 import subprocess
 import sys
@@ -34,7 +33,7 @@ def run_test(test_name):
                 elif command == 'cfail':
                     expected_result = 'cfail'
                 elif command == 'esc':
-                    expected_output += arg.replace('\\0', '\0')
+                    expected_output += arg.replace('\\0', '\0') + '\n'
                 else:
                     raise RuntimeError('Invalid test command')
             else:
