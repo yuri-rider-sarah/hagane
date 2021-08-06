@@ -21,7 +21,8 @@ extern. phi_add_incoming ‡(Int Int Int : #())
 extern. codegen_apply ‡(Int Int : Int)
 extern. codegen_get_arg ‡(Int : Int)
 extern. get_captures_type ‡(Int Int : Int)
-extern. codegen_get_captures ‡(Int : Int)
+extern. codegen_get_captures ‡(: Int)
+extern. codegen_pointer_bitcast ‡(Int Int : Int)
 extern. codegen_extract_capture ‡(Int Int : Int)
 extern. codegen_ret ‡(Int : #())
 extern. codegen_func_val ‡(Int Int Int : Int)
@@ -201,7 +202,8 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         )))
         let. captures_type get_captures_type(len[T_Pattern](params) outer_captures)
         let. func begin_new_function(len[T_Pattern](params))
-        let. inner_captures codegen_get_captures(captures_type)
+        let. inner_captures_box codegen_get_captures()
+        let. inner_captures codegen_pointer_bitcast(inner_captures_box captures_type)
         let. vars′ ++[#(List(Int) C_Variable)](
             map_ι[#(List(Int) C_Variable)](len[#(List(Int) C_Variable)](vars) λ.(i 'Int
                 let. cap codegen_extract_capture(inner_captures i)
@@ -228,7 +230,7 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
             )))
         )
         let. context′ C_Context(vars′)
-        codegen_rc_decr(inner_captures)
+        codegen_rc_decr(inner_captures_box)
         let. ret_val codegen_expr(body context′)
         for[#(List(Int) C_Variable)](vars′ λ.(binding '#(List(Int) C_Variable)
             let. #(_ var) binding

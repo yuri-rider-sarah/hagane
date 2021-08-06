@@ -295,10 +295,10 @@ extern "C" void codegen_br(BasicBlock *bb) {
     cg_br(bb);
 }
 
-extern "C" void codegen_cond_br(Value *cond, BasicBlock *then, BasicBlock *else_) {
-    cond = cg_bitcast(cond, pointer_type(struct_type({box_header_type, i1_type})));
+extern "C" void codegen_cond_br(Value *cond_box, BasicBlock *then, BasicBlock *else_) {
+    Value *cond = cg_bitcast(cond_box, pointer_type(struct_type({box_header_type, i1_type})));
     Value *cond_i1 = cg_load(cg_sgep(cond, 1));
-    codegen_rc_decr(cond);
+    codegen_rc_decr(cond_box);
     cg_cond_br(cond_i1, then, else_);
 }
 
@@ -331,9 +331,13 @@ extern "C" Type *get_captures_type(u64 num_params, vector<Value *> captures) {
     return StructType::create(*context, elem_types, "Func");
 }
 
-extern "C" Value *codegen_get_captures(Type *captures_type) {
+extern "C" Value *codegen_get_captures() {
     Function *func = get_insert_block()->getParent();
-    return cg_bitcast(func->getArg(func->arg_size() - 1), pointer_type(captures_type));
+    return func->getArg(func->arg_size() - 1);
+}
+
+extern "C" Value *codegen_pointer_bitcast(Value *val, Type *type) {
+    return cg_bitcast(val, pointer_type(type));
 }
 
 extern "C" Value *codegen_extract_capture(Value *captures, u64 i) {
