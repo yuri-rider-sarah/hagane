@@ -34,6 +34,7 @@ type. Error
     UnboundType(List(Int))
     IncorrectTypeArity(Int Int)
     ConflictingType(PartialType PartialType)
+    CyclicalType()
     AssignToConst(List(Int))
     NotACtor(List(Int))
     UnusedTypeParam(List(Int))
@@ -60,6 +61,7 @@ let. error_string λ.{err 'Error}
     .UnboundType(name) ++[Int]("Unbound type: " name)
     .IncorrectTypeArity(n1 n2) concat[Int](list.("Incorrect number of type arguments: expected " int→string(n1) ", got " int→string(n2)))
     .ConflictingType(t1 t2) concat[Int](list.("Conflicting type: expected " partial_type→string(t1) ", got " partial_type→string(t2)))
+    .CyclicalType() "Cyclical type"
     .AssignToConst(name) ++[Int]("Assignment to constant variable " name)
     .NotACtor(name) ++[Int](name " is not a constructor")
     .UnusedTypeParam(name) ++[Int]("Unused type parameter " name)

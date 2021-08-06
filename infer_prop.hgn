@@ -88,12 +88,46 @@ let. type_name_string λ.{tn 'TypeName}
 
 let. mut, type_variables empty[I_Type]
 
+let. mut, type_referenced_types′ λ.{tv 'TypeVar} empty[TypeVar]
+set. type_referenced_types′ λ.{tv 'TypeVar}
+    let. TypeVar(tvi) tv
+    match. get[I_Type](type_variables tvi)
+    .I_Any() list.(tv)
+    .I_Equal(tv′) type_referenced_types′(tv′)
+    .I_Named(_) empty[TypeVar]
+    .I_Applied(_ args) concat[TypeVar](map[TypeVar List(TypeVar)](args type_referenced_types′))
+    .I_TupleType(types) concat[TypeVar](map[TypeVar List(TypeVar)](types type_referenced_types′))
+    .I_Function(params ret) concat[TypeVar](map[TypeVar List(TypeVar)](push[TypeVar](params ret) type_referenced_types′))
+
+let. type_referenced_types λ.{tv 'TypeVar} dedup[TypeVar](type_referenced_types′(tv) =type_var)
+
+let. mut, type_referenced_type_names′ λ.{tv 'TypeVar} empty[TypeName]
+set. type_referenced_type_names′ λ.{tv 'TypeVar}
+    let. TypeVar(tvi) tv
+    match. get[I_Type](type_variables tvi)
+    .I_Any() empty[TypeName]
+    .I_Equal(tv′) type_referenced_type_names′(tv′)
+    .I_Named(tn) list.(tn)
+    .I_Applied(_ args) concat[TypeName](map[TypeVar List(TypeName)](args type_referenced_type_names′))
+    .I_TupleType(types) concat[TypeName](map[TypeVar List(TypeName)](types type_referenced_type_names′))
+    .I_Function(params ret) concat[TypeName](map[TypeVar List(TypeName)](push[TypeVar](params ret) type_referenced_type_names′))
+
+let. type_referenced_type_names λ.{tv 'TypeVar} dedup[TypeName](type_referenced_type_names′(tv) =type_name)
+
 let. new_type_var_with_type λ.{type 'I_Type}
     set. type_variables push[I_Type](type_variables type)
     TypeVar(-(len[I_Type](type_variables) 1))
 
 let. new_type_var λ.{}
     new_type_var_with_type(I_Any())
+
+let. assign_type_var λ.{tv 'TypeVar type 'I_Type file_pos 'FilePos}
+    ※ FIXME awful hack to bypass type_referenced_types taking a TypeVar
+    if. ∈[TypeVar](tv type_referenced_types(new_type_var_with_type(type)) =type_var)
+        error(CyclicalType() file_pos)
+    else, #()
+    let. TypeVar(tvi) tv
+    set. type_variables put[I_Type](type_variables tvi type)
 
 let. mut, i_type→partial_type λ.{t 'I_Type tvi 'Int} P_Var(0)
 let. mut, type_var→partial_type λ.{tv 'TypeVar} P_Var(0)
@@ -148,8 +182,8 @@ set. unify_type′ λ.{tv1 'TypeVar tv2 'TypeVar err 'Error file_pos 'FilePos}
     let. t1 get[I_Type](type_variables tvi1)
     let. t2 get[I_Type](type_variables tvi2)
     match. #(t1 t2)
-    .#(I_Any() _) set. type_variables put[I_Type](type_variables tvi1 I_Equal(tv2))
-    .#(_ I_Any()) set. type_variables put[I_Type](type_variables tvi2 I_Equal(tv1))
+    .#(I_Any() _) assign_type_var(tv1 I_Equal(tv2) file_pos)
+    .#(_ I_Any()) assign_type_var(tv2 I_Equal(tv1) file_pos)
     .#(I_Equal(tv1′) _) unify_type′(tv1′ tv2 err file_pos)
     .#(_ I_Equal(tv2′)) unify_type′(tv1 tv2′ err file_pos)
     ._ unify_type_value′(t1 t2 err file_pos)
@@ -158,7 +192,7 @@ set. set_type′ λ.{tv1 'TypeVar t2 'I_Type err 'Error file_pos 'FilePos}
     let. TypeVar(tvi1) tv1
     let. t1 get[I_Type](type_variables tvi1)
     match. #(t1 t2)
-    .#(I_Any() _) set. type_variables put[I_Type](type_variables tvi1 t2)
+    .#(I_Any() _) assign_type_var(tv1 t2 file_pos)
     .#(_ I_Any()) #()
     .#(I_Equal(tv1′) _) set_type′(tv1′ t2 err file_pos)
     .#(_ I_Equal(tv2′)) unify_type′(tv1 tv2′ err file_pos)
@@ -291,32 +325,6 @@ let. instantiate_params λ.{type_params 'List(TypeName) tv 'TypeVar}
         let. #(_ tv) sub
         tv
     )))
-
-let. mut, type_referenced_types′ λ.{tv 'TypeVar} empty[TypeVar]
-set. type_referenced_types′ λ.{tv 'TypeVar}
-    let. TypeVar(tvi) tv
-    match. get[I_Type](type_variables tvi)
-    .I_Any() list.(tv)
-    .I_Equal(tv′) type_referenced_types′(tv′)
-    .I_Named(_) empty[TypeVar]
-    .I_Applied(_ args) concat[TypeVar](map[TypeVar List(TypeVar)](args type_referenced_types′))
-    .I_TupleType(types) concat[TypeVar](map[TypeVar List(TypeVar)](types type_referenced_types′))
-    .I_Function(params ret) concat[TypeVar](map[TypeVar List(TypeVar)](push[TypeVar](params ret) type_referenced_types′))
-
-let. type_referenced_types λ.{tv 'TypeVar} dedup[TypeVar](type_referenced_types′(tv) =type_var)
-
-let. mut, type_referenced_type_names′ λ.{tv 'TypeVar} empty[TypeName]
-set. type_referenced_type_names′ λ.{tv 'TypeVar}
-    let. TypeVar(tvi) tv
-    match. get[I_Type](type_variables tvi)
-    .I_Any() empty[TypeName]
-    .I_Equal(tv′) type_referenced_type_names′(tv′)
-    .I_Named(tn) list.(tn)
-    .I_Applied(_ args) concat[TypeName](map[TypeVar List(TypeName)](args type_referenced_type_names′))
-    .I_TupleType(types) concat[TypeName](map[TypeVar List(TypeName)](types type_referenced_type_names′))
-    .I_Function(params ret) concat[TypeName](map[TypeVar List(TypeName)](push[TypeVar](params ret) type_referenced_type_names′))
-
-let. type_referenced_type_names λ.{tv 'TypeVar} dedup[TypeName](type_referenced_type_names′(tv) =type_name)
 
 let. context_referenced_types λ.{context 'I_Context}
     let. I_Context(vars _) context
