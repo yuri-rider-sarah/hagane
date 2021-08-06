@@ -82,7 +82,7 @@ elif len(args) == 3:
     compiler, tests_dir, test_name = args
 
 if test_name is None:
-    for test in os.listdir(tests_dir):
+    for test in sorted(os.listdir(tests_dir)):
         if test.endswith('.hgn'):
             test_name = test[:-4]
             run_test(test_name)
