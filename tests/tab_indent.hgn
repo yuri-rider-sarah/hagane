@@ -1,0 +1,9 @@
+※ 1
+※ 1
+let. mut, x 0
+if. =(x 1)
+	set. x 3
+	print_int(2)
+else,
+	set. x +(x 1)
+	print_int(x)

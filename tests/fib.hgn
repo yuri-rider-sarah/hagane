@@ -1,0 +1,14 @@
+※ 7540113804746346429
+let. mut, fib λ.{n 'Int} n
+set. fib λ.{n 'Int}
+    let. mut, a 0
+    let. mut, b 1
+    let. mut, i 0
+    while. <(i n)
+        let. t +(a b)
+        set. a b
+        set. b t
+        set. i +(i 1)
+    a
+
+print_int(fib(92))

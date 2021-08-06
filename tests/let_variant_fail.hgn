@@ -1,0 +1,7 @@
+※-cfail
+type. ∀,{T} Option
+    Some(T)
+    None()
+
+let. Some(x) None[Int]()
+print_int(x)

@@ -1,0 +1,13 @@
+※ 5
+※ 0
+type. OptInt
+    Some(Int)
+    None()
+
+match. Some(4)
+.Some(x) print_int(+(x 1))
+.None() print_int(0)
+
+match. None()
+.Some(x) print_int(+(x 1))
+.None() print_int(0)

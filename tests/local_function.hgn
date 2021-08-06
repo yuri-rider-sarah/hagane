@@ -1,0 +1,8 @@
+※ 20
+let. f λ. {x'Int y'Int}
+    let. w +(x y)
+    let. g λ. {x'Int z'Int}
+        +(x +(y +(z w)))
+    g(1 5)
+
+print_int(f(2 6))

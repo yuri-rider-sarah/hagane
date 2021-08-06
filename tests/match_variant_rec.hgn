@@ -1,0 +1,17 @@
+※ 1
+※ 2
+※ 3
+type. ListInt
+    Cons(Int ListInt)
+    Nil()
+
+let. mut, l Cons(1 Cons(2 Cons(3 Nil())))
+while.
+    match. l
+    .Cons(h t)
+        print_int(h)
+        set. l t
+        ⊤
+    .Nil()
+        ⊥
+do, #()

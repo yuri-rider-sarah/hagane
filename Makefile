@@ -21,3 +21,8 @@ char_types.o: char_types.cpp char_types_data.h
 
 %.o: %.cpp $(HEADERS)
 	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+.PHONY: test
+
+test: $(TARGET)
+	./test_run.py ./hagane tests

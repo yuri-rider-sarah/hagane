@@ -1,0 +1,14 @@
+※ 1
+※ 1
+
+※ print_int "1"
+print_int(1) ※ this print_ints "1"
+if. ⊥※this will never execute
+        ※ comments may be unaligned to the right
+    if. ⊤※always true
+※ comments may be unaligned to the left
+        print_int(0) ※ this print_ints "0"
+    else, print_int(2)
+    ※ this will always execute
+else, print_int(1)
+※ comments may occur at the end of file

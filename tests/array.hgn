@@ -1,0 +1,20 @@
+※ 3
+※ 9
+※ 4
+※ 16
+※ 2
+※ 2
+let. mut, a empty[Int]
+set. a push[Int](a 1)
+set. a push[Int](a 4)
+set. a push[Int](a 9)
+print_int(len[Int](a))
+print_int(get[Int](a 2))
+set. a push[Int](a 16)
+print_int(len[Int](a))
+print_int(get[Int](a 3))
+set. a pop[Int](a)
+set. a pop[Int](a)
+set. a put[Int](a 0 2)
+print_int(len[Int](a))
+print_int(get[Int](a 0))

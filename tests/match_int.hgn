@@ -1,0 +1,14 @@
+※ 2
+※ 8
+match. *(2 4)
+.1 print_int(0)
+.5 print_int(1)
+.8 print_int(2)
+.9 print_int(3)
+._ print_int(4)
+
+match. +(2 2)
+.1 print_int(5)
+.2 print_int(6)
+.3 print_int(7)
+._ print_int(8)

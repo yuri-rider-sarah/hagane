@@ -1,0 +1,7 @@
+※ 7
+match. list.(1 2 3 4)
+.list.(x y z) print_int(+(x y))
+.list.(1 2) print_int(0)
+.list.(a b 2 c) print_int(*(a b))
+.list.(a b c d) print_int(+(c d))
+._ print_int(1)

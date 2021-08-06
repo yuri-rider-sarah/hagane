@@ -1,0 +1,9 @@
+※-esc:A!\0😀
+print_byte(#!A)
+print_byte(#!!)
+print_byte(0)
+print_byte(240)
+print_byte(159)
+print_byte(152)
+print_byte(128)
+print_byte(#!\n)

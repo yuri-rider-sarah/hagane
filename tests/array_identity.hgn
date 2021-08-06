@@ -1,0 +1,7 @@
+※ 3
+let. mut, a empty[Int]
+set. a push[Int](a 1)
+set. a push[Int](a 2)
+set. a push[Int](a 3)
+let. b put[Int](a 2 0)
+print_int(get[Int](a 2))

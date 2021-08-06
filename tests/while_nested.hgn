@@ -1,0 +1,10 @@
+※ 3025
+let. mut, n 0
+let. mut, x 0
+while. ≤(x 10)
+    let. mut, y 0
+    while. ≤(y 10)
+        set. n +(n *(x y))
+        set. y +(y 1)
+    set. x +(x 1)
+print_int(n)
