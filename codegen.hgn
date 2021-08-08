@@ -57,6 +57,12 @@ type. C_Variable
     C_MutVar(Int)
     C_Ctor(Int Option(Int))
 
+let. codegen_var_rc_decr λ.{var 'C_Variable}
+    match. var
+    .C_ConstVar(val) codegen_rc_decr(val)
+    .C_MutVar(var) codegen_cell_rc_decr(var)
+    .C_Ctor(val _) codegen_rc_decr(val)
+
 let. codegen_var_rc_incr λ.{var 'C_Variable}
     match. var
     .C_ConstVar(val) codegen_rc_incr(val)
@@ -234,7 +240,7 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         let. ret_val codegen_expr(body context′)
         for[#(List(Int) C_Variable)](vars′ λ.(binding '#(List(Int) C_Variable)
             let. #(_ var) binding
-            codegen_var_rc_incr(var)
+            codegen_var_rc_decr(var)
         ))
         codegen_ret(ret_val)
         set_insert_block(parent_block)
@@ -265,6 +271,8 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         set_insert_block(merge_block)
         phi
     .T_Match(expr cases)
+        let. C_Context(old_context_vars) context
+        let. old_context_len len[#(List(Int) C_Variable)](old_context_vars)
         let. matched_val codegen_expr(expr context)
         let. branches map[#(T_Pattern T_Expr) #(Int Int)](cases λ.(case '#(T_Pattern T_Expr)
             let. #(pattern body) case
@@ -277,6 +285,11 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
             ))
             codegen_rc_decr(matched_val)
             let. body_val codegen_expr(body context′)
+            let. C_Context(context_vars) context
+            for_ι(-(len[#(List(Int) C_Variable)](context_vars) old_context_len) λ.(i 'Int
+                let. #(_ var) get[#(List(Int) C_Variable)](context_vars +(i old_context_len))
+                codegen_var_rc_decr(var)
+            ))
             let. body_end get_insert_block()
             let. next_block create_block()
             for[Int](pattern_ends λ.(pattern_end 'Int
@@ -301,6 +314,8 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
 
 set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
     let. mut, context context
+    let. C_Context(old_context_vars) context
+    let. old_context_len len[#(List(Int) C_Variable)](old_context_vars)
     let. mut, block_val None[Int]()
     for[T_Statement](statements λ.(statement 'T_Statement
         match. statement
@@ -361,6 +376,11 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
                 set. context c_add_let_binding(context name C_ConstVar(codegen_extern(utf8_encode(list→vector(name)) len[T_Type](params) if.(ret_int 1 0))))
             ._
                 error(InvalidExternType(name) file_pos)
+    ))
+    let. C_Context(context_vars) context
+    for_ι(-(len[#(List(Int) C_Variable)](context_vars) old_context_len) λ.(i 'Int
+        let. #(_ var) get[#(List(Int) C_Variable)](context_vars +(i old_context_len))
+        codegen_var_rc_decr(var)
     ))
     match. block_val
     .Some(block_val) block_val
