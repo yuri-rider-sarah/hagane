@@ -511,7 +511,9 @@ extern "C" Value *codegen_arith_primitive(u64 op) {
 
     set_insert_block(entry_block);
     Value *a = cg_load(cg_sgep(cg_bitcast(func->getArg(0), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    codegen_rc_decr(func->getArg(0));
     Value *b = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    codegen_rc_decr(func->getArg(1));
     Value *r = builder->CreateBinaryIntrinsic(arith_intrinsics[op], a, b);
     cg_cond_br(cg_extract_value(r, {1}), overflow_block, exit_block);
 
@@ -543,7 +545,9 @@ extern "C" Value *codegen_div_primitive(u64 is_mod) {
 
     set_insert_block(entry_block);
     Value *a = cg_load(cg_sgep(cg_bitcast(func->getArg(0), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    codegen_rc_decr(func->getArg(0));
     Value *b = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    codegen_rc_decr(func->getArg(1));
     cg_cond_br(cg_icmp_eq(b, cg_i64(0)), div_by_zero_block, overflow_check_block);
 
     set_insert_block(div_by_zero_block);
@@ -605,7 +609,9 @@ extern "C" Value *codegen_cmp_primitive(u64 pred) {
     Function *func = create_function(get_function_type(2));
     set_insert_block(create_basic_block(func));
     Value *a = cg_load(cg_sgep(cg_bitcast(func->getArg(0), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    codegen_rc_decr(func->getArg(0));
     Value *b = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    codegen_rc_decr(func->getArg(1));
     cg_ret(codegen_boxed(builder->CreateICmp(cmp_predicates[pred], a, b)));
     set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
@@ -616,7 +622,9 @@ extern "C" Value *codegen_len_primitive() {
     Function *func = create_function(get_function_type(1));
     set_insert_block(create_basic_block(func));
     Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
-    cg_ret(codegen_boxed(cg_load(cg_sgep(l, 1))));
+    Value *r = codegen_boxed(cg_load(cg_sgep(l, 1)));
+    codegen_rc_decr(func->getArg(0));
+    cg_ret(r);
     set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
 }
@@ -631,15 +639,20 @@ extern "C" Value *codegen_get_primitive() {
     set_insert_block(entry_block);
     Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
     Value *i = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    codegen_rc_decr(func->getArg(1));
     Value *len = cg_load(cg_sgep(l, 1));
     cg_cond_br(cg_icmp_uge(i, len), out_of_range_block, exit_block);
 
     set_insert_block(out_of_range_block);
+    codegen_rc_decr(func->getArg(0));
     cg_call(bounds_error_func, {});
     cg_unreachable();
 
     set_insert_block(exit_block);
-    cg_ret(cg_load(cg_gep(l, {cg_i32(3), i})));
+    Value *r = cg_load(cg_gep(l, {cg_i32(3), i}));
+    codegen_rc_incr(r);
+    codegen_rc_decr(func->getArg(0));
+    cg_ret(r);
     set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
 }
@@ -656,7 +669,9 @@ static void codegen_copy_loop(Value *len, Value *src, Value *dest) {
     PHINode *ci = cg_phi(i64_type, 2);
 
     set_insert_block(copy_loop_block);
-    cg_store(cg_load(cg_gep(src, {ci})), cg_gep(dest, {ci}));
+    Value *e = cg_load(cg_gep(src, {ci}));
+    codegen_rc_incr(e);
+    cg_store(e, cg_gep(dest, {ci}));
     Value *ci1 = cg_add(ci, cg_i64(1));
     cg_br(copy_check_block);
 
@@ -678,10 +693,13 @@ extern "C" Value *codegen_put_primitive() {
     set_insert_block(entry_block);
     Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
     Value *i = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
+    codegen_rc_decr(func->getArg(1));
     Value *len = cg_load(cg_sgep(l, 1));
     cg_cond_br(cg_icmp_uge(i, len), out_of_range_block, alloc_block);
 
     set_insert_block(out_of_range_block);
+    codegen_rc_decr(func->getArg(0));
+    codegen_rc_decr(func->getArg(2));
     cg_call(bounds_error_func, {});
     cg_unreachable();
 
@@ -692,7 +710,8 @@ extern "C" Value *codegen_put_primitive() {
     cg_store(len, cg_sgep(val, 2));
 
     codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3));
-    cg_store(cg_bitcast(func->getArg(2), box_type), cg_gep(val, {cg_i32(3), i}));
+    codegen_rc_decr(func->getArg(0));
+    cg_store(func->getArg(2), cg_gep(val, {cg_i32(3), i}));
     cg_ret(cg_bitcast(val, box_type));
     set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
@@ -710,6 +729,7 @@ extern "C" Value *codegen_push_primitive() {
     cg_store(new_len, cg_sgep(val, 1));
     cg_store(new_len, cg_sgep(val, 2));
     codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3));
+    codegen_rc_decr(func->getArg(0));
     cg_store(cg_bitcast(func->getArg(1), box_type), cg_gep(val, {cg_i32(3), len}));
     cg_ret(cg_bitcast(val, box_type));
     set_insert_block(saved_bb);
@@ -728,6 +748,7 @@ extern "C" Value *codegen_pop_primitive() {
     cg_store(new_len, cg_sgep(val, 1));
     cg_store(new_len, cg_sgep(val, 2));
     codegen_copy_loop(new_len, cg_sgep(l, 3), cg_sgep(val, 3));
+    codegen_rc_decr(func->getArg(0));
     cg_ret(cg_bitcast(val, box_type));
     set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
