@@ -739,9 +739,21 @@ extern "C" Value *codegen_push_primitive() {
 extern "C" Value *codegen_pop_primitive() {
     BasicBlock *saved_bb = builder->GetInsertBlock();
     Function *func = create_function(get_function_type(1));
-    set_insert_block(create_basic_block(func));
+    BasicBlock *entry_block = create_basic_block(func);
+    BasicBlock *out_of_range_block = create_basic_block(func);
+    BasicBlock *alloc_block = create_basic_block(func);
+
+    set_insert_block(entry_block);
     Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
     Value *len = cg_load(cg_sgep(l, 1));
+    cg_cond_br(cg_icmp_eq(len, cg_i64(0)), out_of_range_block, alloc_block);
+
+    set_insert_block(out_of_range_block);
+    codegen_rc_decr(func->getArg(0));
+    cg_call(bounds_error_func, {});
+    cg_unreachable();
+
+    set_insert_block(alloc_block);
     Value *new_len = cg_sub(len, cg_i64(1));
     Value *val = codegen_malloc_list(new_len);
     codegen_box_header_init(val, list_dtor);
