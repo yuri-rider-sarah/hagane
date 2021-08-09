@@ -766,14 +766,14 @@ extern "C" Value *codegen_pop_primitive() {
     return codegen_boxed_fuction(func);
 }
 
-extern "C" void llvm_fin(u64 opt_level, u64 print_ir_unpot, u64 print_ir, vector<vector<u64> *> *cc_args, vector<u64> *output_file) {
+extern "C" void llvm_fin(u64 opt_level, u64 print_ir_unopt, u64 print_ir, vector<vector<u64> *> *cc_args, vector<u64> *output_file) {
     cg_ret_void();
-    if (print_ir_unpot) {
+    if (print_ir_unopt) {
         errs() << "\n=== Unoptimized IR:\n\n";
         module_->print(errs(), nullptr);
     }
     if (verifyModule(*module_, &errs()) == true) {
-        if (!print_ir_unpot) {
+        if (!print_ir_unopt) {
             errs() << "\n=== Unoptimized IR:\n\n";
             module_->print(errs(), nullptr);
         }
