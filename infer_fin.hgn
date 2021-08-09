@@ -73,6 +73,7 @@ let. i_exprs→t_exprs λ.{i_exprs 'List(I_Expr) context 'T_Context}
 
 set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
     let. I_Expr(i_expr_data i_type file_pos) i_expr
+    let. t_type type_var→t_type(i_type context file_pos)
     let. t_expr_data match. i_expr_data
         .I_IntLiteral(n) T_IntLiteral(n)
         .I_Ident(name i_type_args) T_Ident(name map[TypeVar T_Type](i_type_args λ.(t 'TypeVar type_var→t_type(t context file_pos))))
@@ -92,7 +93,7 @@ set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
             #(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_body context))
         )))
         .I_ListLiteral(i_exprs) T_ListLiteral(i_exprs→t_exprs(i_exprs context))
-    T_Expr(t_expr_data type_var→t_type(i_type context file_pos) file_pos)
+    T_Expr(t_expr_data t_type file_pos)
 
 set. i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_Context}
     let. mut, context context
