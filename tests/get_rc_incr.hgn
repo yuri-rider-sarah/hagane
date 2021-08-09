@@ -1,0 +1,7 @@
+※ 1
+※ 1
+let. a list.(list.(#()))
+let. _ get[List(#())](a 0)
+print_int(1)
+let. _ get[List(#())](a 0)
+print_int(1)
