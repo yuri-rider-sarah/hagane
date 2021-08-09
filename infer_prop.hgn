@@ -83,7 +83,7 @@ let. type_name_string λ.{tn 'TypeName}
     let. TypeName(tni) tn
     let. #(name _) get[#(Option(List(Int)) Int)](named_types tni)
     match. name
-    .Some(name) concat[Int](list.(name ":" int→string(tni)))
+    .Some(name) name
     .None() ++[Int]("?G" int→string(tni))
 
 let. mut, type_variables empty[I_Type]
