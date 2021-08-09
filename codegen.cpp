@@ -773,6 +773,10 @@ extern "C" void llvm_fin(u64 opt_level, u64 print_ir_unpot, u64 print_ir, vector
         module_->print(errs(), nullptr);
     }
     if (verifyModule(*module_, &errs()) == true) {
+        if (!print_ir_unpot) {
+            errs() << "\n=== Unoptimized IR:\n\n";
+            module_->print(errs(), nullptr);
+        }
         exit(1);
     }
     legacy::PassManager pm;
