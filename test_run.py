@@ -53,7 +53,7 @@ def run_test(test_name):
             program_stderr_arg = subprocess.DEVNULL if expected_result == 'fail' else None
             program_result = subprocess.run([output_path], stdout=subprocess.PIPE, stderr=program_stderr_arg)
             if expected_result == 'fail':
-                success = program_result.returncode != 0
+                success = program_result.returncode == 1
             else:
                 success = program_result.returncode == 0
             if success:
