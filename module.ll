@@ -44,15 +44,17 @@ entry:
   %list = bitcast %Box* %val to %List*
   %len_ptr = getelementptr %List, %List* %list, i64 0, i32 1
   %len = load i64, i64* %len_ptr
-  br label %loop
-loop:
+  br label %test
+test:
   %i = phi i64 [ 0, %entry ], [ %i_p_1, %loop ]
+  %loop_cont = icmp ult i64 %i, %len
+  br i1 %loop_cont, label %loop, label %end
+loop:
   %elem_ptr = getelementptr %List, %List* %list, i64 0, i32 3, i64 %i
   %elem = load %Box*, %Box** %elem_ptr
   call void @box_rc_decr(%Box* %elem)
   %i_p_1 = add i64 %i, 1
-  %loop_cont = icmp ult i64 %i_p_1, %len
-  br i1 %loop_cont, label %loop, label %end
+  br label %test
 end:
   %val_vp = bitcast %Box* %val to i8*
   call void @free(i8* %val_vp)
