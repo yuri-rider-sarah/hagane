@@ -1,4 +1,4 @@
-TARGET = hagane
+TARGET = ./hagane
 HAGANE = hagane-0.0.5
 CXX = clang++
 CXXFLAGS = -Wall
@@ -25,4 +25,4 @@ char_types.o: char_types.cpp char_types_data.h
 .PHONY: test
 
 test: $(TARGET)
-	./test_run.py ./hagane tests
+	./test_run.py $(TARGET) tests
