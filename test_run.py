@@ -9,9 +9,7 @@ def run_test(test_name):
     test_path = os.path.join(tests_dir, test_name + '.hgn')
     lines = list(open(test_path))
     test_command_start = 0
-    if len(lines) <= 0 or ((len(lines[0]) == 0 or lines[0][0] != '※') and (len(lines[-1]) == 0 or lines[-1][0] != '※')):
-        raise RuntimeError('No test commands given')
-    if len(lines[0]) == 0 or lines[0][0] != '※':
+    if len(lines) == 0 or len(lines[0]) == 0 or lines[0][0] != '※':
         for i in reversed(range(len(lines))):
             if len(lines[i]) > 0 and lines[i][0] == '※':
                 test_command_start = i
