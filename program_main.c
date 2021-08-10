@@ -3,6 +3,11 @@
 #include <string.h>
 #include <inttypes.h>
 
+#ifdef __linux__
+#include <errno.h>
+#include <sys/resource.h>
+#endif
+
 static void error(char *msg) {
     fprintf(stderr, "Error: %s\n", msg);
     exit(1);
@@ -78,5 +83,13 @@ extern void hagane_main(void);
 int main(int argc_, char **argv_) {
     argc = argc_;
     argv = argv_;
+#ifdef __linux__
+    struct rlimit rlim;
+    if (getrlimit(RLIMIT_STACK, &rlim) == 0) {
+        rlim.rlim_cur = rlim.rlim_max;
+        setrlimit(RLIMIT_STACK, &rlim);
+    }
+    errno = 0;
+#endif
     hagane_main();
 }
