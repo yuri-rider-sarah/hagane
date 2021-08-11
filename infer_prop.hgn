@@ -428,6 +428,10 @@ set. u_expr→i_expr λ.{expr 'U_Expr context 'I_Context}
             set_type(this_type I_Named(list_type list.(elem_type)) file_pos)
             for[I_Expr](i_exprs λ.(i_expr 'I_Expr unify_type(i_expr_type(i_expr) elem_type i_expr_file_pos(i_expr))))
             I_ListLiteral(i_exprs)
+        .U_StringLiteral(s)
+            let. elem_type new_type_var_with_type(I_Named(int_type empty[TypeVar]))
+            set_type(this_type I_Named(list_type list.(elem_type)) file_pos)
+            I_ListLiteral(map[Int I_Expr](s λ.(c 'Int I_Expr(I_IntLiteral(c) elem_type file_pos))))
     I_Expr(i_expr_data this_type file_pos)
 
 set. u_statements→i_statements λ.{statements 'List(U_Statement) context 'I_Context this_type 'TypeVar file_pos 'FilePos}

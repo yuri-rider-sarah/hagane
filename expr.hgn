@@ -20,6 +20,7 @@ type. U_ExprData
     U_Cond(List(#(U_Expr U_Expr)))
     U_Match(U_Expr List(#(U_Pattern U_Expr)))
     U_ListLiteral(List(U_Expr))
+    U_StringLiteral(List(Int)) ※ This must be separate from U_ListLiteral at this stage, so that "" can later be assigned type List(Int)
 
 type. U_Expr U_Expr(U_ExprData FilePos)
 
@@ -204,7 +205,7 @@ set. r_expr→u_expr λ.{r_expr 'R_Expr}
     let. expr_data match. r_expr_data
         .R_IntLiteral(n) U_IntLiteral(n)
         .R_CharLiteral(c) U_IntLiteral(c)
-        .R_StringLiteral(s) U_ListLiteral(map[Int U_Expr](s λ.(c 'Int U_Expr(U_IntLiteral(c) file_pos))))
+        .R_StringLiteral(s) U_StringLiteral(s)
         .R_Ident(s) U_Ident(s)
         .R_Tuple(exprs) U_Tuple(map[R_Expr U_Expr](exprs r_expr→u_expr))
         .R_Typed(expr type) U_Typed(r_expr→u_expr(expr) r_expr→u_type(type))
