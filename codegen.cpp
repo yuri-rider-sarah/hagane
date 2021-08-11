@@ -41,6 +41,7 @@ static Function *cell_rc_decr;
 static Function *overflow_error_func;
 static Function *div_by_zero_error_func;
 static Function *bounds_error_func;
+static Function *pop_bounds_error_func;
 
 static StructType *struct_type(ArrayRef<Type *> elems) {
     return StructType::get(*context, elems);
@@ -219,6 +220,7 @@ extern "C" void llvm_init() {
     overflow_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "overflow_error", module_);
     div_by_zero_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "div_by_zero_error", module_);
     bounds_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "bounds_error", module_);
+    pop_bounds_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "pop_bounds_error", module_);
     Function *main = Function::Create(FunctionType::get(Type::getVoidTy(*context), false), Function::ExternalLinkage, "hagane_main", module_);
     set_insert_block(create_basic_block(main));
 }
@@ -816,7 +818,7 @@ extern "C" Value *codegen_pop_primitive() {
 
     set_insert_block(out_of_range_block);
     codegen_rc_decr(func->getArg(0));
-    cg_call(bounds_error_func, {});
+    cg_call(pop_bounds_error_func, {});
     cg_unreachable();
 
     set_insert_block(alloc_block);

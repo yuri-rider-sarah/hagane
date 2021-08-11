@@ -25,6 +25,10 @@ void bounds_error(void) {
     error("List index out of range");
 }
 
+void pop_bounds_error(void) {
+    error("Pop from empty list");
+}
+
 static void *s_malloc(size_t n) {
     void *p = malloc(n);
     if (p == NULL)
