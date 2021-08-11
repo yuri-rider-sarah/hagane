@@ -27,7 +27,7 @@ set. partial_type→string λ.{type 'PartialType}
 type. Error
     UnexpectedChar(Option(Int))
     UnexpectedToken(Token)
-    InvalidExpr(List(Int))
+    InvalidExpr(Option(List(Int)))
     InvalidPattern()
     InvalidType()
     UnboundVariable(List(Int))
@@ -54,7 +54,8 @@ let. error_string λ.{err 'Error}
     .UnexpectedChar(Some(c)) concat[Int](list.("Unexpected character: " list.(c) " (" int→string(c) ")"))
     .UnexpectedChar(None()) "Unexpected end of file"
     .UnexpectedToken(token) "Unexpected token"
-    .InvalidExpr(kw) concat[Int](list.("Invalid " kw " expression"))
+    .InvalidExpr(None()) "Invalid expression"
+    .InvalidExpr(Some(kw)) concat[Int](list.("Invalid " kw " expression"))
     .InvalidPattern() "Invalid pattern"
     .InvalidType() "Invalid type"
     .UnboundVariable(name) ++[Int]("Unbound variable: " name)
