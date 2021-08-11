@@ -148,8 +148,7 @@ set. type_var→t_type′ λ.{tv 'TypeVar context 'T_Context err 'Error file_pos
         error(err file_pos)
         T_Named(0 empty[T_Type])
     .I_Equal(tv′) type_var→t_type′(tv′ context err file_pos)
-    .I_Named(name) T_Named(t_locate_type_in_context(name context file_pos) empty[T_Type])
-    .I_Applied(name type_args) T_Named(t_locate_type_in_context(name context file_pos) map[TypeVar T_Type](type_args λ.(tv′ 'TypeVar type_var→t_type′(tv′ context err file_pos))))
+    .I_Named(name type_args) T_Named(t_locate_type_in_context(name context file_pos) map[TypeVar T_Type](type_args λ.(tv′ 'TypeVar type_var→t_type′(tv′ context err file_pos))))
     .I_TupleType(tvs) T_TupleType(map[TypeVar T_Type](tvs λ.(tv′ 'TypeVar type_var→t_type′(tv′ context err file_pos))))
     .I_Function(params ret) T_Function(map[TypeVar T_Type](params λ.(param 'TypeVar type_var→t_type′(param context err file_pos))) type_var→t_type′(ret context err file_pos))
 

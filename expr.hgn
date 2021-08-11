@@ -24,8 +24,7 @@ type. U_ExprData
 type. U_Expr U_Expr(U_ExprData FilePos)
 
 type. U_TypeData
-    U_Named(List(Int))
-    U_Applied(List(Int) List(U_Type))
+    U_Named(List(Int) List(U_Type))
     U_TupleType(List(U_Type))
     U_Function(List(U_Type) U_Type)
 
@@ -35,17 +34,17 @@ let. mut, r_expr→u_type λ.{expr 'R_Expr} U_Type(U_TupleType(empty[U_Type]) Fi
 set. r_expr→u_type λ.{expr 'R_Expr}
     let. R_Expr(expr_data file_pos) expr
     let. type_data match. expr_data
-        .R_Ident(name) U_Named(name)
+        .R_Ident(name) U_Named(name empty[U_Type])
         .R_Apply(R_Expr(R_Ident(base) _) params)
             if. =(len[R_Expr](params) 0)
                 error(InvalidType() file_pos)
             else, #()
-            U_Applied(base map[R_Expr U_Type](params r_expr→u_type))
+            U_Named(base map[R_Expr U_Type](params r_expr→u_type))
         .R_Tuple(types) U_TupleType(map[R_Expr U_Type](types r_expr→u_type))
         .R_FunctionExpr(params result) U_Function(map[R_Expr U_Type](params r_expr→u_type) r_expr→u_type(result))
         ._
             error(InvalidType() file_pos)
-            U_Named(empty[Int])
+            U_Named(empty[Int] empty[U_Type])
     U_Type(type_data file_pos)
 
 type. U_PatternData
