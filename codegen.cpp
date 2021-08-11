@@ -104,6 +104,83 @@ extern "C" void set_insert_block(BasicBlock *bb) {
     builder->SetInsertPoint(bb);
 }
 
+static Function *codegen_box_rc_decr_func() {
+    Function *func = create_function(FunctionType::get(Type::getVoidTy(*context), {box_type}, false));
+    BasicBlock *entry_block = create_basic_block(func);
+    BasicBlock *free_block = create_basic_block(func);
+    BasicBlock *decr_block = create_basic_block(func);
+    Value *val = func->getArg(0);
+
+    set_insert_block(entry_block);
+    Value *rc_ptr = cg_sgep(val, 0);
+    Value *rc = cg_load(rc_ptr);
+    cg_cond_br(cg_icmp_eq(rc, cg_i64(0)), free_block, decr_block);
+
+    set_insert_block(free_block);
+    cg_call(dtor_type, cg_load(cg_sgep(val, 1)), {val});
+    cg_ret_void();
+
+    set_insert_block(decr_block);
+    cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
+    cg_ret_void();
+
+    return func;
+}
+
+static Function *codegen_cell_rc_decr_func() {
+    Function *func = create_function(FunctionType::get(Type::getVoidTy(*context), {pointer_type(cell_type)}, false));
+    BasicBlock *entry_block = create_basic_block(func);
+    BasicBlock *free_block = create_basic_block(func);
+    BasicBlock *decr_block = create_basic_block(func);
+    Value *val = func->getArg(0);
+
+    set_insert_block(entry_block);
+    Value *rc_ptr = cg_sgep(val, 0);
+    Value *rc = cg_load(rc_ptr);
+    cg_cond_br(cg_icmp_eq(rc, cg_i64(0)), free_block, decr_block);
+
+    set_insert_block(free_block);
+    Value *box = cg_load(cg_sgep(val, 1));
+    cg_call(box_rc_decr, {box});
+    cg_call(free_func, {cg_bitcast(val, Type::getInt8PtrTy(*context))});
+    cg_ret_void();
+
+    set_insert_block(decr_block);
+    cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
+    cg_ret_void();
+
+    return func;
+}
+
+static Function *codegen_list_dtor_func() {
+    Function *func = create_function(dtor_type);
+    BasicBlock *entry_block = create_basic_block(func);
+    BasicBlock *test_block = create_basic_block(func);
+    BasicBlock *loop_block = create_basic_block(func);
+    BasicBlock *end_block = create_basic_block(func);
+
+    set_insert_block(entry_block);
+    Value *val = cg_bitcast(func->getArg(0), pointer_type(list_type));
+    Value *len = cg_load(cg_sgep(val, 1));
+    cg_br(test_block);
+
+    set_insert_block(test_block);
+    PHINode *i = cg_phi(i64_type, 2);
+    i->addIncoming(cg_i64(0), entry_block);
+    cg_cond_br(cg_icmp_ult(i, len), loop_block, end_block);
+
+    set_insert_block(loop_block);
+    cg_call(box_rc_decr, {cg_load(cg_gep(val, {cg_i32(3), i}))});
+    i->addIncoming(cg_add(i, cg_i64(1)), loop_block);
+    cg_br(test_block);
+
+    set_insert_block(end_block);
+    cg_call(free_func, {cg_bitcast(val, Type::getInt8PtrTy(*context))});
+    cg_ret_void();
+
+    return func;
+}
+
 extern "C" void llvm_init() {
     InitializeAllTargetInfos();
     InitializeAllTargets();
@@ -121,36 +198,29 @@ extern "C" void llvm_init() {
     DataLayout data_layout = target_machine->createDataLayout();
     context = new LLVMContext();
     SMDiagnostic err;
-    module_ = parseIRFile("module.ll", err, *context).release();
-    if (!module_) {
-        errs() << "Error initializing module\n";
-        err.print("hagane", errs());
-        exit(1);
-    }
-    if (verifyModule(*module_, &errs()) == true) {
-        exit(1);
-    }
+    module_ = new Module("", *context);
     builder = new IRBuilder<>(*context);
     module_->setDataLayout(data_layout);
     module_->setTargetTriple(target_triple);
-    Function *main = Function::Create(FunctionType::get(Type::getVoidTy(*context), false), Function::ExternalLinkage, "hagane_main", module_);
-    set_insert_block(create_basic_block(main));
-    malloc_func = module_->getFunction("malloc");
-    free_func = module_->getFunction("free");
-    box_header_type = StructType::getTypeByName(*context, "Box");
+    malloc_func = Function::Create(FunctionType::get(Type::getInt8PtrTy(*context), {Type::getInt64Ty(*context)}, false), Function::ExternalLinkage, "malloc", module_);
+    free_func = Function::Create(FunctionType::get(Type::getVoidTy(*context), {Type::getInt8PtrTy(*context)}, false), Function::ExternalLinkage, "free", module_);
+    box_header_type = StructType::create(*context, "Box");
     box_type = pointer_type(box_header_type);
+    box_header_type->setBody({i64_type, pointer_type(FunctionType::get(Type::getVoidTy(*context), {box_type}, false))});
     tagged_header_type = struct_type({box_header_type, i64_type});
+    cell_type = StructType::create(*context, {i64_type, box_type}, "Cell");
+    list_type = StructType::create(*context, {box_header_type, i64_type, i64_type, ArrayType::get(box_type, 0)}, "List");
     dtor_type = FunctionType::get(Type::getVoidTy(*context), {box_type}, false);
+    box_rc_decr = codegen_box_rc_decr_func();
+    cell_rc_decr = codegen_cell_rc_decr_func();
     base_dtor = (Function *)cg_bitcast(free_func, pointer_type(dtor_type));
-    list_dtor = (Function *)module_->getFunction("list_dtor");
-    cell_type = StructType::getTypeByName(*context, "Cell");
-    list_type = StructType::getTypeByName(*context, "List");
-    box_rc_decr = module_->getFunction("box_rc_decr");
-    cell_rc_decr = module_->getFunction("cell_rc_decr");
+    list_dtor = codegen_list_dtor_func();
     FunctionType *error_func_type = FunctionType::get(Type::getVoidTy(*context), false);
     overflow_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "overflow_error", module_);
     div_by_zero_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "div_by_zero_error", module_);
     bounds_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "bounds_error", module_);
+    Function *main = Function::Create(FunctionType::get(Type::getVoidTy(*context), false), Function::ExternalLinkage, "hagane_main", module_);
+    set_insert_block(create_basic_block(main));
 }
 
 extern "C" BasicBlock *create_block() {
@@ -664,21 +734,17 @@ static void codegen_copy_loop(Value *len, Value *src, Value *dest) {
     BasicBlock *exit_block = create_basic_block(parent_block->getParent());
     cg_br(copy_check_block);
 
-    // blocks defined out of order so variables are declared before use
     set_insert_block(copy_check_block);
     PHINode *ci = cg_phi(i64_type, 2);
+    ci->addIncoming(cg_i64(0), parent_block);
+    cg_cond_br(cg_icmp_ult(ci, len), copy_loop_block, exit_block);
 
     set_insert_block(copy_loop_block);
     Value *e = cg_load(cg_gep(src, {ci}));
     codegen_rc_incr(e);
     cg_store(e, cg_gep(dest, {ci}));
-    Value *ci1 = cg_add(ci, cg_i64(1));
+    ci->addIncoming(cg_add(ci, cg_i64(1)), copy_loop_block);
     cg_br(copy_check_block);
-
-    set_insert_block(copy_check_block);
-    ci->addIncoming(cg_i64(0), parent_block);
-    ci->addIncoming(ci1, copy_loop_block);
-    cg_cond_br(cg_icmp_ult(ci, len), copy_loop_block, exit_block);
 
     set_insert_block(exit_block);
 }
