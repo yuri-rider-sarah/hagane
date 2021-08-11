@@ -50,7 +50,7 @@ let. read_char λ.{chars 'CharReader}
         let. c get[Int](cs char_i)
         let. #(file_i′ char_i′ line′ col′)
             if. <(+(char_i 1) len[Int](cs))
-                let. #(line′ col′) if. ∈[Int](c newline_chars =)
+                let. #(line′ col′) if. ∧(∈[Int](c newline_chars =) ∨(≠(c 13) ≠(get[Int](cs +(char_i 1)) #!\n))) ※ don't count CR as end of line if followed by LF
                     then, #(+(line 1) 1)
                     else, #(line +(col 1))
                 #(file_i +(char_i 1) line′ col′)
