@@ -5,5 +5,5 @@ extern "C" void vector_string_error(u64 v_, u64 internal) {
     for (u64 c : *v)
         fputc((char)c, stderr);
     fputc('\n', stderr);
-    exit(internal ? 2 : 1);
+    exit(internal ? 1 : 2);
 }
