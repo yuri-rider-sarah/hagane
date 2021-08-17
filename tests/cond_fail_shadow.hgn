@@ -1,5 +1,7 @@
 ※-cfail
+let. ⊤ ⊥
 cond.
 .>(1 2) print_int(1)
 .=(1 2) print_int(2)
 .=(2 4) print_int(3)
+.⊤ print_int(4)

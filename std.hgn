@@ -69,6 +69,13 @@ let. ∀,{T} ∃ λ.{xs 'List(T) f '‡(T : Bool)}
     ))
     r
 
+let. ∀,{T} count λ.{xs 'List(T) f '‡(T : Bool)}
+    let. mut, r 0
+    for[T](xs λ.(x 'T
+        if. f(x) then, set.(r +(r 1)) else, #()
+    ))
+    r
+
 let. ∀,{T} last λ.{xs 'List(T)}
     if. >(len[T](xs) 0)
     then, Some[T](get[T](xs -(len[T](xs) 1)))

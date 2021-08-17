@@ -298,6 +298,20 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         set_insert_block(parent_block)
         codegen_func_val(func outer_captures captures_type)
     .T_Cond(cases)
+        let. C_Context(vars _) context
+        if. ¬(∧(
+            =(count[#(List(Int) C_Variable)](vars λ.(var '#(List(Int) C_Variable)
+                let. #(name _) var
+                =list[Int](name "⊤" =)
+            )) 1)
+            ∃[#(T_Expr T_Expr)](cases λ.(case '#(T_Expr T_Expr)
+                match. case
+                .#(T_Expr(T_Ident("⊤" _) _ _) _) ⊤
+                ._ ⊥
+            ))
+        ))
+        then, error(InvalidExpr(Some[List(Int)]("cond")) file_pos)
+        else, #()
         let. branches map[#(T_Expr T_Expr) #(Int Int)](cases λ.(case '#(T_Expr T_Expr)
             let. #(cond body) case
             let. cond_val codegen_expr(cond context)
