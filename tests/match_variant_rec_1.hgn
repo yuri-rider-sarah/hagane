@@ -1,0 +1,10 @@
+※ 80
+type. ∀,{T} List
+    Cons(T List(T))
+    Nil()
+
+match. Cons[Int](10 Cons[Int](90 Cons[Int](13 Nil[Int]())))
+.Nil() print_int(0)
+.Cons(x Nil()) print_int(x)
+.Cons(x Cons(y Nil())) print_int(+(x y))
+.Cons(x Cons(y _)) print_int(-(y x))

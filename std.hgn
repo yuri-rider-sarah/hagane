@@ -41,6 +41,34 @@ let. ∀,{T} map_ι λ.{n 'Int f '‡(Int : T)}
     for_ι(n λ.(i 'Int set.(ys push[T](ys f(i)))))
     ys
 
+let. ∀,{T U} map_opt λ.{xs 'List(T) f '‡(T : Option(U))}
+    let. mut, ys empty[U]
+    for[T](xs λ.(x 'T
+        match. f(x)
+        .Some(y) set. ys push[U](ys y)
+        .None() #()
+    ))
+    ys
+
+let. ∀,{T} ι* λ.{xs 'List(T)}
+    map_ι[#(Int T)](len[T](xs) λ.(i 'Int
+        #(i get[T](xs i))
+    ))
+
+let. ∀,{T} ∀ λ.{xs 'List(T) f '‡(T : Bool)}
+    let. mut, r ⊤
+    for[T](xs λ.(x 'T
+        if. f(x) then, #() else, set.(r ⊥)
+    ))
+    r
+
+let. ∀,{T} ∃ λ.{xs 'List(T) f '‡(T : Bool)}
+    let. mut, r ⊥
+    for[T](xs λ.(x 'T
+        if. f(x) then, set.(r ⊤) else, #()
+    ))
+    r
+
 let. ∀,{T} last λ.{xs 'List(T)}
     if. >(len[T](xs) 0)
     then, Some[T](get[T](xs -(len[T](xs) 1)))

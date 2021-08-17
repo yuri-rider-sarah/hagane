@@ -36,6 +36,7 @@ type. Error
     CyclicalType()
     AssignToConst(List(Int))
     NotACtor(List(Int))
+    InexhaustivePatterns()
     UnusedTypeParam(List(Int))
     AmbiguousType(PartialType)
     LeakedType(List(Int))
@@ -64,6 +65,7 @@ let. error_string λ.{err 'Error}
     .CyclicalType() "Cyclical type"
     .AssignToConst(name) ++[Int]("Assignment to constant variable " name)
     .NotACtor(name) ++[Int](name " is not a constructor")
+    .InexhaustivePatterns() "Inexhaustive patterns"
     .UnusedTypeParam(name) ++[Int]("Unused type parameter " name)
     .AmbiguousType(t) ++[Int]("Ambiguous type " partial_type→string(t))
     .LeakedType(name) ++[Int]("Inferred type contains leaked type " name)

@@ -1,0 +1,10 @@
+※-cfail
+type. ∀,{T} List
+    Cons(T List(T))
+    Nil()
+
+match. Nil[Int]()
+.Nil() print_int(0)
+.Cons(x Nil()) print_int(x)
+.Cons(x Cons(y Nil())) print_int(+(x y))
+.Cons(x Cons(y Cons(z Nil()))) print_int(+(x z))
