@@ -18,6 +18,9 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 #include <iostream>
+#include <filesystem>
+
+#include "program_main.h"
 
 using namespace llvm;
 
@@ -834,6 +837,8 @@ extern "C" Value *codegen_pop_primitive() {
     return codegen_boxed_fuction(func);
 }
 
+static char temp_dir_path_buffer[L_tmpnam];
+
 extern "C" void llvm_fin(u64 opt_level, u64 print_ir_unopt, u64 print_ir, vector<vector<u64> *> *cc_args, vector<u64> *output_file) {
     cg_ret_void();
     if (print_ir_unopt) {
@@ -853,10 +858,24 @@ extern "C" void llvm_fin(u64 opt_level, u64 print_ir_unopt, u64 print_ir, vector
     if (opt_level >= 2)
         pmb.Inliner = createFunctionInliningPass();
     pmb.populateModulePassManager(pm);
+    if (tmpnam(temp_dir_path_buffer) == nullptr) {
+        errs() << "Failed to generate temporary filename";
+        exit(1);
+    }
+    string temp_dir_path(temp_dir_path_buffer);
+    error_code dir_ec;
+    filesystem::create_directory(temp_dir_path, dir_ec);
+    if (dir_ec) {
+        errs() << "Failed to create directory: " << dir_ec.message() << "\n";
+        exit(1);
+    }
+    string obj_file_path = temp_dir_path + "/obj.o";
+    string main_file_path = temp_dir_path + "/main.c";
     error_code file_ec;
-    raw_fd_ostream file("out.o", file_ec);
+    raw_fd_ostream file(obj_file_path, file_ec);
     if (file_ec) {
         errs() << "Failed to open file: " << file_ec.message() << "\n";
+        filesystem::remove_all(temp_dir_path);
         exit(1);
     }
     target_machine->addPassesToEmitFile(pm, file, nullptr, CGFT_ObjectFile);
@@ -865,7 +884,33 @@ extern "C" void llvm_fin(u64 opt_level, u64 print_ir_unopt, u64 print_ir, vector
         errs() << "\n=== Optimized IR:\n\n";
         module_->print(errs(), nullptr);
     }
-    string command = "clang program_main.c out.o -o ";
+    FILE *main_file = fopen(main_file_path.c_str(), "w");
+    if (main_file == nullptr) {
+        perror("Failed to open file");
+        filesystem::remove_all(temp_dir_path);
+        exit(1);
+    }
+    if (fwrite(program_main_c, 1, program_main_c_len, main_file) != program_main_c_len) {
+        fprintf(stderr, "Failed to write to file\n");
+        filesystem::remove_all(temp_dir_path);
+        exit(1);
+    }
+    if (fclose(main_file) != 0) {
+        perror("Failed to close file");
+        filesystem::remove_all(temp_dir_path);
+        exit(1);
+    }
+    string command = "clang";
+    command.push_back(' ');
+    for (char c : main_file_path)
+        command.push_back(c);
+    command.push_back(' ');
+    for (char c : obj_file_path)
+        command.push_back(c);
+    command.push_back(' ');
+    command.push_back('-');
+    command.push_back('o');
+    command.push_back(' ');
     for (u64 c : *output_file)
         command.push_back(c);
     for (vector<u64> *cc_arg : *cc_args) {
@@ -874,7 +919,7 @@ extern "C" void llvm_fin(u64 opt_level, u64 print_ir_unopt, u64 print_ir, vector
             command.push_back(c);
     }
     int linker_ret = system(command.c_str());
-    remove("out.o");
+    filesystem::remove_all(temp_dir_path);
     if (linker_ret != 0)
         exit(1);
 }

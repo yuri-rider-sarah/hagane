@@ -1,12 +1,12 @@
 TARGET = ./hagane
 HAGANE = hagane-0.0.5
 CXX = clang++
-CXXFLAGS = -Wall
+CXXFLAGS = -std=c++17 -Wall
 HGN_FLAGS =
 
 HGN_SRC = std.hgn vector.hgn error.hgn char_types.hgn lexer.hgn parser.hgn expr.hgn infer_prop.hgn infer_fin.hgn codegen.hgn main.hgn
 
-HEADERS = $(filter-out char_types_data.h,$(wildcard *.h))
+HEADERS = $(filter-out char_types_data.h,$(wildcard *.h)) program_main.h
 LIBS = stdc++ LLVM-12
 OBJECTS = $(patsubst %.cpp,%.o,$(wildcard *.cpp))
 
@@ -21,6 +21,9 @@ char_types.o: char_types.cpp char_types_data.h
 
 %.o: %.cpp $(HEADERS)
 	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+program_main.h: program_main.c
+	xxd -i $< > $@
 
 .PHONY: test
 
