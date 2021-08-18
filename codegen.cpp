@@ -185,7 +185,7 @@ static Function *codegen_list_dtor_func() {
     return func;
 }
 
-extern "C" void llvm_init() {
+extern "C" void llvm_init(u64 opt_level) {
     InitializeAllTargetInfos();
     InitializeAllTargets();
     InitializeAllTargetMCs();
@@ -198,7 +198,7 @@ extern "C" void llvm_init() {
         errs() << "Error looking up target: " << error << "\n";
         exit(1);
     }
-    target_machine = target->createTargetMachine(target_triple, "generic", "", TargetOptions(), Optional<Reloc::Model>(Reloc::PIC_));
+    target_machine = target->createTargetMachine(target_triple, "generic", "", TargetOptions(), Optional<Reloc::Model>(Reloc::PIC_), None, (CodeGenOpt::Level)opt_level);
     DataLayout data_layout = target_machine->createDataLayout();
     context = new LLVMContext();
     SMDiagnostic err;
