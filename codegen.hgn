@@ -436,10 +436,6 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
                     let. #(name params) get[#(List(Int) List(T_Type))](variants i)
                     set. context c_add_let_binding(context name C_Ctor(codegen_create_tagged_ctor(len[T_Type](params) i) Some[Int](i)))
                 ))
-            set. context c_add_type_binding(context map[#(List(Int) List(T_Type)) List(T_Type)](variants λ.(v '#(List(Int) List(T_Type))
-                let. #(_ v) v
-                v
-            )))
         .T_Extern(name type)
             let. file_pos FilePos("[extern.]" 0 0)
             match. type

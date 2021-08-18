@@ -121,7 +121,6 @@ set. i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_
                 let. #(name i_param_types) i_variant
                 #(name map[TypeVar T_Type](i_param_types λ.(i_type 'TypeVar type_var→t_type(i_type context′ file_pos))))
             ))
-            set. context t_add_type_binding(context type)
             T_TypeStatement(len[TypeName](type_params) t_variants)
         .I_Extern(name type) T_Extern(name type_var→t_type(type context file_pos))
     ))
