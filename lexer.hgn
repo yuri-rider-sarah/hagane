@@ -38,8 +38,12 @@ type. Lexer Lexer(
     Bool          ※ at_line_start
 )
 
+let. mut, read_indent λ.{lexer 'Lexer indent_depth 'Int} #(lexer indent_depth)
+
 let. lexer λ.{files 'List(#(List(Int) List(Int)))}
-    Lexer(CharReader(files 0 0 1 1) empty[Int] None[Int]() empty[FilePos] 0 ⊤)
+    let. lexer Lexer(CharReader(files 0 0 1 1) empty[Int] None[Int]() empty[FilePos] 0 ⊤)
+    let. #(lexer′ _) read_indent(lexer 0)
+    lexer′
 
 let. newline_chars list.(10 11 12 13 133 8232 8233)
 
@@ -243,7 +247,6 @@ set. skip_comment λ.{lexer 'Lexer}
             skip_comment(lexer)
     .#(_ None() _) lexer
 
-let. mut, read_indent λ.{lexer 'Lexer indent_depth 'Int} #(lexer indent_depth)
 set. read_indent λ.{lexer 'Lexer indent_depth 'Int}
     let. mut, lexer lexer
     match. read_char(lexer)
