@@ -125,7 +125,7 @@ static Function *codegen_box_rc_decr_func() {
     cg_ret_void();
 
     set_insert_block(decr_block);
-    cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
+    cg_store(cg_sub(rc, cg_i64(1)), rc_ptr);
     cg_ret_void();
 
     return func;
@@ -150,7 +150,7 @@ static Function *codegen_cell_rc_decr_func() {
     cg_ret_void();
 
     set_insert_block(decr_block);
-    cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
+    cg_store(cg_sub(rc, cg_i64(1)), rc_ptr);
     cg_ret_void();
 
     return func;
