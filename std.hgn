@@ -147,6 +147,11 @@ let. ∀,{T} intercalate λ.{xss 'List(List(T)) sep 'List(T)}
         for_ι(-(len[List(T)](xss) 1) λ.(i 'Int set.(r ++[T](r ++[T](sep get[List(T)](xss +(i 1)))))))
         r
 
+let. ∀,{T U} zip λ.{xs 'List(T) ys 'List(U)}
+    if. =(len[T](xs) len[U](ys))
+        Some[List(#(T U))](map_ι[#(T U)](len[T](xs) λ.(i 'Int #(get[T](xs i) get[U](ys i)))))
+    else, None[List(#(T U))]()
+
 let. ∀,{T U} unzip λ.{xs 'List(#(T U))}
     let. mut, xs1 empty[T]
     let. mut, xs2 empty[U]

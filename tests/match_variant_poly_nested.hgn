@@ -1,0 +1,8 @@
+※ 1
+type. ∀,{T} Option
+    Some(T)
+    None()
+
+match. Some[#()](#())
+.Some(#()) print_int(1)
+.None() print_int(2)

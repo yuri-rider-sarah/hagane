@@ -70,17 +70,17 @@ let. codegen_var_rc_incr λ.{var 'C_Variable}
     .C_Ctor(val _) codegen_rc_incr(val)
 
 type. C_Context C_Context(
-    List(#(List(Int) C_Variable)) ※ vars
-    List(List(List(T_Type)))      ※ types
+    List(#(List(Int) C_Variable))         ※ vars
+    List(#(List(Int) List(List(T_Type)))) ※ types
 )
 
 let. c_add_let_binding λ.{context 'C_Context name 'List(Int) var 'C_Variable}
     let. C_Context(vars types) context
     C_Context(push[#(List(Int) C_Variable)](vars #(name var)) types)
 
-let. c_add_type_binding λ.{context 'C_Context variants 'List(List(T_Type))}
+let. c_add_type_binding λ.{context 'C_Context type_params 'List(Int) variants 'List(List(T_Type))}
     let. C_Context(vars types) context
-    C_Context(vars push[List(List(T_Type))](types variants))
+    C_Context(vars push[#(List(Int) List(List(T_Type)))](types #(type_params variants)))
 
 let. c_lookup_var λ.{name 'List(Int) context 'C_Context}
     let. mut, r None[C_Variable]()
@@ -130,8 +130,25 @@ let. get_empty_c_context λ.{}
         extern_binding("get_argv_len" 1 1)
         extern_binding("get_argv_byte" 2 1)
         )
-        list.(list.(empty[T_Type]) list.(empty[T_Type]) list.(empty[T_Type]))
+        list.(#(empty[Int] list.(empty[T_Type])) #(empty[Int] list.(empty[T_Type])) #(list.(3) list.(empty[T_Type])))
     )
+
+let. mut, c_substitute_in_type λ.{type 'T_Type subs 'List(#(Int T_Type))} type
+set. c_substitute_in_type λ.{type 'T_Type subs 'List(#(Int T_Type))}
+    match. type
+    .T_Named(tn type_args)
+        let. mut, t′ None[T_Type]()
+        for[#(Int T_Type)](subs λ.(sub '#(Int T_Type)
+            let. #(stn st) sub
+            if. =(stn tn)
+            then, set. t′ Some[T_Type](st)
+            else, #()
+        ))
+        match. t′
+        .Some(t′) t′
+        .None() T_Named(tn map[T_Type T_Type](type_args λ.(t 'T_Type c_substitute_in_type(t subs))))
+    .T_TupleType(subtypes) T_TupleType(map[T_Type T_Type](subtypes λ.(t 'T_Type c_substitute_in_type(t subs))))
+    .T_Function(params ret) T_Function(map[T_Type T_Type](params λ.(t 'T_Type c_substitute_in_type(t subs))) c_substitute_in_type(ret subs))
 
 let. mut, is_match_exhaustive λ.{pattern_lists 'List(List(T_Pattern)) types 'List(T_Type) context 'C_Context} ⊥
 set. is_match_exhaustive λ.{pattern_lists 'List(List(T_Pattern)) types 'List(T_Type) context 'C_Context}
@@ -148,9 +165,18 @@ set. is_match_exhaustive λ.{pattern_lists 'List(List(T_Pattern)) types 'List(T_
         if. ≠(len[List(T_Pattern)](pattern_lists′) 0)
         then, is_match_exhaustive(pattern_lists′ drop[T_Type](types 1) context)
         else, match. get[T_Type](types 0)
-            .T_Named(ti _)
+            .T_Named(ti type_args)
                 let. C_Context(_ ctx_types) context
-                ∀[#(Int List(T_Type))](ι*[List(T_Type)](get[List(List(T_Type))](ctx_types ti)) λ.(vs '#(Int List(T_Type))
+                let. #(type_params variants) get[#(List(Int) List(List(T_Type)))](ctx_types ti)
+                let. subs match. zip[Int T_Type](type_params type_args)
+                    .Some(subs) subs
+                    .None()
+                        unreachable("type_args and type_params are not equal length")
+                        empty[#(Int T_Type)]
+                let. variants map[List(T_Type) List(T_Type)](variants λ.(variant 'List(T_Type)
+                    map[T_Type T_Type](variant λ.(t 'T_Type c_substitute_in_type(t subs)))
+                ))
+                ∀[#(Int List(T_Type))](ι*[List(T_Type)](variants) λ.(vs '#(Int List(T_Type))
                     let. #(vi subtypes) vs
                     let. pattern_lists′ map_opt[List(T_Pattern) List(T_Pattern)](pattern_lists λ.(ps 'List(T_Pattern)
                         match. get[T_Pattern](ps 0)
@@ -387,14 +413,23 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
 
 set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
     let. mut, context context
-    let. C_Context(old_context_vars _) context
+    let. C_Context(old_context_vars old_context_types) context
     let. old_context_len len[#(List(Int) C_Variable)](old_context_vars)
+    let. mut, type_index_base len[#(List(Int) List(List(T_Type)))](old_context_types)
     for[T_Statement](statements λ.(statement 'T_Statement
         match. statement
-        .T_TypeStatement(_ variants) set. context c_add_type_binding(context map[#(List(Int) List(T_Type)) List(T_Type)](variants λ.(v '#(List(Int) List(T_Type))
-            let. #(_ v) v
-            v
-        )))
+        .T_TypeStatement(num_type_params variants) set. type_index_base +(type_index_base 1)
+        ._ #()
+    ))
+    for[T_Statement](statements λ.(statement 'T_Statement
+        match. statement
+        .T_TypeStatement(num_type_params variants) set. context c_add_type_binding(context
+            map_ι[Int](num_type_params λ.(i 'Int +(type_index_base i)))
+            map[#(List(Int) List(T_Type)) List(T_Type)](variants λ.(v '#(List(Int) List(T_Type))
+                let. #(_ v) v
+                v
+            ))
+        )
         ._ #()
     ))
     let. mut, block_val None[Int]()
@@ -423,7 +458,7 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
             codegen_rc_decr(val)
         .T_Let∀(type_params name expr)
             let. mut, context′ context
-            for_ι(type_params λ.(i 'Int set.(context′ c_add_type_binding(context′ list.(empty[T_Type])))))
+            for_ι(type_params λ.(i 'Int set.(context′ c_add_type_binding(context′ empty[Int] list.(empty[T_Type])))))
             set. context c_add_let_binding(context name C_ConstVar(codegen_expr(expr context)))
         .T_LetMut(name expr)
             set. context c_add_let_binding(context name C_MutVar(codegen_create_mut_var(codegen_expr(expr context))))
