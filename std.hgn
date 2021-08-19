@@ -170,7 +170,7 @@ let. int→string λ.{n 'Int}
         .<(n 0)
             set. n -(0 n)
             "-"
-        .=(n 0)
+        .⊤
             "0"
     while. >(n 0)
         set. s ++[Int](list.(+(#!0 %(n 10))) s)
