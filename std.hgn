@@ -121,6 +121,9 @@ let. ∀,{T} =list λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
         r
     else, ⊥
 
+let. =list_int λ.{x 'List(Int) y 'List(Int)}
+    =list[Int](x y =)
+
 let. ∀,{T} filter λ.{xs 'List(T) f '‡(T : Bool)}
     let. mut, r empty[T]
     for[T](xs λ.(x 'T set.(r if.(f(x) push[T](r x) r))))
