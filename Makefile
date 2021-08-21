@@ -1,4 +1,4 @@
-TARGET = ./hagane
+TARGET = ./hagane-0.1
 HAGANE = hagane-0.0.5
 CXX = clang++
 CXXFLAGS = -std=c++17 -Wall
