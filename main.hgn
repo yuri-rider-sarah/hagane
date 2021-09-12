@@ -2,17 +2,17 @@ extern. file_contents ‡(Int : Int)
 extern. llvm_init ‡(Int : #())
 extern. llvm_fin ‡(Int Int Int Int Int : #())
 
-let. argv map_ι[List(Int)](-(get_argc() 1) λ.(i 'Int map_ι[Int](get_argv_len(+(i 1)) λ.(j 'Int get_argv_byte(+(i 1) j)))))
+let. argv map_ι(-(get_argc() 1) λ.(i 'Int map_ι(get_argv_len(+(i 1)) λ.(j 'Int get_argv_byte(+(i 1) j)))))
 
-let. mut, filenames empty[List(Int)]
+let. mut, filenames empty
 let. mut, opt_level 0
 let. mut, print_ir_unopt ⊥
 let. mut, print_ir ⊥
-let. mut, cc_args empty[List(Int)]
+let. mut, cc_args empty
 let. mut, output_file "out"
 
-for[List(Int)](argv λ.(arg 'List(Int)
-    if. if.(>(len[Int](arg) 0) =(get[Int](arg 0) #!-) ⊥)
+for(argv λ.(arg 'List(Int)
+    if. if.(>(len(arg) 0) =(get(arg 0) #!-) ⊥)
     then, match. arg
         ."-O0" set. opt_level 0
         ."-O1" set. opt_level 1
@@ -21,24 +21,24 @@ for[List(Int)](argv λ.(arg 'List(Int)
         ."-print-ir-unopt" set. print_ir_unopt ⊤
         ."-print-ir" set. print_ir ⊤
         ._
-            if. >(len[Int](arg) 1)
-                match. get[Int](arg 1)
-                .#!L set. cc_args push[List(Int)](cc_args drop[Int](arg 2))
-                .#!o set. output_file drop[Int](arg 2)
-                ._ string_error(++[Int]("Error: Invalid argument: " arg) 0)
-            else, string_error(++[Int]("Error: Invalid argument: " arg) 0)
-    else, set. filenames push[List(Int)](filenames arg)
+            if. >(len(arg) 1)
+                match. get(arg 1)
+                .#!L set. cc_args push(cc_args drop(arg 2))
+                .#!o set. output_file drop(arg 2)
+                ._ string_error(++("Error: Invalid argument: " arg) 0)
+            else, string_error(++("Error: Invalid argument: " arg) 0)
+    else, set. filenames push(filenames arg)
 ))
 
-if. =(len[List(Int)](filenames) 0)
+if. =(len(filenames) 0)
 then, string_error("Error: No input files given" 0)
 else, #()
 
-let. files map[List(Int) #(List(Int) List(Int))](filenames λ.(filename 'List(Int)
+let. files map(filenames λ.(filename 'List(Int)
     #(filename vector→list(utf8_decode(file_contents(list→vector(filename)))))
 ))
 let. mut, lexer lexer(files)
-let. mut, u_statements empty[U_Statement]
+let. mut, u_statements empty
 while.
     match. read_token(lexer)
     .#(_ Eof() _) ⊥
@@ -47,9 +47,9 @@ do,
     let. #(lexer′ r_expr) read_block_expr(lexer)
     set. lexer lexer′
     let. u_statement r_expr→u_statement(r_expr)
-    set. u_statements push[U_Statement](u_statements u_statement)
-let. i_statements u_statements→i_statements(u_statements empty_i_context new_type_var() FilePos(get[List(Int)](argv 0) 1 1))
+    set. u_statements push(u_statements u_statement)
+let. i_statements u_statements→i_statements(u_statements empty_i_context new_type_var() FilePos(get(argv 0) 1 1))
 let. t_statements i_statements→t_statements(i_statements empty_t_context)
 llvm_init(opt_level)
 codegen_statements(t_statements get_empty_c_context())
-llvm_fin(opt_level if.(print_ir_unopt 1 0) if.(print_ir 1 0) list→vector(map[List(Int) Int](cc_args λ.(x 'List(Int) utf8_encode(list→vector(x))))) utf8_encode(list→vector(output_file)))
+llvm_fin(opt_level if.(print_ir_unopt 1 0) if.(print_ir 1 0) list→vector(map(cc_args λ.(x 'List(Int) utf8_encode(list→vector(x))))) utf8_encode(list→vector(output_file)))

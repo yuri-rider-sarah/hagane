@@ -23,75 +23,75 @@ let. for_ι λ.{n 'Int f '‡(Int : #())}
         set. i +(i 1)
 
 let. ∀,{T} for λ.{xs 'List(T) f '‡(T : #())}
-    for_ι(len[T](xs) λ.(i 'Int f(get[T](xs i))))
+    for_ι(len(xs) λ.(i 'Int f(get(xs i))))
 
 let. ∀,{T U} for2 λ.{xs 'List(T) ys 'List(U) f '‡(T U : #())}
-    if. =(len[T](xs) len[U](ys))
-        for_ι(len[T](xs) λ.(i 'Int f(get[T](xs i) get[U](ys i))))
-        Some[#()](#())
-    else, None[#()]()
+    if. =(len(xs) len(ys))
+        for_ι(len(xs) λ.(i 'Int f(get(xs i) get(ys i))))
+        Some(#())
+    else, None()
 
 let. ∀,{T U} map λ.{xs 'List(T) f '‡(T : U)}
-    let. mut, ys empty[U]
-    for[T](xs λ.(x 'T set.(ys push[U](ys f(x)))))
+    let. mut, ys empty
+    for(xs λ.(x 'T set.(ys push(ys f(x)))))
     ys
 
 let. ∀,{T} map_ι λ.{n 'Int f '‡(Int : T)}
-    let. mut, ys empty[T]
-    for_ι(n λ.(i 'Int set.(ys push[T](ys f(i)))))
+    let. mut, ys empty
+    for_ι(n λ.(i 'Int set.(ys push(ys f(i)))))
     ys
 
 let. ∀,{T U} map_opt λ.{xs 'List(T) f '‡(T : Option(U))}
-    let. mut, ys empty[U]
-    for[T](xs λ.(x 'T
+    let. mut, ys empty
+    for(xs λ.(x 'T
         match. f(x)
-        .Some(y) set. ys push[U](ys y)
+        .Some(y) set. ys push(ys y)
         .None() #()
     ))
     ys
 
 let. ∀,{T} ι* λ.{xs 'List(T)}
-    map_ι[#(Int T)](len[T](xs) λ.(i 'Int
-        #(i get[T](xs i))
+    map_ι(len(xs) λ.(i 'Int
+        #(i get(xs i))
     ))
 
 let. ∀,{T} ∀ λ.{xs 'List(T) f '‡(T : Bool)}
     let. mut, r ⊤
-    for[T](xs λ.(x 'T
+    for(xs λ.(x 'T
         if. f(x) then, #() else, set.(r ⊥)
     ))
     r
 
 let. ∀,{T} ∃ λ.{xs 'List(T) f '‡(T : Bool)}
     let. mut, r ⊥
-    for[T](xs λ.(x 'T
+    for(xs λ.(x 'T
         if. f(x) then, set.(r ⊤) else, #()
     ))
     r
 
 let. ∀,{T} count λ.{xs 'List(T) f '‡(T : Bool)}
     let. mut, r 0
-    for[T](xs λ.(x 'T
+    for(xs λ.(x 'T
         if. f(x) then, set.(r +(r 1)) else, #()
     ))
     r
 
 let. ∀,{T} last λ.{xs 'List(T)}
-    if. >(len[T](xs) 0)
-    then, Some[T](get[T](xs -(len[T](xs) 1)))
-    else, None[T]()
+    if. >(len(xs) 0)
+    then, Some(get(xs -(len(xs) 1)))
+    else, None()
 
 let. ∀,{T} drop λ.{xs 'List(T) n 'Int}
-    let. mut, r empty[T]
+    let. mut, r empty
     let. mut, i n
-    while. <(i len[T](xs))
-        set. r push[T](r get[T](xs i))
+    while. <(i len(xs))
+        set. r push(r get(xs i))
         set. i +(i 1)
     r
 
 let. ∀,{T} ∈ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
     let. mut, r ⊥
-    for[T](ys λ.(y 'T
+    for(ys λ.(y 'T
         if. =T(y x)
         then, set. r ⊤
         else, #()
@@ -99,22 +99,22 @@ let. ∀,{T} ∈ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
     r
 
 let. ∀,{T} ∉ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
-    ¬(∈[T](x ys =T))
+    ¬(∈(x ys =T))
 
 let. ∀,{T} dedup λ.{xs 'List(T) =T '‡(T T : Bool)}
-    let. mut, r empty[T]
-    for[T](xs λ.(x 'T
-        if. ∉[T](x r =T)
-        then, set. r push[T](r x)
+    let. mut, r empty
+    for(xs λ.(x 'T
+        if. ∉(x r =T)
+        then, set. r push(r x)
         else, #()
     ))
     r
 
 let. ∀,{T} =list λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
-    if. =(len[T](xs) len[T](ys))
+    if. =(len(xs) len(ys))
         let. mut, r ⊤
-        for_ι(len[T](xs) λ.(i 'Int
-            if. ¬(=T(get[T](xs i) get[T](ys i)))
+        for_ι(len(xs) λ.(i 'Int
+            if. ¬(=T(get(xs i) get(ys i)))
             then, set. r ⊥
             else, #()
         ))
@@ -122,46 +122,46 @@ let. ∀,{T} =list λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
     else, ⊥
 
 let. =list_int λ.{x 'List(Int) y 'List(Int)}
-    =list[Int](x y =)
+    =list(x y =)
 
 let. ∀,{T} filter λ.{xs 'List(T) f '‡(T : Bool)}
-    let. mut, r empty[T]
-    for[T](xs λ.(x 'T set.(r if.(f(x) push[T](r x) r))))
+    let. mut, r empty
+    for(xs λ.(x 'T set.(r if.(f(x) push(r x) r))))
     r
 
 let. ∀,{T} \ λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
-    filter[T](xs λ.(x 'T ∉[T](x ys =T)))
+    filter(xs λ.(x 'T ∉(x ys =T)))
 
 let. ∀,{T} ++ λ.{xs 'List(T) ys 'List(T)}
     let. mut, r xs
-    for[T](ys λ.(y 'T set.(r push[T](r y))))
+    for(ys λ.(y 'T set.(r push(r y))))
     r
 
 let. ∀,{T} concat λ.{xss 'List(List(T))}
-    let. mut, r empty[T]
-    for[List(T)](xss λ.(xs 'List(T) set.(r ++[T](r xs))))
+    let. mut, r empty
+    for(xss λ.(xs 'List(T) set.(r ++(r xs))))
     r
 
 let. ∀,{T} intercalate λ.{xss 'List(List(T)) sep 'List(T)}
-    if. =(len[List(T)](xss) 0)
-        empty[T]
+    if. =(len(xss) 0)
+        empty
     else,
-        let. mut, r get[List(T)](xss 0)
-        for_ι(-(len[List(T)](xss) 1) λ.(i 'Int set.(r ++[T](r ++[T](sep get[List(T)](xss +(i 1)))))))
+        let. mut, r get(xss 0)
+        for_ι(-(len(xss) 1) λ.(i 'Int set.(r ++(r ++(sep get(xss +(i 1)))))))
         r
 
 let. ∀,{T U} zip λ.{xs 'List(T) ys 'List(U)}
-    if. =(len[T](xs) len[U](ys))
-        Some[List(#(T U))](map_ι[#(T U)](len[T](xs) λ.(i 'Int #(get[T](xs i) get[U](ys i)))))
-    else, None[List(#(T U))]()
+    if. =(len(xs) len(ys))
+        Some(map_ι(len(xs) λ.(i 'Int #(get(xs i) get(ys i)))))
+    else, None()
 
 let. ∀,{T U} unzip λ.{xs 'List(#(T U))}
-    let. mut, xs1 empty[T]
-    let. mut, xs2 empty[U]
-    for[#(T U)](xs λ.(x '#(T U)
+    let. mut, xs1 empty
+    let. mut, xs2 empty
+    for(xs λ.(x '#(T U)
         let. #(x1 x2) x
-        set. xs1 push[T](xs1 x1)
-        set. xs2 push[U](xs2 x2)
+        set. xs1 push(xs1 x1)
+        set. xs2 push(xs2 x2)
     ))
     #(xs1 xs2)
 
@@ -169,13 +169,13 @@ let. int→string λ.{n 'Int}
     let. mut, n n
     let. mut, s cond.
         .>(n 0)
-            empty[Int]
+            empty
         .<(n 0)
             set. n -(0 n)
             "-"
         .⊤
             "0"
     while. >(n 0)
-        set. s ++[Int](list.(+(#!0 %(n 10))) s)
+        set. s ++(list.(+(#!0 %(n 10))) s)
         set. n /(n 10)
     s

@@ -82,19 +82,19 @@ type. C_Context C_Context(
 
 let. c_add_let_binding λ.{context 'C_Context name 'List(Int) var 'C_Variable}
     let. C_Context(vars types) context
-    C_Context(push[#(List(Int) C_Variable)](vars #(name var)) types)
+    C_Context(push(vars #(name var)) types)
 
 let. c_add_type_binding λ.{context 'C_Context type_params 'List(Int) variants 'List(List(T_Type))}
     let. C_Context(vars types) context
-    C_Context(vars push[#(List(Int) List(List(T_Type)))](types #(type_params variants)))
+    C_Context(vars push(types #(type_params variants)))
 
 let. c_lookup_var λ.{name 'List(Int) context 'C_Context}
-    let. mut, r None[C_Variable]()
+    let. mut, r None()
     let. C_Context(vars _) context
-    for[#(List(Int) C_Variable)](vars λ.(var '#(List(Int) C_Variable)
+    for(vars λ.(var '#(List(Int) C_Variable)
         let. #(name′ val) var
-        if. =list[Int](name′ name =)
-        then, set. r Some[C_Variable](val)
+        if. =list(name′ name =)
+        then, set. r Some(val)
         else, #()
     ))
     match. r
@@ -122,7 +122,7 @@ let. get_empty_c_context λ.{}
         #("≤" C_ConstVar(codegen_cmp_primitive(3)))
         #(">" C_ConstVar(codegen_cmp_primitive(4)))
         #("≥" C_ConstVar(codegen_cmp_primitive(5)))
-        #("empty" C_ConstVar(codegen_list(list→vector(empty[Int]))))
+        #("empty" C_ConstVar(codegen_list(list→vector(empty))))
         #("len" C_ConstVar(codegen_len_primitive()))
         #("get" C_ConstVar(codegen_get_primitive()))
         #("put" C_ConstVar(codegen_put_primitive()))
@@ -136,142 +136,142 @@ let. get_empty_c_context λ.{}
         extern_binding("get_argv_len" 1 1)
         extern_binding("get_argv_byte" 2 1)
         )
-        list.(#(empty[Int] list.(empty[T_Type])) #(empty[Int] list.(empty[T_Type])) #(list.(3) list.(empty[T_Type])))
+        list.(#(empty list.(empty)) #(empty list.(empty)) #(list.(3) list.(empty)))
     )
 
 let. mut, c_substitute_in_type λ.{type 'T_Type subs 'List(#(Int T_Type))} type
 set. c_substitute_in_type λ.{type 'T_Type subs 'List(#(Int T_Type))}
     match. type
     .T_Named(tn type_args)
-        let. mut, t′ None[T_Type]()
-        for[#(Int T_Type)](subs λ.(sub '#(Int T_Type)
+        let. mut, t′ None()
+        for(subs λ.(sub '#(Int T_Type)
             let. #(stn st) sub
             if. =(stn tn)
-            then, set. t′ Some[T_Type](st)
+            then, set. t′ Some(st)
             else, #()
         ))
         match. t′
         .Some(t′) t′
-        .None() T_Named(tn map[T_Type T_Type](type_args λ.(t 'T_Type c_substitute_in_type(t subs))))
-    .T_TupleType(subtypes) T_TupleType(map[T_Type T_Type](subtypes λ.(t 'T_Type c_substitute_in_type(t subs))))
-    .T_Function(params ret) T_Function(map[T_Type T_Type](params λ.(t 'T_Type c_substitute_in_type(t subs))) c_substitute_in_type(ret subs))
+        .None() T_Named(tn map(type_args λ.(t 'T_Type c_substitute_in_type(t subs))))
+    .T_TupleType(subtypes) T_TupleType(map(subtypes λ.(t 'T_Type c_substitute_in_type(t subs))))
+    .T_Function(params ret) T_Function(map(params λ.(t 'T_Type c_substitute_in_type(t subs))) c_substitute_in_type(ret subs))
 
 let. mut, is_match_exhaustive λ.{pattern_lists 'List(List(T_Pattern)) types 'List(T_Type) context 'C_Context} ⊥
 set. is_match_exhaustive λ.{pattern_lists 'List(List(T_Pattern)) types 'List(T_Type) context 'C_Context}
-    if. =(len[T_Type](types) 0)
-    then, ≠(len[List(T_Pattern)](pattern_lists) 0)
+    if. =(len(types) 0)
+    then, ≠(len(pattern_lists) 0)
     else,
-        let. pattern_lists′ map_opt[List(T_Pattern) List(T_Pattern)](pattern_lists λ.(ps 'List(T_Pattern)
-            let. T_Pattern(pd _ _) get[T_Pattern](ps 0)
+        let. pattern_lists′ map_opt(pattern_lists λ.(ps 'List(T_Pattern)
+            let. T_Pattern(pd _ _) get(ps 0)
             match. pd
-            .T_IdentPattern(_) Some[List(T_Pattern)](drop[T_Pattern](ps 1))
-            .T_WildcardPattern() Some[List(T_Pattern)](drop[T_Pattern](ps 1))
-            ._ None[List(T_Pattern)]()
+            .T_IdentPattern(_) Some(drop(ps 1))
+            .T_WildcardPattern() Some(drop(ps 1))
+            ._ None()
         ))
-        if. ≠(len[List(T_Pattern)](pattern_lists′) 0)
-        then, is_match_exhaustive(pattern_lists′ drop[T_Type](types 1) context)
-        else, match. get[T_Type](types 0)
+        if. ≠(len(pattern_lists′) 0)
+        then, is_match_exhaustive(pattern_lists′ drop(types 1) context)
+        else, match. get(types 0)
             .T_Named(ti type_args)
                 let. C_Context(_ ctx_types) context
-                let. #(type_params variants) get[#(List(Int) List(List(T_Type)))](ctx_types ti)
-                let. subs match. zip[Int T_Type](type_params type_args)
+                let. #(type_params variants) get(ctx_types ti)
+                let. subs match. zip(type_params type_args)
                     .Some(subs) subs
                     .None()
                         unreachable("type_args and type_params are not equal length")
-                        empty[#(Int T_Type)]
-                let. variants map[List(T_Type) List(T_Type)](variants λ.(variant 'List(T_Type)
-                    map[T_Type T_Type](variant λ.(t 'T_Type c_substitute_in_type(t subs)))
+                        empty
+                let. variants map(variants λ.(variant 'List(T_Type)
+                    map(variant λ.(t 'T_Type c_substitute_in_type(t subs)))
                 ))
-                ∀[#(Int List(T_Type))](ι*[List(T_Type)](variants) λ.(vs '#(Int List(T_Type))
+                ∀(ι*(variants) λ.(vs '#(Int List(T_Type))
                     let. #(vi subtypes) vs
-                    let. pattern_lists′ map_opt[List(T_Pattern) List(T_Pattern)](pattern_lists λ.(ps 'List(T_Pattern)
-                        match. get[T_Pattern](ps 0)
+                    let. pattern_lists′ map_opt(pattern_lists λ.(ps 'List(T_Pattern)
+                        match. get(ps 0)
                         .T_Pattern(T_VariantPattern(name subpatterns _) _ file_pos) match. c_lookup_var(name context)
-                            .C_Ctor(_ vi′) if. =(default[Int](0 vi′) vi)
-                                then, Some[List(T_Pattern)](++[T_Pattern](subpatterns drop[T_Pattern](ps 1)))
-                                else, None[List(T_Pattern)]()
-                            .C_DCtor(vi′) if. =(default[Int](0 vi′) vi)
-                                then, Some[List(T_Pattern)](++[T_Pattern](subpatterns drop[T_Pattern](ps 1)))
-                                else, None[List(T_Pattern)]()
+                            .C_Ctor(_ vi′) if. =(default(0 vi′) vi)
+                                then, Some(++(subpatterns drop(ps 1)))
+                                else, None()
+                            .C_DCtor(vi′) if. =(default(0 vi′) vi)
+                                then, Some(++(subpatterns drop(ps 1)))
+                                else, None()
                             ._
                                 error(NotACtor(name) file_pos)
-                                None[List(T_Pattern)]()
-                        ._ None[List(T_Pattern)]()
+                                None()
+                        ._ None()
                     ))
-                    if. ≠(len[List(T_Pattern)](pattern_lists′) 0)
-                    then, is_match_exhaustive(pattern_lists′ ++[T_Type](subtypes drop[T_Type](types 1)) context)
+                    if. ≠(len(pattern_lists′) 0)
+                    then, is_match_exhaustive(pattern_lists′ ++(subtypes drop(types 1)) context)
                     else, ⊥
                 ))
             .T_TupleType(subtypes)
-                let. pattern_lists′ map_opt[List(T_Pattern) List(T_Pattern)](pattern_lists λ.(ps 'List(T_Pattern)
-                    match. get[T_Pattern](ps 0)
+                let. pattern_lists′ map_opt(pattern_lists λ.(ps 'List(T_Pattern)
+                    match. get(ps 0)
                     .T_Pattern(T_TuplePattern(subpatterns) _ _)
-                        Some[List(T_Pattern)](++[T_Pattern](subpatterns drop[T_Pattern](ps 1)))
-                    ._ None[List(T_Pattern)]()
+                        Some(++(subpatterns drop(ps 1)))
+                    ._ None()
                 ))
-                if. ≠(len[List(T_Pattern)](pattern_lists′) 0)
-                then, is_match_exhaustive(pattern_lists′ ++[T_Type](subtypes drop[T_Type](types 1)) context)
+                if. ≠(len(pattern_lists′) 0)
+                then, is_match_exhaustive(pattern_lists′ ++(subtypes drop(types 1)) context)
                 else, ⊥
             .T_Function(_ _) ⊥
 
-let. mut, pattern_vars λ.{pattern 'T_Pattern} empty[List(Int)]
+let. mut, pattern_vars λ.{pattern 'T_Pattern} empty
 set. pattern_vars λ.{pattern 'T_Pattern}
-    let. rec λ. subpatterns 'List(T_Pattern) dedup[List(Int)](concat[List(Int)](map[T_Pattern List(List(Int))](subpatterns pattern_vars)) =list_int)
+    let. rec λ. subpatterns 'List(T_Pattern) dedup(concat(map(subpatterns pattern_vars)) =list_int)
     let. T_Pattern(pattern_data _ _) pattern
     match. pattern_data
-    .T_IntLiteralPattern(_) empty[List(Int)]
+    .T_IntLiteralPattern(_) empty
     .T_IdentPattern(name) list.(name)
-    .T_WildcardPattern() empty[List(Int)]
+    .T_WildcardPattern() empty
     .T_TuplePattern(subpatterns) rec(subpatterns)
     .T_VariantPattern(_ subpatterns _) rec(subpatterns)
     .T_ListPattern(subpatterns) rec(subpatterns)
 
-let. mut, free_vars λ.{expr 'T_Expr} empty[List(Int)]
+let. mut, free_vars λ.{expr 'T_Expr} empty
 set. free_vars λ.{expr 'T_Expr}
-    let. rec λ. subexprs 'List(T_Expr) dedup[List(Int)](concat[List(Int)](map[T_Expr List(List(Int))](subexprs free_vars)) =list_int)
+    let. rec λ. subexprs 'List(T_Expr) dedup(concat(map(subexprs free_vars)) =list_int)
     let. T_Expr(expr_data _ _) expr
     match. expr_data
-    .T_IntLiteral(_) empty[List(Int)]
+    .T_IntLiteral(_) empty
     .T_Ident(name _) list.(name)
     .T_Tuple(subexprs) rec(subexprs)
-    .T_Apply(func args) rec(push[T_Expr](args func))
-    .T_Set(name subexpr) push[List(Int)](free_vars(subexpr) name)
+    .T_Apply(func args) rec(push(args func))
+    .T_Set(name subexpr) push(free_vars(subexpr) name)
     .T_If(cond then else) rec(list.(cond then else))
     .T_While(cond body) rec(list.(cond body))
     .T_Do(statements)
-        let. mut, bound_vars empty[List(Int)]
-        let. mut, do_free_vars empty[List(Int)]
-        for[T_Statement](statements λ.(statement 'T_Statement
+        let. mut, bound_vars empty
+        let. mut, do_free_vars empty
+        for(statements λ.(statement 'T_Statement
             match. statement
-            .T_ExprStatement(expr) set. do_free_vars ++[List(Int)](do_free_vars \[List(Int)](free_vars(expr) bound_vars =list_int))
+            .T_ExprStatement(expr) set. do_free_vars ++(do_free_vars \(free_vars(expr) bound_vars =list_int))
             .T_Let(pattern expr)
-                set. do_free_vars ++[List(Int)](do_free_vars \[List(Int)](free_vars(expr) bound_vars =list_int))
-                set. bound_vars ++[List(Int)](bound_vars pattern_vars(pattern))
+                set. do_free_vars ++(do_free_vars \(free_vars(expr) bound_vars =list_int))
+                set. bound_vars ++(bound_vars pattern_vars(pattern))
             .T_Let∀(_ name expr)
-                set. do_free_vars ++[List(Int)](do_free_vars \[List(Int)](free_vars(expr) bound_vars =list_int))
-                set. bound_vars push[List(Int)](bound_vars name)
+                set. do_free_vars ++(do_free_vars \(free_vars(expr) bound_vars =list_int))
+                set. bound_vars push(bound_vars name)
             .T_LetMut(name expr)
-                set. do_free_vars ++[List(Int)](do_free_vars \[List(Int)](free_vars(expr) bound_vars =list_int))
-                set. bound_vars push[List(Int)](bound_vars name)
+                set. do_free_vars ++(do_free_vars \(free_vars(expr) bound_vars =list_int))
+                set. bound_vars push(bound_vars name)
             .T_TypeStatement(_ _) #()
             .T_Extern(name _)
-                set. bound_vars push[List(Int)](bound_vars name)
+                set. bound_vars push(bound_vars name)
         ))
-        dedup[List(Int)](do_free_vars =list_int)
-    .T_Lambda(params body) \[List(Int)](free_vars(body) concat[List(Int)](map[T_Pattern List(List(Int))](params pattern_vars)) =list_int)
-    .T_Cond(cases) rec(concat[T_Expr](map[#(T_Expr T_Expr) List(T_Expr)](cases λ.(case '#(T_Expr T_Expr)
+        dedup(do_free_vars =list_int)
+    .T_Lambda(params body) \(free_vars(body) concat(map(params pattern_vars)) =list_int)
+    .T_Cond(cases) rec(concat(map(cases λ.(case '#(T_Expr T_Expr)
         let. #(cond body) case
         list.(cond body)
     ))))
-    .T_Match(subexpr cases) dedup[List(Int)](concat[List(Int)](push[List(List(Int))](map[#(T_Pattern T_Expr) List(List(Int))](cases λ.(case '#(T_Pattern T_Expr)
+    .T_Match(subexpr cases) dedup(concat(push(map(cases λ.(case '#(T_Pattern T_Expr)
         let. #(pattern body) case
-        \[List(Int)](free_vars(body) pattern_vars(pattern) =list_int)
+        \(free_vars(body) pattern_vars(pattern) =list_int)
     )) free_vars(subexpr))) =list_int)
     .T_ListLiteral(subexprs) rec(subexprs)
 
 let. mut, codegen_expr λ.{expr 'T_Expr context 'C_Context} 0
 let. mut, codegen_statements λ.{statements 'List(T_Statement) context 'C_Context} 0
-let. mut, codegen_pattern_test λ.{val 'Int pattern 'T_Pattern context 'C_Context} #(empty[#(List(Int) C_Variable)] empty[Int])
+let. mut, codegen_pattern_test λ.{val 'Int pattern 'T_Pattern context 'C_Context} #(empty empty)
 
 set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
     let. T_Expr(expr_data expr_type file_pos) expr
@@ -291,9 +291,9 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         codegen_rc_incr(val)
         val
     .T_Tuple(exprs)
-        codegen_tuple(list→vector(map[T_Expr Int](exprs λ.(e 'T_Expr codegen_expr(e context)))))
+        codegen_tuple(list→vector(map(exprs λ.(e 'T_Expr codegen_expr(e context)))))
     .T_Apply(func args)
-        codegen_apply(codegen_expr(func context) list→vector(map[T_Expr Int](args λ.(e 'T_Expr codegen_expr(e context)))))
+        codegen_apply(codegen_expr(func context) list→vector(map(args λ.(e 'T_Expr codegen_expr(e context)))))
     .T_Set(name expr)
         match. c_lookup_var(name context)
         .C_MutVar(var)
@@ -303,7 +303,7 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         .C_Unused()
             unreachable("Variable incorrectly marked as unused")
         ._ error(AssignToConst(name) file_pos)
-        codegen_tuple(list→vector(empty[Int]))
+        codegen_tuple(list→vector(empty))
     .T_If(cond then else)
         let. cond_val codegen_expr(cond context)
         let. cond_val_block get_insert_block()
@@ -338,30 +338,30 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         set_insert_block(cond_val_block)
         codegen_cond_br(cond_val body_block merge_block)
         set_insert_block(merge_block)
-        codegen_tuple(list→vector(empty[Int]))
+        codegen_tuple(list→vector(empty))
     .T_Do(statements) codegen_statements(statements context)
     .T_Lambda(params body)
         let. parent_block get_insert_block()
         let. C_Context(vars types) context
         let. body_free_vars free_vars(body)
-        let. mut, is_captured empty[Bool]
-        for[#(List(Int) C_Variable)](vars λ.(var '#(List(Int) C_Variable) set.(is_captured push[Bool](is_captured ⊥))))
-        for[List(Int)](body_free_vars λ.(name 'List(Int)
-            let. mut, cap_var_i None[Int]()
-            for_ι(len[#(List(Int) C_Variable)](vars) λ.(i 'Int
-                let. #(name′ _) get[#(List(Int) C_Variable)](vars i)
-                if. =list[Int](name′ name =)
-                    set. cap_var_i Some[Int](i)
+        let. mut, is_captured empty
+        for(vars λ.(var '#(List(Int) C_Variable) set.(is_captured push(is_captured ⊥))))
+        for(body_free_vars λ.(name 'List(Int)
+            let. mut, cap_var_i None()
+            for_ι(len(vars) λ.(i 'Int
+                let. #(name′ _) get(vars i)
+                if. =list(name′ name =)
+                    set. cap_var_i Some(i)
                 else, #()
             ))
             match. cap_var_i
             .Some(cap_var_i)
-                set. is_captured put[Bool](is_captured cap_var_i ⊤)
+                set. is_captured put(is_captured cap_var_i ⊤)
             .None() #()
         ))
-        let. outer_captures list→vector(map_opt[#(Int #(List(Int) C_Variable)) Int](ι*[#(List(Int) C_Variable)](vars) λ.(i_var '#(Int #(List(Int) C_Variable))
+        let. outer_captures list→vector(map_opt(ι*(vars) λ.(i_var '#(Int #(List(Int) C_Variable))
             let. #(i #(name var)) i_var
-            if. get[Bool](is_captured i)
+            if. get(is_captured i)
                 let. cap match. var
                     .C_ConstVar(val)
                         codegen_rc_incr(val)
@@ -378,18 +378,18 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
                     .C_DCtor(_)
                         unreachable("Variable incorrectly marked as unused")
                         0
-                Some[Int](cap)
-            else, None[Int]()
+                Some(cap)
+            else, None()
         )))
-        let. captures_type get_captures_type(len[T_Pattern](params) outer_captures)
-        let. func begin_new_function(len[T_Pattern](params))
+        let. captures_type get_captures_type(len(params) outer_captures)
+        let. func begin_new_function(len(params))
         let. inner_captures_box codegen_get_captures()
         let. inner_captures codegen_pointer_bitcast(inner_captures_box captures_type)
         let. mut, cap_struct_i 0
-        let. vars′ ++[#(List(Int) C_Variable)](
-            map[#(Int #(List(Int) C_Variable)) #(List(Int) C_Variable)](ι*[#(List(Int) C_Variable)](vars) λ.(i_var '#(Int #(List(Int) C_Variable))
+        let. vars′ ++(
+            map(ι*(vars) λ.(i_var '#(Int #(List(Int) C_Variable))
                 let. #(i #(name var)) i_var
-                if. get[Bool](is_captured i)
+                if. get(is_captured i)
                     let. cap codegen_extract_capture(inner_captures cap_struct_i)
                     set. cap_struct_i +(cap_struct_i 1)
                     let. var′ match. var
@@ -409,13 +409,13 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
                         ._ C_Unused()
                     #(name var′)
             ))
-            concat[#(List(Int) C_Variable)](map_ι[List(#(List(Int) C_Variable))](len[T_Pattern](params) λ.(i 'Int
+            concat(map_ι(len(params) λ.(i 'Int
                 let. arg codegen_get_arg(i)
-                let. #(bindings pattern_ends) codegen_pattern_test(arg get[T_Pattern](params i) context)
-                if. ≠(len[Int](pattern_ends) 0)
+                let. #(bindings pattern_ends) codegen_pattern_test(arg get(params i) context)
+                if. ≠(len(pattern_ends) 0)
                     unreachable("pattern_ends not empty")
                 else, #()
-                for[#(List(Int) C_Variable)](bindings λ.(binding '#(List(Int) C_Variable)
+                for(bindings λ.(binding '#(List(Int) C_Variable)
                     let. #(_ var) binding
                     codegen_var_rc_incr(var)
                 ))
@@ -426,7 +426,7 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         let. context′ C_Context(vars′ types)
         codegen_rc_decr(inner_captures_box)
         let. ret_val codegen_expr(body context′)
-        for[#(List(Int) C_Variable)](vars′ λ.(binding '#(List(Int) C_Variable)
+        for(vars′ λ.(binding '#(List(Int) C_Variable)
             let. #(_ var) binding
             codegen_var_rc_decr(var)
         ))
@@ -436,19 +436,19 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
     .T_Cond(cases)
         let. C_Context(vars _) context
         if. ¬(∧(
-            =(count[#(List(Int) C_Variable)](vars λ.(var '#(List(Int) C_Variable)
+            =(count(vars λ.(var '#(List(Int) C_Variable)
                 let. #(name _) var
-                =list[Int](name "⊤" =)
+                =list(name "⊤" =)
             )) 1)
-            ∃[#(T_Expr T_Expr)](cases λ.(case '#(T_Expr T_Expr)
+            ∃(cases λ.(case '#(T_Expr T_Expr)
                 match. case
                 .#(T_Expr(T_Ident("⊤" _) _ _) _) ⊤
                 ._ ⊥
             ))
         ))
-        then, error(InvalidExpr(Some[List(Int)]("cond")) file_pos)
+        then, error(InvalidExpr(Some("cond")) file_pos)
         else, #()
-        let. branches map[#(T_Expr T_Expr) #(Int Int)](cases λ.(case '#(T_Expr T_Expr)
+        let. branches map(cases λ.(case '#(T_Expr T_Expr)
             let. #(cond body) case
             let. cond_val codegen_expr(cond context)
             let. cond_val_block get_insert_block()
@@ -463,8 +463,8 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         ))
         codegen_unreachable()
         let. merge_block begin_new_block()
-        let. phi codegen_phi(len[#(Int Int)](branches))
-        for[#(Int Int)](branches λ.(branch '#(Int Int)
+        let. phi codegen_phi(len(branches))
+        for(branches λ.(branch '#(Int Int)
             let. #(body_val body_end) branch
             set_insert_block(body_end)
             codegen_br(merge_block)
@@ -474,20 +474,20 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         phi
     .T_Match(expr cases)
         let. T_Expr(_ expr_type expr_file_pos) expr
-        if. ¬(is_match_exhaustive(map[#(T_Pattern T_Expr) List(T_Pattern)](cases λ.(case '#(T_Pattern T_Expr)
+        if. ¬(is_match_exhaustive(map(cases λ.(case '#(T_Pattern T_Expr)
             let. #(pattern _) case
             list.(pattern)
         )) list.(expr_type) context))
         then, error(InexhaustivePatterns() expr_file_pos)
         else, #()
         let. C_Context(old_context_vars _) context
-        let. old_context_len len[#(List(Int) C_Variable)](old_context_vars)
+        let. old_context_len len(old_context_vars)
         let. matched_val codegen_expr(expr context)
-        let. branches map[#(T_Pattern T_Expr) #(Int Int)](cases λ.(case '#(T_Pattern T_Expr)
+        let. branches map(cases λ.(case '#(T_Pattern T_Expr)
             let. #(pattern body) case
             let. #(bindings pattern_ends) codegen_pattern_test(matched_val pattern context)
             let. mut, context′ context
-            for[#(List(Int) C_Variable)](bindings λ.(bind '#(List(Int) C_Variable)
+            for(bindings λ.(bind '#(List(Int) C_Variable)
                 let. #(name var) bind
                 codegen_var_rc_incr(var)
                 set. context′ c_add_let_binding(context′ name var)
@@ -495,13 +495,13 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
             codegen_rc_decr(matched_val)
             let. body_val codegen_expr(body context′)
             let. C_Context(context_vars _) context
-            for_ι(-(len[#(List(Int) C_Variable)](context_vars) old_context_len) λ.(i 'Int
-                let. #(_ var) get[#(List(Int) C_Variable)](context_vars +(i old_context_len))
+            for_ι(-(len(context_vars) old_context_len) λ.(i 'Int
+                let. #(_ var) get(context_vars +(i old_context_len))
                 codegen_var_rc_decr(var)
             ))
             let. body_end get_insert_block()
             let. next_block create_block()
-            for[Int](pattern_ends λ.(pattern_end 'Int
+            for(pattern_ends λ.(pattern_end 'Int
                 bind_pattern_end(pattern_end next_block)
             ))
             set_insert_block(next_block)
@@ -509,8 +509,8 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         ))
         codegen_unreachable()
         let. merge_block begin_new_block()
-        let. phi codegen_phi(len[#(Int Int)](branches))
-        for[#(Int Int)](branches λ.(branch '#(Int Int)
+        let. phi codegen_phi(len(branches))
+        for(branches λ.(branch '#(Int Int)
             let. #(body_val body_end) branch
             set_insert_block(body_end)
             codegen_br(merge_block)
@@ -519,37 +519,37 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         set_insert_block(merge_block)
         phi
     .T_ListLiteral(exprs)
-        codegen_list(list→vector(map[T_Expr Int](exprs λ.(e 'T_Expr codegen_expr(e context)))))
+        codegen_list(list→vector(map(exprs λ.(e 'T_Expr codegen_expr(e context)))))
 
 set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
     let. mut, context context
     let. C_Context(old_context_vars old_context_types) context
-    let. old_context_len len[#(List(Int) C_Variable)](old_context_vars)
-    let. mut, type_index_base len[#(List(Int) List(List(T_Type)))](old_context_types)
-    for[T_Statement](statements λ.(statement 'T_Statement
+    let. old_context_len len(old_context_vars)
+    let. mut, type_index_base len(old_context_types)
+    for(statements λ.(statement 'T_Statement
         match. statement
         .T_TypeStatement(num_type_params variants) set. type_index_base +(type_index_base 1)
         ._ #()
     ))
-    for[T_Statement](statements λ.(statement 'T_Statement
+    for(statements λ.(statement 'T_Statement
         match. statement
         .T_TypeStatement(num_type_params variants) set. context c_add_type_binding(context
-            map_ι[Int](num_type_params λ.(i 'Int +(type_index_base i)))
-            map[#(List(Int) List(T_Type)) List(T_Type)](variants λ.(v '#(List(Int) List(T_Type))
+            map_ι(num_type_params λ.(i 'Int +(type_index_base i)))
+            map(variants λ.(v '#(List(Int) List(T_Type))
                 let. #(_ v) v
                 v
             ))
         )
         ._ #()
     ))
-    let. mut, block_val None[Int]()
-    for[T_Statement](statements λ.(statement 'T_Statement
+    let. mut, block_val None()
+    for(statements λ.(statement 'T_Statement
         match. statement
         .T_ExprStatement(expr)
             match. block_val
             .Some(val) codegen_rc_decr(val)
             .None() #()
-            set. block_val Some[Int](codegen_expr(expr context))
+            set. block_val Some(codegen_expr(expr context))
         .T_Let(pattern expr)
             let. T_Expr(_ expr_type expr_file_pos) expr
             if. ¬(is_match_exhaustive(list.(list.(pattern)) list.(expr_type) context))
@@ -557,10 +557,10 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
             else, #()
             let. val codegen_expr(expr context)
             let. #(bindings pattern_ends) codegen_pattern_test(val pattern context)
-            if. ≠(len[Int](pattern_ends) 0)
+            if. ≠(len(pattern_ends) 0)
                 unreachable("pattern_ends not empty")
             else, #()
-            for[#(List(Int) C_Variable)](bindings λ.(bind '#(List(Int) C_Variable)
+            for(bindings λ.(bind '#(List(Int) C_Variable)
                 let. #(name var) bind
                 codegen_var_rc_incr(var)
                 set. context c_add_let_binding(context name var)
@@ -568,25 +568,25 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
             codegen_rc_decr(val)
         .T_Let∀(type_params name expr)
             let. mut, context′ context
-            for_ι(type_params λ.(i 'Int set.(context′ c_add_type_binding(context′ empty[Int] list.(empty[T_Type])))))
+            for_ι(type_params λ.(i 'Int set.(context′ c_add_type_binding(context′ empty list.(empty)))))
             set. context c_add_let_binding(context name C_ConstVar(codegen_expr(expr context)))
         .T_LetMut(name expr)
             set. context c_add_let_binding(context name C_MutVar(codegen_create_mut_var(codegen_expr(expr context))))
         .T_TypeStatement(num_params variants)
-            if. =(len[#(List(Int) List(T_Type))](variants) 1)
-                let. #(name params) get[#(List(Int) List(T_Type))](variants 0)
-                set. context c_add_let_binding(context name C_Ctor(codegen_create_tagless_ctor(len[T_Type](params)) None[Int]()))
+            if. =(len(variants) 1)
+                let. #(name params) get(variants 0)
+                set. context c_add_let_binding(context name C_Ctor(codegen_create_tagless_ctor(len(params)) None()))
             else,
-                for_ι(len[#(List(Int) List(T_Type))](variants) λ.(i 'Int
-                    let. #(name params) get[#(List(Int) List(T_Type))](variants i)
-                    set. context c_add_let_binding(context name C_Ctor(codegen_create_tagged_ctor(len[T_Type](params) i) Some[Int](i)))
+                for_ι(len(variants) λ.(i 'Int
+                    let. #(name params) get(variants i)
+                    set. context c_add_let_binding(context name C_Ctor(codegen_create_tagged_ctor(len(params) i) Some(i)))
                 ))
         .T_Extern(name type)
             let. file_pos FilePos("[extern.]" 0 0)
             match. type
             .T_Function(params ret)
                 let. TypeName(int_type_index) int_type
-                for[T_Type](params λ.(param 'T_Type
+                for(params λ.(param 'T_Type
                     match. param
                     .T_Named(i _)
                         if. ≠(i int_type_index)
@@ -605,56 +605,56 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
                     ._
                         error(InvalidExternType(name) file_pos)
                         ⊥
-                set. context c_add_let_binding(context name C_ConstVar(codegen_extern(utf8_encode(list→vector(name)) len[T_Type](params) if.(ret_int 1 0))))
+                set. context c_add_let_binding(context name C_ConstVar(codegen_extern(utf8_encode(list→vector(name)) len(params) if.(ret_int 1 0))))
             ._
                 error(InvalidExternType(name) file_pos)
     ))
     let. C_Context(context_vars _) context
-    for_ι(-(len[#(List(Int) C_Variable)](context_vars) old_context_len) λ.(i 'Int
-        let. #(_ var) get[#(List(Int) C_Variable)](context_vars +(i old_context_len))
+    for_ι(-(len(context_vars) old_context_len) λ.(i 'Int
+        let. #(_ var) get(context_vars +(i old_context_len))
         codegen_var_rc_decr(var)
     ))
     match. block_val
     .Some(block_val) block_val
-    .None() codegen_tuple(list→vector(empty[Int]))
+    .None() codegen_tuple(list→vector(empty))
 
 set. codegen_pattern_test λ.{val 'Int pattern 'T_Pattern context 'C_Context}
     let. T_Pattern(pattern_data _ file_pos) pattern
     match. pattern_data
-    .T_IntLiteralPattern(n) #(empty[#(List(Int) C_Variable)] list.(codegen_int_pattern_test(val n)))
-    .T_IdentPattern(name) #(list.(#(name C_ConstVar(val))) empty[Int])
-    .T_WildcardPattern() #(empty[#(List(Int) C_Variable)] empty[Int])
+    .T_IntLiteralPattern(n) #(empty list.(codegen_int_pattern_test(val n)))
+    .T_IdentPattern(name) #(list.(#(name C_ConstVar(val))) empty)
+    .T_WildcardPattern() #(empty empty)
     .T_TuplePattern(patterns)
-        let. tuple codegen_tuple_cast(val len[T_Pattern](patterns))
-        let. #(bindings_ ends_) unzip[List(#(List(Int) C_Variable)) List(Int)](map_ι[#(List(#(List(Int) C_Variable)) List(Int))](len[T_Pattern](patterns) λ.(i 'Int
-            codegen_pattern_test(codegen_tuple_get(tuple i) get[T_Pattern](patterns i) context)
+        let. tuple codegen_tuple_cast(val len(patterns))
+        let. #(bindings_ ends_) unzip(map_ι(len(patterns) λ.(i 'Int
+            codegen_pattern_test(codegen_tuple_get(tuple i) get(patterns i) context)
         )))
-        #(concat[#(List(Int) C_Variable)](bindings_) concat[Int](ends_))
+        #(concat(bindings_) concat(ends_))
     .T_VariantPattern(ctor patterns _)
         let. tag match. c_lookup_var(ctor context)
             .C_Ctor(_ tag) tag
             .C_DCtor(tag) tag
             ._
                 error(NotACtor(ctor) file_pos)
-                None[Int]()
+                None()
         match. tag
         .Some(tag)
-            let. tagged codegen_tagged_cast(val len[T_Pattern](patterns))
+            let. tagged codegen_tagged_cast(val len(patterns))
             let. tag_fail codegen_tag_check(tagged tag)
-            let. #(bindings_ ends_) unzip[List(#(List(Int) C_Variable)) List(Int)](map_ι[#(List(#(List(Int) C_Variable)) List(Int))](len[T_Pattern](patterns) λ.(i 'Int
-                codegen_pattern_test(codegen_tuple_get(tagged i) get[T_Pattern](patterns i) context)
+            let. #(bindings_ ends_) unzip(map_ι(len(patterns) λ.(i 'Int
+                codegen_pattern_test(codegen_tuple_get(tagged i) get(patterns i) context)
             )))
-            #(concat[#(List(Int) C_Variable)](bindings_) push[Int](concat[Int](ends_) tag_fail))
+            #(concat(bindings_) push(concat(ends_) tag_fail))
         .None()
-            let. tuple codegen_tuple_cast(val len[T_Pattern](patterns))
-            let. #(bindings_ ends_) unzip[List(#(List(Int) C_Variable)) List(Int)](map_ι[#(List(#(List(Int) C_Variable)) List(Int))](len[T_Pattern](patterns) λ.(i 'Int
-                codegen_pattern_test(codegen_tuple_get(tuple i) get[T_Pattern](patterns i) context)
+            let. tuple codegen_tuple_cast(val len(patterns))
+            let. #(bindings_ ends_) unzip(map_ι(len(patterns) λ.(i 'Int
+                codegen_pattern_test(codegen_tuple_get(tuple i) get(patterns i) context)
             )))
-            #(concat[#(List(Int) C_Variable)](bindings_) concat[Int](ends_))
+            #(concat(bindings_) concat(ends_))
     .T_ListPattern(patterns)
         let. list codegen_list_cast(val)
-        let. len_fail codegen_len_check(list len[T_Pattern](patterns))
-        let. #(bindings_ ends_) unzip[List(#(List(Int) C_Variable)) List(Int)](map_ι[#(List(#(List(Int) C_Variable)) List(Int))](len[T_Pattern](patterns) λ.(i 'Int
-            codegen_pattern_test(codegen_list_get(list i) get[T_Pattern](patterns i) context)
+        let. len_fail codegen_len_check(list len(patterns))
+        let. #(bindings_ ends_) unzip(map_ι(len(patterns) λ.(i 'Int
+            codegen_pattern_test(codegen_list_get(list i) get(patterns i) context)
         )))
-        #(concat[#(List(Int) C_Variable)](bindings_) push[Int](concat[Int](ends_) len_fail))
+        #(concat(bindings_) push(concat(ends_) len_fail))

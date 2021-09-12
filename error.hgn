@@ -8,19 +8,19 @@ type. PartialType
     P_TupleType(List(PartialType))
     P_Function(List(PartialType) PartialType)
 
-let. mut, partial_type→string λ.{type 'PartialType} empty[Int]
+let. mut, partial_type→string λ.{type 'PartialType} empty
 set. partial_type→string λ.{type 'PartialType}
     match. type
-    .P_Var(n) ++[Int]("?" int→string(n))
+    .P_Var(n) ++("?" int→string(n))
     .P_Applied(name list.()) name
-    .P_Applied(name types) concat[Int](list.(
-    name "(" intercalate[Int](map[PartialType List(Int)](types partial_type→string) " ") ")"
+    .P_Applied(name types) concat(list.(
+    name "(" intercalate(map(types partial_type→string) " ") ")"
     ))
-    .P_TupleType(types) concat[Int](list.(
-    "#(" intercalate[Int](map[PartialType List(Int)](types partial_type→string) " ") ")"
+    .P_TupleType(types) concat(list.(
+    "#(" intercalate(map(types partial_type→string) " ") ")"
     ))
-    .P_Function(params ret) concat[Int](list.(
-    "‡(" concat[Int](map[PartialType List(Int)](params λ.(p 'PartialType ++[Int](partial_type→string(p) " ")))) ": " partial_type→string(ret) ")"
+    .P_Function(params ret) concat(list.(
+    "‡(" concat(map(params λ.(p 'PartialType ++(partial_type→string(p) " ")))) ": " partial_type→string(ret) ")"
     ))
 
 type. Error
@@ -47,32 +47,32 @@ let. string_error λ.{str 'List(Int) internal 'Int}
 
 let. file_pos_string λ.{file_pos 'FilePos}
     let. FilePos(file_name line col) file_pos
-    concat[Int](list.(file_name ":" int→string(line) ":" int→string(col)))
+    concat(list.(file_name ":" int→string(line) ":" int→string(col)))
 
 let. error_string λ.{err 'Error}
     match. err
-    .UnexpectedChar(Some(c)) concat[Int](list.("Unexpected character: " list.(c) " (" int→string(c) ")"))
+    .UnexpectedChar(Some(c)) concat(list.("Unexpected character: " list.(c) " (" int→string(c) ")"))
     .UnexpectedChar(None()) "Unexpected end of file"
     .UnexpectedToken(token) "Unexpected token"
     .InvalidExpr(None()) "Invalid expression"
-    .InvalidExpr(Some(kw)) concat[Int](list.("Invalid " kw " expression"))
+    .InvalidExpr(Some(kw)) concat(list.("Invalid " kw " expression"))
     .InvalidPattern() "Invalid pattern"
     .InvalidType() "Invalid type"
-    .UnboundVariable(name) ++[Int]("Unbound variable: " name)
-    .UnboundType(name) ++[Int]("Unbound type: " name)
-    .IncorrectTypeArity(n1 n2) concat[Int](list.("Incorrect number of type arguments: expected " int→string(n1) ", got " int→string(n2)))
-    .ConflictingType(t1 t2) concat[Int](list.("Conflicting type: expected " partial_type→string(t1) ", got " partial_type→string(t2)))
+    .UnboundVariable(name) ++("Unbound variable: " name)
+    .UnboundType(name) ++("Unbound type: " name)
+    .IncorrectTypeArity(n1 n2) concat(list.("Incorrect number of type arguments: expected " int→string(n1) ", got " int→string(n2)))
+    .ConflictingType(t1 t2) concat(list.("Conflicting type: expected " partial_type→string(t1) ", got " partial_type→string(t2)))
     .CyclicalType() "Cyclical type"
-    .AssignToConst(name) ++[Int]("Assignment to constant variable " name)
-    .NotACtor(name) ++[Int](name " is not a constructor")
+    .AssignToConst(name) ++("Assignment to constant variable " name)
+    .NotACtor(name) ++(name " is not a constructor")
     .InexhaustivePatterns() "Inexhaustive patterns"
-    .UnusedTypeParam(name) ++[Int]("Unused type parameter " name)
-    .AmbiguousType(t) ++[Int]("Ambiguous type " partial_type→string(t))
-    .LeakedType(name) ++[Int]("Inferred type contains leaked type " name)
-    .InvalidExternType(name) ++[Int]("Invalid extern type for variable " name)
+    .UnusedTypeParam(name) ++("Unused type parameter " name)
+    .AmbiguousType(t) ++("Ambiguous type " partial_type→string(t))
+    .LeakedType(name) ++("Inferred type contains leaked type " name)
+    .InvalidExternType(name) ++("Invalid extern type for variable " name)
 
 let. error λ.{err 'Error file_pos 'FilePos}
-    string_error(concat[Int](list.(file_pos_string(file_pos) ": " error_string(err))) 0)
+    string_error(concat(list.(file_pos_string(file_pos) ": " error_string(err))) 0)
 
 let. unreachable λ.{err 'List(Int)}
-    string_error(++[Int]("Internal compiler error: " err) 1)
+    string_error(++("Internal compiler error: " err) 1)

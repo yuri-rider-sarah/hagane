@@ -47,14 +47,14 @@ let. empty_t_context T_Context(builtin_types)
 
 let. t_add_type_binding λ.{context 'T_Context type 'TypeName}
     let. T_Context(types) context
-    T_Context(push[TypeName](types type))
+    T_Context(push(types type))
 
 let. t_locate_type_in_context λ.{type 'TypeName context 'T_Context file_pos 'FilePos}
     let. T_Context(types) context
-    let. mut, index None[Int]()
-    for_ι(len[TypeName](types) λ.(i 'Int
-        if. =type_name(get[TypeName](types i) type)
-            set. index Some[Int](i)
+    let. mut, index None()
+    for_ι(len(types) λ.(i 'Int
+        if. =type_name(get(types i) type)
+            set. index Some(i)
         else, #()
     ))
     match. index
@@ -63,32 +63,32 @@ let. t_locate_type_in_context λ.{type 'TypeName context 'T_Context file_pos 'Fi
         error(LeakedType(type_name_string(type)) file_pos)
         0
 
-let. mut, i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context} T_Expr(T_IntLiteral(0) T_Named(0 empty[T_Type]) FilePos(" " 0 0))
-let. mut, i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_Context} empty[T_Statement]
-let. mut, i_pattern→t_pattern λ.{i_pattern 'I_Pattern context 'T_Context} T_Pattern(T_IntLiteralPattern(0) T_Named(0 empty[T_Type]) FilePos(" " 0 0))
-let. mut, type_var→t_type λ.{i_type 'TypeVar context 'T_Context file_pos 'FilePos} T_Named(0 empty[T_Type])
+let. mut, i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context} T_Expr(T_IntLiteral(0) T_Named(0 empty) FilePos(" " 0 0))
+let. mut, i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_Context} empty
+let. mut, i_pattern→t_pattern λ.{i_pattern 'I_Pattern context 'T_Context} T_Pattern(T_IntLiteralPattern(0) T_Named(0 empty) FilePos(" " 0 0))
+let. mut, type_var→t_type λ.{i_type 'TypeVar context 'T_Context file_pos 'FilePos} T_Named(0 empty)
 
 let. i_exprs→t_exprs λ.{i_exprs 'List(I_Expr) context 'T_Context}
-    map[I_Expr T_Expr](i_exprs λ.(e 'I_Expr i_expr→t_expr(e context)))
+    map(i_exprs λ.(e 'I_Expr i_expr→t_expr(e context)))
 
 set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
     let. I_Expr(i_expr_data i_type file_pos) i_expr
     let. t_type type_var→t_type(i_type context file_pos)
     let. t_expr_data match. i_expr_data
         .I_IntLiteral(n) T_IntLiteral(n)
-        .I_Ident(name i_type_args) T_Ident(name map[TypeVar T_Type](i_type_args λ.(t 'TypeVar type_var→t_type(t context file_pos))))
+        .I_Ident(name i_type_args) T_Ident(name map(i_type_args λ.(t 'TypeVar type_var→t_type(t context file_pos))))
         .I_Tuple(i_exprs) T_Tuple(i_exprs→t_exprs(i_exprs context))
         .I_Apply(i_func i_args) T_Apply(i_expr→t_expr(i_func context) i_exprs→t_exprs(i_args context))
         .I_Set(name i_expr) T_Set(name i_expr→t_expr(i_expr context))
         .I_If(i_cond i_then i_else) T_If(i_expr→t_expr(i_cond context) i_expr→t_expr(i_then context) i_expr→t_expr(i_else context))
         .I_While(i_cond i_body) T_While(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
         .I_Do(i_statements) T_Do(i_statements→t_statements(i_statements context))
-        .I_Lambda(i_params i_body) T_Lambda(map[I_Pattern T_Pattern](i_params λ.(p 'I_Pattern i_pattern→t_pattern(p context))) i_expr→t_expr(i_body context))
-        .I_Cond(i_cases) T_Cond(map[#(I_Expr I_Expr) #(T_Expr T_Expr)](i_cases λ.(i_case '#(I_Expr I_Expr)
+        .I_Lambda(i_params i_body) T_Lambda(map(i_params λ.(p 'I_Pattern i_pattern→t_pattern(p context))) i_expr→t_expr(i_body context))
+        .I_Cond(i_cases) T_Cond(map(i_cases λ.(i_case '#(I_Expr I_Expr)
             let. #(i_cond i_body) i_case
             #(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
         )))
-        .I_Match(i_expr i_cases) T_Match(i_expr→t_expr(i_expr context) map[#(I_Pattern I_Expr) #(T_Pattern T_Expr)](i_cases λ.(i_case '#(I_Pattern I_Expr)
+        .I_Match(i_expr i_cases) T_Match(i_expr→t_expr(i_expr context) map(i_cases λ.(i_case '#(I_Pattern I_Expr)
             let. #(i_pattern i_body) i_case
             #(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_body context))
         )))
@@ -97,7 +97,7 @@ set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
 
 set. i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_Context}
     let. mut, context context
-    for[I_Statement](i_statements λ.(i_statement 'I_Statement
+    for(i_statements λ.(i_statement 'I_Statement
         match. i_statement
         .I_TypeStatement(type _ _) set. context t_add_type_binding(context type)
         ._ #()
@@ -105,28 +105,28 @@ set. i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_
     ※ A dummy file_pos is used since the errors shouldn't ever occur.
     let. file_pos FilePos("[INTERNAL COMPILER ERROR]" 0 0)
     let. mut, context context
-    map[I_Statement T_Statement](i_statements λ.(i_statement 'I_Statement
+    map(i_statements λ.(i_statement 'I_Statement
         match. i_statement
         .I_ExprStatement(i_expr) T_ExprStatement(i_expr→t_expr(i_expr context))
         .I_Let(i_pattern i_expr) T_Let(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_expr context))
         .I_Let∀(type_params name i_expr)
             let. mut, context′ context
-            for[TypeName](type_params λ.(type 'TypeName set.(context′ t_add_type_binding(context′ type))))
-            T_Let∀(len[TypeName](type_params) name i_expr→t_expr(i_expr context′))
+            for(type_params λ.(type 'TypeName set.(context′ t_add_type_binding(context′ type))))
+            T_Let∀(len(type_params) name i_expr→t_expr(i_expr context′))
         .I_LetMut(name i_expr) T_LetMut(name i_expr→t_expr(i_expr context))
         .I_TypeStatement(type type_params i_variants)
             let. mut, context′ context
-            for[TypeName](type_params λ.(type 'TypeName set.(context′ t_add_type_binding(context′ type))))
-            let. t_variants map[#(List(Int) List(TypeVar)) #(List(Int) List(T_Type))](i_variants λ.(i_variant '#(List(Int) List(TypeVar))
+            for(type_params λ.(type 'TypeName set.(context′ t_add_type_binding(context′ type))))
+            let. t_variants map(i_variants λ.(i_variant '#(List(Int) List(TypeVar))
                 let. #(name i_param_types) i_variant
-                #(name map[TypeVar T_Type](i_param_types λ.(i_type 'TypeVar type_var→t_type(i_type context′ file_pos))))
+                #(name map(i_param_types λ.(i_type 'TypeVar type_var→t_type(i_type context′ file_pos))))
             ))
-            T_TypeStatement(len[TypeName](type_params) t_variants)
+            T_TypeStatement(len(type_params) t_variants)
         .I_Extern(name type) T_Extern(name type_var→t_type(type context file_pos))
     ))
 
 let. i_patterns→t_patterns λ.{i_patterns 'List(I_Pattern) context 'T_Context}
-    map[I_Pattern T_Pattern](i_patterns λ.(p 'I_Pattern i_pattern→t_pattern(p context)))
+    map(i_patterns λ.(p 'I_Pattern i_pattern→t_pattern(p context)))
 
 set. i_pattern→t_pattern λ.{i_pattern 'I_Pattern context 'T_Context}
     let. I_Pattern(i_pattern_data i_type file_pos) i_pattern
@@ -135,21 +135,21 @@ set. i_pattern→t_pattern λ.{i_pattern 'I_Pattern context 'T_Context}
         .I_IdentPattern(name) T_IdentPattern(name)
         .I_WildcardPattern() T_WildcardPattern()
         .I_TuplePattern(i_patterns) T_TuplePattern(i_patterns→t_patterns(i_patterns context))
-        .I_VariantPattern(ctor i_args i_type_args) T_VariantPattern(ctor i_patterns→t_patterns(i_args context) map[TypeVar T_Type](i_type_args λ.(t 'TypeVar type_var→t_type(t context file_pos))))
+        .I_VariantPattern(ctor i_args i_type_args) T_VariantPattern(ctor i_patterns→t_patterns(i_args context) map(i_type_args λ.(t 'TypeVar type_var→t_type(t context file_pos))))
         .I_ListPattern(i_patterns) T_ListPattern(i_patterns→t_patterns(i_patterns context))
     T_Pattern(t_pattern_data type_var→t_type(i_type context file_pos) file_pos)
 
-let. mut, type_var→t_type′ λ.{tv 'TypeVar context 'T_Context err 'Error file_pos 'FilePos} T_Named(0 empty[T_Type])
+let. mut, type_var→t_type′ λ.{tv 'TypeVar context 'T_Context err 'Error file_pos 'FilePos} T_Named(0 empty)
 set. type_var→t_type′ λ.{tv 'TypeVar context 'T_Context err 'Error file_pos 'FilePos}
     let. TypeVar(tvi) tv
-    match. get[I_Type](type_variables tvi)
+    match. get(type_variables tvi)
     .I_Any()
         error(err file_pos)
-        T_Named(0 empty[T_Type])
+        T_Named(0 empty)
     .I_Equal(tv′) type_var→t_type′(tv′ context err file_pos)
-    .I_Named(name type_args) T_Named(t_locate_type_in_context(name context file_pos) map[TypeVar T_Type](type_args λ.(tv′ 'TypeVar type_var→t_type′(tv′ context err file_pos))))
-    .I_TupleType(tvs) T_TupleType(map[TypeVar T_Type](tvs λ.(tv′ 'TypeVar type_var→t_type′(tv′ context err file_pos))))
-    .I_Function(params ret) T_Function(map[TypeVar T_Type](params λ.(param 'TypeVar type_var→t_type′(param context err file_pos))) type_var→t_type′(ret context err file_pos))
+    .I_Named(name type_args) T_Named(t_locate_type_in_context(name context file_pos) map(type_args λ.(tv′ 'TypeVar type_var→t_type′(tv′ context err file_pos))))
+    .I_TupleType(tvs) T_TupleType(map(tvs λ.(tv′ 'TypeVar type_var→t_type′(tv′ context err file_pos))))
+    .I_Function(params ret) T_Function(map(params λ.(param 'TypeVar type_var→t_type′(param context err file_pos))) type_var→t_type′(ret context err file_pos))
 
 set. type_var→t_type λ.{tv 'TypeVar context 'T_Context file_pos 'FilePos}
     type_var→t_type′(tv context AmbiguousType(type_var→partial_type(tv)) file_pos)

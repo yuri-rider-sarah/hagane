@@ -5,17 +5,17 @@ extern. vector_get ‡(Int Int : Int)
 
 let. list→vector λ.{a 'List(Int)}
     let. v vector_new()
-    for[Int](a λ.(x 'Int vector_push(v x)))
+    for(a λ.(x 'Int vector_push(v x)))
     v
 
 let. vector→list λ.{v 'Int}
-    let. mut, a empty[Int]
-    for_ι(vector_len(v) λ.(i 'Int set.(a push[Int](a vector_get(v i)))))
+    let. mut, a empty
+    for_ι(vector_len(v) λ.(i 'Int set.(a push(a vector_get(v i)))))
     a
 
 extern. utf8_decode ‡(Int : Int)
 extern. utf8_encode ‡(Int : Int)
 
 let. print_string λ.{s 'List(Int)}
-    for[Int](vector→list(utf8_encode(list→vector(s))) print_byte)
+    for(vector→list(utf8_encode(list→vector(s))) print_byte)
     print_byte(#!\n)
