@@ -4,6 +4,6 @@
 ※ 4
 let. a list.(1 2 3 4)
 let. mut, i 0
-while. <(i len[Int](a))
-    print_int(get[Int](a i))
+while. <(i len(a))
+    print_int(get(a i))
     set. i +(i 1)

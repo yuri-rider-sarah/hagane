@@ -1,2 +1,2 @@
 ※-fail
-let. a pop[Int](empty[Int])
+let. a pop(empty)

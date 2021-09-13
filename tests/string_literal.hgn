@@ -12,6 +12,6 @@
 let. s "a! )\"\\\nπ↓😀"
 
 let. mut, i 0
-while. <(i len[Int](s))
-    print_int(get[Int](s i))
+while. <(i len(s))
+    print_int(get(s i))
     set. i +(i 1)

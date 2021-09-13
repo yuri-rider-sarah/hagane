@@ -29,7 +29,6 @@ let. mut, read_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) c
 let. mut, read_paren_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos} #(lexer dummy_r_expr)
 let. mut, read_block_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos} #(lexer dummy_r_expr)
 let. mut, read_clause_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos} #(lexer dummy_r_expr)
-let. mut, skip_monomorphization_r λ.{lexer 'Lexer} lexer
 
 set. read_noncall_expr λ.{lexer 'Lexer}
     let. mut, lexer lexer
@@ -41,10 +40,6 @@ set. read_noncall_expr λ.{lexer 'Lexer}
     .StringLiteral(s) #(lexer R_Expr(R_StringLiteral(s) file_pos))
     .IdentToken(s)
         match. read_token(lexer)
-        .#(lexer′ LBracket() _)
-            set. lexer lexer′
-            set. lexer skip_monomorphization_r(lexer)
-            #(lexer R_Expr(R_Ident(s) file_pos))
         .#(lexer′ Apostrophe() _)
             set. lexer lexer′
             let. #(lexer′ type) read_expr(lexer)
@@ -327,11 +322,3 @@ set. read_block_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) 
 
 set. read_clause_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos}
     read_special_expr_r(lexer indent_depth kw empty file_pos ClauseSE(⊥))
-
-set. skip_monomorphization_r λ.{lexer 'Lexer}
-    let. mut, lexer lexer
-    let. #(lexer′ token _) read_token(lexer)
-    set. lexer lexer′
-    match. token
-    .RBracket() lexer
-    ._ skip_monomorphization_r(lexer)

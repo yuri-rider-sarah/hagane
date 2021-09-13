@@ -4,10 +4,10 @@ type. ∀,{T} Opt
     Some(T)
     None()
 
-match. Some[Int](4)
+match. Some(4)
 .Some(x) print_int(+(x 1))
 .None() print_int(0)
 
-match. None[Int]()
+match. None()
 .Some(x) print_int(+(x 1))
 .None() print_int(0)

@@ -8,8 +8,6 @@ type. Token
     SecKeyword(List(Int))
     LParen()
     RParen()
-    LBracket()
-    RBracket()
     LBrace()
     RBrace()
     LIndent()
@@ -68,7 +66,7 @@ let. read_char λ.{lexer 'Lexer}
     let. #(chars′ c file_pos) read_char(chars)
     #(Lexer(chars′ indents indent_char rindents this_indent_depth at_line_start) c file_pos)
 
-let. after_ident_chars list.(#!( #!) #![ #!] #!{ #!} #!' #!: #!※)
+let. after_ident_chars list.(#!( #!) #!{ #!} #!' #!: #!※)
 
 let. read_quoted_char λ.{lexer 'Lexer}
     let. mut, lexer lexer
@@ -159,8 +157,6 @@ let. read_token_char λ.{lexer 'Lexer}
     match. c
     .Some(#!() #(lexer LParen() file_pos)
     .Some(#!)) #(lexer RParen() file_pos)
-    .Some(#![) #(lexer LBracket() file_pos)
-    .Some(#!]) #(lexer RBracket() file_pos)
     .Some(#!{) #(lexer LBrace() file_pos)
     .Some(#!}) #(lexer RBrace() file_pos)
     .Some(#!') #(lexer Apostrophe() file_pos)

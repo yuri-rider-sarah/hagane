@@ -3,7 +3,7 @@ type. ∀,{T} List
     Cons(T List(T))
     Nil()
 
-match. Nil[Int]()
+match. Nil()
 .Nil() print_int(0)
 .Cons(x Nil()) print_int(x)
 .Cons(x Cons(y Nil())) print_int(+(x y))

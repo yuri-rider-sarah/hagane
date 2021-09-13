@@ -3,5 +3,5 @@ type. ∀,{T} Option
     Some(T)
     None()
 
-let. Some(x) None[Int]()
+let. Some(x) None()
 print_int(x)

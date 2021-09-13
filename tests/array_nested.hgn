@@ -8,14 +8,14 @@
 ※ 15
 ※ 18
 
-let. mut, a empty[List(Int)]
+let. mut, a empty
 
 let. mut, i 0
 while. <(i 3)
-    set. a push[List(Int)](a empty[Int])
+    set. a push(a empty)
     let. mut, j 0
     while. <(j 3)
-        set. a put[List(Int)](a i push[Int](get[List(Int)](a i) *(+(i 1) +(j 4))))
+        set. a put(a i push(get(a i) *(+(i 1) +(j 4))))
         set. j +(j 1)
     set. i +(i 1)
 
@@ -23,6 +23,6 @@ let. mut, i 0
 while. <(i 3)
     let. mut, j 0
     while. <(j 3)
-        print_int(get[Int](get[List(Int)](a i) j))
+        print_int(get(get(a i) j))
         set. j +(j 1)
     set. i +(i 1)

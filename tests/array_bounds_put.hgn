@@ -1,6 +1,6 @@
 ※-fail
-let. mut, a empty[Int]
-set. a push[Int](a 1)
-set. a push[Int](a 2)
-set. a push[Int](a 3)
-set. a put[Int](a 3 0)
+let. mut, a empty
+set. a push(a 1)
+set. a push(a 2)
+set. a push(a 3)
+set. a put(a 3 0)

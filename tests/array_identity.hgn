@@ -1,7 +1,7 @@
 ※ 3
-let. mut, a empty[Int]
-set. a push[Int](a 1)
-set. a push[Int](a 2)
-set. a push[Int](a 3)
-let. b put[Int](a 2 0)
-print_int(get[Int](a 2))
+let. mut, a empty
+set. a push(a 1)
+set. a push(a 2)
+set. a push(a 3)
+let. b put(a 2 0)
+print_int(get(a 2))
