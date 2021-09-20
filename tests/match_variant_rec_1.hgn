@@ -1,5 +1,5 @@
 ※ 80
-type. ∀,{T} List
+type. ∀, T: List
     Cons(T List(T))
     Nil()
 

@@ -21,17 +21,15 @@ let. mut, read_arg_list λ.{lexer 'Lexer} #(lexer empty)
 let. mut, read_arg_list_cr λ.{lexer 'Lexer exprs 'List(R_Expr)} #(lexer exprs)
 let. mut, read_arg_list_c λ.{lexer 'Lexer} #(lexer empty)
 let. mut, read_expr_calls λ.{lexer 'Lexer expr 'R_Expr} #(lexer expr)
-let. mut, read_block_expr λ.{lexer 'Lexer} #(lexer dummy_r_expr)
-let. mut, read_clause_expr λ.{lexer 'Lexer} #(lexer dummy_r_expr)
-let. mut, read_brace_block_r λ.{lexer 'Lexer exprs 'List(R_Expr)} #(lexer exprs)
-let. mut, read_indent_block_r λ.{lexer 'Lexer exprs 'List(R_Expr)} #(lexer exprs)
 let. mut, read_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos se_type 'SpecialExprType} #(lexer dummy_r_expr)
 let. mut, read_paren_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos} #(lexer dummy_r_expr)
 let. mut, read_block_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos} #(lexer dummy_r_expr)
-let. mut, read_clause_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos} #(lexer dummy_r_expr)
+let. mut, read_inner_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos} #(lexer dummy_r_expr)
 
 set. read_noncall_expr λ.{lexer 'Lexer}
     let. mut, lexer lexer
+    let. at_line_start lexer_at_line_start(lexer)
+    let. indent_depth lexer_indent_depth(lexer)
     let. #(lexer′ token file_pos) read_token(lexer)
     set. lexer lexer′
     match. token
@@ -63,13 +61,13 @@ set. read_noncall_expr λ.{lexer 'Lexer}
         ._ error(UnexpectedToken(right) right_file_pos)
         #(lexer R_Expr(R_FunctionExpr(args ret) file_pos))
     .PriKeyword(kw)
-        let. indent_depth lexer_indent_depth(lexer)
-        let. #(lexer′ left left_file_pos) read_token(lexer)
-        set. lexer lexer′
-        match. left
-        .LParen() #()
-        ._ error(UnexpectedToken(left) left_file_pos)
-        read_paren_special_expr_r(lexer indent_depth kw file_pos)
+        match. read_token(lexer)
+        .#(lexer′ LParen() _)
+            set. lexer lexer′
+            read_paren_special_expr_r(lexer indent_depth kw file_pos)
+        ._ if. at_line_start
+            then, read_block_special_expr_r(lexer indent_depth kw file_pos)
+            else, read_inner_special_expr_r(lexer indent_depth kw file_pos)
     ._
         error(UnexpectedToken(token) file_pos)
         #(lexer dummy_r_expr)
@@ -130,195 +128,76 @@ set. read_arg_list_c λ.{lexer 'Lexer}
     ._ error(UnexpectedToken(token) file_pos)
     read_arg_list_cr(lexer empty)
 
-set. read_block_expr λ.{lexer 'Lexer}
-    let. mut, lexer lexer
-    match. read_token(lexer)
-    .#(lexer′ PriKeyword(kw) file_pos)
-        set. lexer lexer′
-        let. indent_depth lexer_indent_depth(lexer)
-        match. read_token(lexer)
-        .#(lexer′ LParen() _)
-            set. lexer lexer′
-            read_paren_special_expr_r(lexer indent_depth kw file_pos)
-        ._
-            read_block_special_expr_r(lexer indent_depth kw file_pos)
-    ._
-        read_expr(lexer)
-
-set. read_clause_expr λ.{lexer 'Lexer}
-    let. mut, lexer lexer
-    match. read_token(lexer)
-    .#(lexer′ PriKeyword(kw) file_pos)
-        set. lexer lexer′
-        let. indent_depth lexer_indent_depth(lexer)
-        match. read_token(lexer)
-        .#(lexer′ LParen() _)
-            set. lexer lexer′
-            read_paren_special_expr_r(lexer indent_depth kw file_pos)
-        ._
-            read_clause_special_expr_r(lexer indent_depth kw file_pos)
-    ._
-        read_expr(lexer)
-
 type. Clause
+    ExprClause(R_Expr)
     SecKeywordClause(List(Int))
+    ColonClause()
     Label(R_Expr)
-    Block(List(R_Expr))
-
-set. read_brace_block_r λ.{lexer 'Lexer exprs 'List(R_Expr)}
-    let. mut, lexer lexer
-    match. read_token(lexer)
-    .#(lexer′ RBrace() _)
-        set. lexer lexer′
-        #(lexer exprs)
-    ._
-        let. #(lexer′ expr) read_block_expr(lexer)
-        set. lexer lexer′
-        read_brace_block_r(lexer push(exprs expr))
-
-set. read_indent_block_r λ.{lexer 'Lexer exprs 'List(R_Expr)}
-    let. mut, lexer lexer
-    match. read_token(lexer)
-    .#(lexer′ RIndent() _)
-        set. lexer lexer′
-        #(lexer exprs)
-    ._
-        let. #(lexer′ expr) read_block_expr(lexer)
-        set. lexer lexer′
-        read_indent_block_r(lexer push(exprs expr))
 
 type. SpecialExprType
     ParenSE()
     BlockSE()
-    ClauseSE(Bool)
+    InnerSE()
 
-set. read_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos se_type 'SpecialExprType}
+set. read_special_expr_r λ.{lexer 'Lexer kw_indent_depth 'Int kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos se_type 'SpecialExprType}
     let. mut, lexer lexer
-    let. mut, se_type se_type
     let. at_line_start lexer_at_line_start(lexer)
+    let. clause_indent_depth lexer_indent_depth(lexer)
+    let. separator_continue ∨(¬(at_line_start) match.(se_type
+        .ParenSE() ⊤
+        .BlockSE() ≥(clause_indent_depth kw_indent_depth)
+        .InnerSE() >(clause_indent_depth kw_indent_depth)
+    ))
+    let. content_continue ∨(¬(at_line_start) match.(se_type
+        .ParenSE() ⊤
+        .BlockSE() >(clause_indent_depth kw_indent_depth)
+        .InnerSE() >(clause_indent_depth kw_indent_depth)
+    ))
 
-    let. end_expr λ.{lexer 'Lexer expr 'R_Expr}
-        let. lexer′ match. se_type
-            .ClauseSE(past_indent)
-                if. past_indent
-                    let. #(lexer′ token token_file_pos) read_token(lexer)
-                    match. token
-                    .RIndent() #()
-                    ._ error(UnexpectedToken(token) token_file_pos)
-                    lexer′
-                else,
-                    lexer
-            ._ lexer
-        #(lexer′ expr)
-
-    let. get_unindented_token λ.{continue '‡(: #(Lexer R_Expr))}
-        match. se_type
-        .ParenSE() continue()
-        .BlockSE() continue()
-        .ClauseSE(past_indent) if. ∧(at_line_start ¬(past_indent))
-            then, end_expr(lexer R_Expr(R_Special(kw clauses) file_pos))
-            else, continue()
-
-    match. read_token_or_indent(lexer indent_depth)
+    match. read_token(lexer)
     .#(lexer′ RParen() token_file_pos)
         match. se_type
-        .ParenSE() #()
-        ._ error(UnexpectedToken(RParen()) token_file_pos)
-        set. lexer lexer′
-        end_expr(lexer R_Expr(R_Special(kw clauses) file_pos))
-    .#(_ RBrace() token_file_pos)
-        match. se_type
-        .ParenSE() error(UnexpectedToken(RBrace()) token_file_pos)
+        .ParenSE() set. lexer lexer′
         ._ #()
-        end_expr(lexer R_Expr(R_Special(kw clauses) file_pos))
-    .#(_ RIndent() token_file_pos)
-        match. se_type
-        .ParenSE() error(UnexpectedToken(RIndent()) token_file_pos)
-        ._ #()
-        end_expr(lexer R_Expr(R_Special(kw clauses) file_pos))
+        #(lexer R_Expr(R_Special(kw clauses) file_pos))
     .#(_ Eof() token_file_pos)
         match. se_type
         .ParenSE() error(UnexpectedToken(Eof()) token_file_pos)
         ._ #()
-        end_expr(lexer R_Expr(R_Special(kw clauses) file_pos))
-
+        #(lexer R_Expr(R_Special(kw clauses) file_pos))
     .#(lexer′ SecKeyword(skw) _)
-        get_unindented_token(λ.({}
+        if. separator_continue
             set. lexer lexer′
-            read_special_expr_r(lexer indent_depth kw push(clauses SecKeywordClause(skw)) file_pos se_type)
-        ))
+            read_special_expr_r(lexer kw_indent_depth kw push(clauses SecKeywordClause(skw)) file_pos se_type)
+        else,
+            #(lexer R_Expr(R_Special(kw clauses) file_pos))
+    .#(lexer′ Colon() _)
+        if. separator_continue
+            set. lexer lexer′
+            read_special_expr_r(lexer kw_indent_depth kw push(clauses ColonClause()) file_pos se_type)
+        else,
+            #(lexer R_Expr(R_Special(kw clauses) file_pos))
     .#(lexer′ Period() _)
-        get_unindented_token(λ.({}
+        if. separator_continue
             set. lexer lexer′
             let. #(lexer′ expr) read_expr(lexer)
             set. lexer lexer′
-            read_special_expr_r(lexer indent_depth kw push(clauses Label(expr)) file_pos se_type)
-        ))
-    .#(lexer′ LBrace() _)
-        get_unindented_token(λ.({}
-            set. lexer lexer′
-            let. #(lexer′ exprs) read_brace_block_r(lexer empty)
-            set. lexer lexer′
-            read_special_expr_r(lexer indent_depth kw push(clauses Block(exprs)) file_pos se_type)
-        ))
-
-    .#(lexer′ LIndent() _)
-        let. reset_indentation λ.{lexer′ 'Lexer}
-            match. se_type
-            .ClauseSE(past_indent)
-                if. past_indent
-                    let. #(lexer′ _ _) read_token(lexer)
-                    set. lexer lexer′
-                else,
-                    set. lexer lexer′
-                    set. se_type ClauseSE(⊤)
-            ._
-                let. #(lexer′ _ _) read_token(lexer)
-                set. lexer lexer′
-        match. read_token(lexer′)
-        .#(lexer′ RParen() token_file_pos)
-            reset_indentation(lexer′)
-            match. se_type
-            .ParenSE() #()
-            ._ error(UnexpectedToken(RParen()) token_file_pos)
-            end_expr(lexer R_Expr(R_Special(kw clauses) file_pos))
-        .#(lexer′ SecKeyword(skw) _)
-            reset_indentation(lexer′)
-            read_special_expr_r(lexer indent_depth kw push(clauses SecKeywordClause(skw)) file_pos se_type)
-        .#(lexer′ Period() _)
-            reset_indentation(lexer′)
-            let. #(lexer′ expr) read_expr(lexer)
-            set. lexer lexer′
-            read_special_expr_r(lexer indent_depth kw push(clauses Label(expr)) file_pos se_type)
-        .#(lexer′ LBrace() _)
-            reset_indentation(lexer′)
-            let. #(lexer′ exprs) read_brace_block_r(lexer empty)
-            set. lexer lexer′
-            read_special_expr_r(lexer indent_depth kw push(clauses Block(exprs)) file_pos se_type)
-        ._
-            set. lexer lexer′
-            let. #(lexer′ exprs) read_indent_block_r(lexer empty)
-            set. lexer lexer′
-            read_special_expr_r(lexer indent_depth kw push(clauses Block(exprs)) file_pos se_type)
-
+            read_special_expr_r(lexer kw_indent_depth kw push(clauses Label(expr)) file_pos se_type)
+        else,
+            #(lexer R_Expr(R_Special(kw clauses) file_pos))
     ._
-        match. se_type
-        .ParenSE()
+        if. content_continue
             let. #(lexer′ expr) read_expr(lexer)
             set. lexer lexer′
-            read_special_expr_r(lexer indent_depth kw push(clauses Block(list.(expr))) file_pos se_type)
-        ._ if. at_line_start
-            then, end_expr(lexer R_Expr(R_Special(kw clauses) file_pos))
-            else,
-                let. #(lexer′ expr) read_clause_expr(lexer)
-                set. lexer lexer′
-                read_special_expr_r(lexer indent_depth kw push(clauses Block(list.(expr))) file_pos se_type)
+            read_special_expr_r(lexer kw_indent_depth kw push(clauses ExprClause(expr)) file_pos se_type)
+        else,
+            #(lexer R_Expr(R_Special(kw clauses) file_pos))
 
-set. read_paren_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos}
-    read_special_expr_r(lexer indent_depth kw empty file_pos ParenSE())
+set. read_paren_special_expr_r λ.{lexer 'Lexer kw_indent_depth 'Int kw 'List(Int) file_pos 'FilePos}
+    read_special_expr_r(lexer kw_indent_depth kw empty file_pos ParenSE())
 
-set. read_block_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos}
-    read_special_expr_r(lexer indent_depth kw empty file_pos BlockSE())
+set. read_block_special_expr_r λ.{lexer 'Lexer kw_indent_depth 'Int kw 'List(Int) file_pos 'FilePos}
+    read_special_expr_r(lexer kw_indent_depth kw empty file_pos BlockSE())
 
-set. read_clause_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos}
-    read_special_expr_r(lexer indent_depth kw empty file_pos ClauseSE(⊥))
+set. read_inner_special_expr_r λ.{lexer 'Lexer kw_indent_depth 'Int kw 'List(Int) file_pos 'FilePos}
+    read_special_expr_r(lexer kw_indent_depth kw empty file_pos InnerSE())

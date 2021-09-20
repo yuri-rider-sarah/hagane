@@ -1,6 +1,6 @@
 ※ 5
 ※ 0
-type. ∀,{T} Opt
+type. ∀, T: Opt
     Some(T)
     None()
 

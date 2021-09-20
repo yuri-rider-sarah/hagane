@@ -76,7 +76,7 @@ set. r_expr→u_pattern λ.{expr 'R_Expr}
         .R_Typed(expr type) U_TypedPattern(r_expr→u_pattern(expr) r_expr→u_type(type))
         .R_Special("list" clauses) U_ListPattern(map(clauses λ.(clause 'Clause
             match. clause
-            .Block(list.(expr)) r_expr→u_pattern(expr)
+            .ExprClause(expr) r_expr→u_pattern(expr)
             ._
                 error(InvalidPattern() file_pos)
                 dummy_u_pattern
@@ -102,102 +102,214 @@ let. r_expr→string λ.{expr 'R_Expr kw 'List(Int) file_pos 'FilePos}
 let. block→u_expr λ.{exprs 'List(R_Expr) file_pos 'FilePos}
     U_Expr(U_Do(map(exprs r_expr→u_statement)) file_pos)
 
+type. ClauseSeparator
+    NamedSep(List(Int))
+    ColonSep()
+    LabelSep(R_Expr)
+
+type. ClauseGroup ClauseGroup(ClauseSeparator List(R_Expr))
+
+type. ClauseGrouping ClauseGrouping(List(R_Expr) List(ClauseGroup))
+
+let. mut, group_clauses_loop λ.{clauses 'List(Clause) i 'Int init_group 'List(R_Expr) groups 'List(ClauseGroup) this_sep 'ClauseSeparator this_group 'List(R_Expr)} ClauseGrouping(empty empty)
+let. mut, group_clauses_init λ.{clauses 'List(Clause) i 'Int init_group 'List(R_Expr)} ClauseGrouping(empty empty)
+
+set. group_clauses_loop λ.{clauses 'List(Clause) i 'Int init_group 'List(R_Expr) groups 'List(ClauseGroup) this_sep 'ClauseSeparator this_group 'List(R_Expr)}
+    if. <(i len(clauses))
+        match. get(clauses i)
+        .ExprClause(expr)
+            group_clauses_loop(clauses +(i 1) init_group groups this_sep push(this_group expr))
+        .SecKeywordClause(kw)
+            group_clauses_loop(clauses +(i 1) init_group push(groups ClauseGroup(this_sep this_group)) NamedSep(kw) empty)
+        .ColonClause()
+            group_clauses_loop(clauses +(i 1) init_group push(groups ClauseGroup(this_sep this_group)) ColonSep() empty)
+        .Label(expr)
+            group_clauses_loop(clauses +(i 1) init_group push(groups ClauseGroup(this_sep this_group)) LabelSep(expr) empty)
+    else,
+        ClauseGrouping(init_group push(groups ClauseGroup(this_sep this_group)))
+
+set. group_clauses_init λ.{clauses 'List(Clause) i 'Int init_group 'List(R_Expr)}
+    if. <(i len(clauses))
+        match. get(clauses i)
+        .ExprClause(expr)
+            group_clauses_init(clauses +(i 1) push(init_group expr))
+        .SecKeywordClause(kw)
+            group_clauses_loop(clauses +(i 1) init_group empty NamedSep(kw) empty)
+        .ColonClause()
+            group_clauses_loop(clauses +(i 1) init_group empty ColonSep() empty)
+        .Label(expr)
+            group_clauses_loop(clauses +(i 1) init_group empty LabelSep(expr) empty)
+    else,
+        ClauseGrouping(init_group empty)
+
+let. group_clauses λ.{clauses 'List(Clause)}
+    group_clauses_init(clauses 0 empty)
+
+let. split_off λ.{exprs 'List(R_Expr) kw 'List(Int) file_pos 'FilePos}
+    if. ≥(len(exprs) 1)
+    then, #(get(exprs 0) drop(exprs 1))
+    else,
+        error(InvalidExpr(Some(kw)) file_pos)
+        #(dummy_r_expr list.())
+
 set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
     let. r_expr→string λ.{expr 'R_Expr} r_expr→string(expr kw file_pos)
     let. block→u_expr λ.{exprs 'List(R_Expr)} block→u_expr(exprs file_pos)
+    let. invalid_expr λ.{} error(InvalidExpr(Some(kw)) file_pos)
+    let. split_off λ.{exprs 'List(R_Expr)} split_off(exprs kw file_pos)
 
-    let. clause→u_expr λ.{clause 'Clause}
-        match. clause
-        .Block(exprs) block→u_expr(exprs)
+    match. kw
+    ."set" match. group_clauses(clauses)
+        .ClauseGrouping(name+body list.())
+            let. #(name_r_expr body) split_off(name+body)
+            let. name match. name_r_expr
+                .R_Expr(R_Ident(name) _) name
+                ._
+                    invalid_expr()
+                    ""
+            U_Set(name block→u_expr(body))
         ._
-            error(InvalidExpr(Some(kw)) file_pos)
-            dummy_u_expr
-
-    match. #(kw clauses)
-    .#("set" list.(Block(list.(R_Expr(R_Ident(var) _))) Block(val)))
-        U_Set(var block→u_expr(val))
-    .#("do" list.(Block(exprs)))
-        U_Do(map(exprs r_expr→u_statement))
-    .#("if" list.(Block(cond) Block(then) Block(else)))
-        U_If(block→u_expr(cond) block→u_expr(then) block→u_expr(else))
-    .#("if" list.(Block(cond) SecKeywordClause("then") Block(then) Block(else)))
-        U_If(block→u_expr(cond) block→u_expr(then) block→u_expr(else))
-    .#("if" list.(Block(cond) Block(then) SecKeywordClause("else") Block(else)))
-        U_If(block→u_expr(cond) block→u_expr(then) block→u_expr(else))
-    .#("if" list.(Block(cond) SecKeywordClause("then") Block(then) SecKeywordClause("else") Block(else)))
-        U_If(block→u_expr(cond) block→u_expr(then) block→u_expr(else))
-    .#("while" list.(Block(cond) Block(body)))
-        U_While(block→u_expr(cond) block→u_expr(body))
-    .#("while" list.(Block(cond) SecKeywordClause("do") Block(body)))
-        U_While(block→u_expr(cond) block→u_expr(body))
-    .#("λ" list.(Block(args) Block(body)))
-        U_Lambda(map(args r_expr→u_pattern) block→u_expr(body))
-    .#("λ" list.(Block(args) SecKeywordClause("⇒") Block(body)))
-        U_Lambda(map(args r_expr→u_pattern) block→u_expr(body))
-    .#("cond" _)
-        if. ≠(%(len(clauses) 2) 0)
-            error(InvalidExpr(Some(kw)) file_pos)
-        else, #()
-        let. cases map_ι(/(len(clauses) 2) λ.(i 'Int
-            match. #(get(clauses *(2 i)) get(clauses +(*(2 i) 1)))
-            .#(Label(cond) Block(body)) #(r_expr→u_expr(cond) block→u_expr(body))
+            invalid_expr()
+            U_IntLiteral(0)
+    ."do"
+        U_Do(map(clauses λ.(clause
+            match. clause
+            .ExprClause(elem) r_expr→u_statement(elem)
             ._
-                error(InvalidExpr(Some(kw)) file_pos)
+                invalid_expr()
+                U_ExprStatement(dummy_u_expr)
+        )))
+    ."if"
+        let. #(cond then else) match. group_clauses(clauses)
+            .ClauseGrouping(cond list.(ClauseGroup(NamedSep("then") then) ClauseGroup(NamedSep("else") else)))
+                #(cond then else)
+            .ClauseGrouping(cond list.(ClauseGroup(NamedSep("then") then) ClauseGroup(ColonSep() else)))
+                #(cond then else)
+            .ClauseGrouping(cond list.(ClauseGroup(ColonSep() then) ClauseGroup(NamedSep("else") else)))
+                #(cond then else)
+            .ClauseGrouping(cond list.(ClauseGroup(ColonSep() then) ClauseGroup(ColonSep() else)))
+                #(cond then else)
+            .ClauseGrouping(cond+then list.(ClauseGroup(NamedSep("else") else)))
+                let. #(cond then) split_off(cond+then)
+                #(list.(cond) then else)
+            .ClauseGrouping(cond+then list.(ClauseGroup(ColonSep() else)))
+                let. #(cond then) split_off(cond+then)
+                #(list.(cond) then else)
+            .ClauseGrouping(list.(cond then else) list.())
+                #(list.(cond) list.(then) list.(else))
+            ._
+                invalid_expr()
+                #(list.() list.() list.())
+        U_If(block→u_expr(cond) block→u_expr(then) block→u_expr(else))
+    ."while"
+        let. #(cond body) match. group_clauses(clauses)
+            .ClauseGrouping(cond list.(ClauseGroup(NamedSep("do") body)))
+                #(cond body)
+            .ClauseGrouping(cond list.(ClauseGroup(ColonSep() body)))
+                #(cond body)
+            .ClauseGrouping(cond+body list.())
+                let. #(cond body) split_off(cond+body)
+                #(list.(cond) body)
+            ._
+                invalid_expr()
+                #(list.() list.())
+        U_While(block→u_expr(cond) block→u_expr(body))
+    ."λ"
+        let. #(params body) match. group_clauses(clauses)
+            .ClauseGrouping(params list.(ClauseGroup(NamedSep("⇒") body)))
+                #(params body)
+            .ClauseGrouping(params list.(ClauseGroup(ColonSep() body)))
+                #(params body)
+            ._
+                invalid_expr()
+                #(list.() list.())
+        U_Lambda(map(params r_expr→u_pattern) block→u_expr(body))
+    ."cond"
+        let. groups match. group_clauses(clauses)
+            .ClauseGrouping(list.() groups) groups
+            ._
+                invalid_expr()
+                list.()
+        U_Cond(map(groups λ.(ClauseGroup(sep body)
+            match. sep
+            .LabelSep(cond) #(r_expr→u_expr(cond) block→u_expr(body))
+            ._
+                invalid_expr()
                 #(dummy_u_expr dummy_u_expr)
-        ))
-        U_Cond(cases)
-    .#("match" _)
-        if. ≠(%(len(clauses) 2) 1)
-            error(InvalidExpr(Some(kw)) file_pos)
-        else, #()
-        let. val clause→u_expr(get(clauses 0))
-        let. cases map_ι(/(len(clauses) 2) λ.(i 'Int
-            match. #(get(clauses +(*(2 i) 1)) get(clauses +(*(2 i) 2)))
-            .#(Label(pattern_expr) Block(body)) #(r_expr→u_pattern(pattern_expr) block→u_expr(body))
+        )))
+    ."match"
+        let. ClauseGrouping(matched groups) group_clauses(clauses)
+        U_Match(block→u_expr(matched) map(groups λ.(ClauseGroup(sep body)
+            match. sep
+            .LabelSep(pattern) #(r_expr→u_pattern(pattern) block→u_expr(body))
             ._
-                error(InvalidExpr(Some(kw)) file_pos)
+                invalid_expr()
                 #(dummy_u_pattern dummy_u_expr)
-        ))
-        U_Match(val cases)
-    .#("list" _)
-        U_ListLiteral(map(clauses clause→u_expr))
+        )))
+    ."list"
+        U_ListLiteral(map(clauses λ.(clause
+            match. clause
+            .ExprClause(elem) r_expr→u_expr(elem)
+            ._
+                invalid_expr()
+                dummy_u_expr
+        )))
     ._
-        error(InvalidExpr(Some(kw)) file_pos)
+        invalid_expr()
         U_IntLiteral(0)
 
 set. clauses→u_statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
     let. r_expr→string λ.{expr 'R_Expr} r_expr→string(expr kw file_pos)
     let. block→u_expr λ.{exprs 'List(R_Expr)} block→u_expr(exprs file_pos)
-    match. #(kw clauses)
-    .#("let" list.(Block(list.(var)) Block(val)))
-        U_Let(r_expr→u_pattern(var) block→u_expr(val))
-    .#("let" list.(SecKeywordClause("∀") Block(type_param_exprs) Block(list.(R_Expr(R_Ident(var) _))) Block(val)))
-        U_Let∀(map(type_param_exprs r_expr→string) var block→u_expr(val))
-    .#("let" list.(SecKeywordClause("mut") Block(list.(R_Expr(R_Ident(var) _))) Block(val)))
-        U_LetMut(var block→u_expr(val))
-    .#("type" list.(Block(list.(R_Expr(R_Ident(name) _))) Block(variant_exprs)))
-        let. variants map(variant_exprs λ.(expr 'R_Expr
-            match. expr
-            .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
-                #(variant_name map(params r_expr→u_type))
-            ._
-                error(InvalidExpr(Some(kw)) file_pos)
-                #(empty empty)
-        ))
-        U_TypeStatement(name empty variants)
-    .#("type" list.(SecKeywordClause("∀") Block(type_param_exprs) Block(list.(R_Expr(R_Ident(name) _))) Block(variant_exprs)))
-        let. type_params map(type_param_exprs r_expr→string)
-        let. variants map(variant_exprs λ.(expr 'R_Expr
-            match. expr
-            .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
-                #(variant_name map(params r_expr→u_type))
-            ._
-                error(InvalidExpr(Some(kw)) file_pos)
-                #(empty empty)
-        ))
-        U_TypeStatement(name type_params variants)
-    .#("extern" list.(Block(list.(R_Expr(R_Ident(name) _))) Block(list.(type_expr))))
-        U_Extern(name r_expr→u_type(type_expr))
+    let. invalid_expr λ.{} error(InvalidExpr(Some(kw)) file_pos)
+    let. split_off λ.{exprs 'List(R_Expr)} split_off(exprs kw file_pos)
+
+    match. kw
+    ."let" match. group_clauses(clauses)
+        .ClauseGrouping(pattern+body list.())
+            let. #(pattern body) split_off(pattern+body)
+            U_Let(r_expr→u_pattern(pattern) block→u_expr(body))
+        .ClauseGrouping(list.() list.(ClauseGroup(NamedSep("∀") type_params) ClauseGroup(ColonSep() name+body)))
+            let. #(name body) split_off(name+body)
+            U_Let∀(map(type_params r_expr→string) r_expr→string(name) block→u_expr(body))
+        .ClauseGrouping(list.() list.(ClauseGroup(NamedSep("mut") name+body)))
+            let. #(name body) split_off(name+body)
+            U_LetMut(r_expr→string(name) block→u_expr(body))
+        ._
+            invalid_expr()
+            U_TypeStatement("" list.() list.())
+    ."type" match. group_clauses(clauses)
+        .ClauseGrouping(name+variants list.())
+            let. #(name variant_exprs) split_off(name+variants)
+            let. variants map(variant_exprs λ.(expr 'R_Expr
+                match. expr
+                .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
+                    #(variant_name map(params r_expr→u_type))
+                ._
+                    error(InvalidExpr(Some(kw)) file_pos)
+                    #(empty empty)
+            ))
+            U_TypeStatement(r_expr→string(name) empty variants)
+        .ClauseGrouping(list.() list.(ClauseGroup(NamedSep("∀") type_params) ClauseGroup(ColonSep() name+variants)))
+            let. #(name variant_exprs) split_off(name+variants)
+            let. variants map(variant_exprs λ.(expr 'R_Expr
+                match. expr
+                .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
+                    #(variant_name map(params r_expr→u_type))
+                ._
+                    error(InvalidExpr(Some(kw)) file_pos)
+                    #(empty empty)
+            ))
+            U_TypeStatement(r_expr→string(name) map(type_params r_expr→string) variants)
+        ._
+            invalid_expr()
+            U_TypeStatement("" list.() list.())
+    ."extern" match. group_clauses(clauses)
+        .ClauseGrouping(list.(R_Expr(R_Ident(name) _) type) list.())
+            U_Extern(name r_expr→u_type(type))
+        ._
+            invalid_expr()
+            U_TypeStatement("" list.() list.())
     ._ U_ExprStatement(U_Expr(clauses→expr_data(kw clauses file_pos) file_pos))
 
 set. r_expr→u_expr λ.{r_expr 'R_Expr}

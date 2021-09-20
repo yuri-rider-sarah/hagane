@@ -44,7 +44,7 @@ while.
     .#(_ Eof() _) ⊥
     ._ ⊤
 do,
-    let. #(lexer′ r_expr) read_block_expr(lexer)
+    let. #(lexer′ r_expr) read_expr(lexer)
     set. lexer lexer′
     let. u_statement r_expr→u_statement(r_expr)
     set. u_statements push(u_statements u_statement)

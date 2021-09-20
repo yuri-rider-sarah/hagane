@@ -1,8 +1,8 @@
 ※ 9
-let. g λ. {x'Int y'Int z'Int}
+let. g λ. x'Int y'Int z'Int:
     -(+(*(x y) *(z z)) 2)
 
-let. f λ. {x'Int y'Int}
+let. f λ. x'Int y'Int:
     g(x y +(x y))
 
 print_int(f(1 2))

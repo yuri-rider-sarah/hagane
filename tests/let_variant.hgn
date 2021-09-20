@@ -1,5 +1,5 @@
 ※ 3
-type. ∀,{T} Pair Pair(T)
+type. ∀, T: Pair Pair(T)
 
 let. Pair(x) Pair(+(1 2))
 print_int(x)

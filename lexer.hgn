@@ -322,10 +322,6 @@ let. read_token λ.{lexer 'Lexer}
 let. read_token_or_indent λ.{lexer 'Lexer last_indent_depth 'Int}
     read_token′(lexer Some(last_indent_depth))
 
-let. lexer_indent_depth λ.{lexer 'Lexer}
-    let. Lexer(_ _ _ _ this_indent_depth _) lexer
-    this_indent_depth
-
 let. mut, lexer_at_line_start λ.{lexer 'Lexer} ⊤
 set. lexer_at_line_start λ.{lexer 'Lexer}
     let. Lexer(_ _ _ _ _ at_line_start) lexer
@@ -338,3 +334,11 @@ set. lexer_at_line_start λ.{lexer 'Lexer}
             .is_white_space(c) lexer_at_line_start(lexer′)
             .⊤ ⊥
         .None() ⊤
+
+let. lexer_indent_depth λ.{lexer 'Lexer}
+    let. Lexer(_ _ _ _ this_indent_depth _) lexer
+    if. lexer_at_line_start(lexer)
+        let. #(_ indent) read_indent(lexer 0)
+        indent
+    else,
+        this_indent_depth

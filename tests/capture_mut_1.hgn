@@ -2,7 +2,7 @@
 ※ 2
 let. mut, x 1
 
-let. incr_x λ.{}
+let. incr_x λ.:
     set.(x 2)
 
 print_int(x)
