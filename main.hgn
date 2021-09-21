@@ -41,7 +41,7 @@ let. mut, lexer lexer(files)
 let. mut, u_statements empty
 while.
     match. read_token(lexer)
-    .#(_ Eof() _) ⊥
+    .#(_ Eof() _ _ _) ⊥
     ._ ⊤
 do,
     let. #(lexer′ r_expr) read_expr(lexer)
