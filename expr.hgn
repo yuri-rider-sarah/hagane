@@ -31,77 +31,6 @@ type. U_TypeData
 
 type. U_Type U_Type(U_TypeData FilePos)
 
-let. mut, r_expr→u_type λ.{expr 'R_Expr} U_Type(U_TupleType(empty) FilePos(" " 0 0))
-set. r_expr→u_type λ.{expr 'R_Expr}
-    let. R_Expr(expr_data file_pos) expr
-    let. type_data match. expr_data
-        .R_Ident(name) U_Named(name empty)
-        .R_Apply(R_Expr(R_Ident(base) _) params)
-            if. =(len(params) 0)
-                error(InvalidType() file_pos)
-            else, #()
-            U_Named(base map(params r_expr→u_type))
-        .R_Tuple(types) U_TupleType(map(types r_expr→u_type))
-        .R_FunctionExpr(params result) U_Function(map(params r_expr→u_type) r_expr→u_type(result))
-        ._
-            error(InvalidType() file_pos)
-            U_Named(empty empty)
-    U_Type(type_data file_pos)
-
-type. U_PatternData
-    U_IntLiteralPattern(Int)
-    U_IdentPattern(List(Int))
-    U_WildcardPattern()
-    U_TuplePattern(List(U_Pattern))
-    U_VariantPattern(List(Int) List(U_Pattern))
-    U_ListPattern(List(U_Pattern))
-    U_TypedPattern(U_Pattern U_Type)
-
-type. U_Pattern U_Pattern(U_PatternData FilePos)
-
-let. dummy_u_expr U_Expr(U_IntLiteral(0) FilePos(empty 0 0))
-let. dummy_u_pattern U_Pattern(U_WildcardPattern() FilePos(empty 0 0))
-
-let. mut, r_expr→u_pattern λ.{expr 'R_Expr} dummy_u_pattern
-set. r_expr→u_pattern λ.{expr 'R_Expr}
-    let. R_Expr(expr_data file_pos) expr
-    let. pattern_data match. expr_data
-        .R_IntLiteral(n) U_IntLiteralPattern(n)
-        .R_CharLiteral(c) U_IntLiteralPattern(c)
-        .R_StringLiteral(s) U_ListPattern(map(s λ.(c 'Int U_Pattern(U_IntLiteralPattern(c) file_pos))))
-        .R_Ident(name) U_IdentPattern(name)
-        .R_Wildcard() U_WildcardPattern()
-        .R_Tuple(exprs) U_TuplePattern(map(exprs r_expr→u_pattern))
-        .R_Apply(R_Expr(R_Ident(ctor) _) args) U_VariantPattern(ctor map(args r_expr→u_pattern))
-        .R_Typed(expr type) U_TypedPattern(r_expr→u_pattern(expr) r_expr→u_type(type))
-        .R_Special("list" clauses) U_ListPattern(map(clauses λ.(clause 'Clause
-            match. clause
-            .ExprClause(expr) r_expr→u_pattern(expr)
-            ._
-                error(InvalidPattern() file_pos)
-                dummy_u_pattern
-        )))
-        ._
-            error(InvalidPattern() file_pos)
-            U_WildcardPattern()
-    U_Pattern(pattern_data file_pos)
-
-let. mut, clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} U_IntLiteral(0)
-let. mut, clauses→u_statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} U_ExprStatement(dummy_u_expr)
-let. mut, r_expr→u_expr λ.{r_expr 'R_Expr} dummy_u_expr
-let. mut, r_expr→u_expr λ.{r_expr 'R_Expr} dummy_u_expr
-let. mut, r_expr→u_statement λ.{r_expr 'R_Expr} U_ExprStatement(dummy_u_expr)
-
-let. r_expr→string λ.{expr 'R_Expr kw 'List(Int) file_pos 'FilePos}
-    match. expr
-    .R_Expr(R_Ident(s) _) s
-    ._
-        error(InvalidExpr(Some(kw)) file_pos)
-        empty
-
-let. block→u_expr λ.{exprs 'List(R_Expr) file_pos 'FilePos}
-    U_Expr(U_Do(map(exprs r_expr→u_statement)) file_pos)
-
 type. ClauseSeparator
     NamedSep(List(Int))
     ColonSep()
@@ -145,6 +74,94 @@ set. group_clauses_init λ.{clauses 'List(Clause) i 'Int init_group 'List(R_Expr
 let. group_clauses λ.{clauses 'List(Clause)}
     group_clauses_init(clauses 0 empty)
 
+let. mut, r_expr→u_type λ.{expr 'R_Expr} U_Type(U_TupleType(empty) FilePos(" " 0 0))
+set. r_expr→u_type λ.{expr 'R_Expr}
+    let. R_Expr(expr_data file_pos) expr
+    let. type_data match. expr_data
+        .R_Ident(name) U_Named(name empty)
+        .R_Apply(R_Expr(R_Ident(base) _) params)
+            if. =(len(params) 0)
+                error(InvalidType() file_pos)
+            else, #()
+            U_Named(base map(params r_expr→u_type))
+        .R_Special("*" clauses) U_TupleType(map(clauses λ.(clause match.(clause
+            .ExprClause(expr) r_expr→u_type(expr)
+            ._
+                error(InvalidType() file_pos)
+                U_Type(U_Named(empty empty) FilePos("" 0 0))
+        ))))
+        .R_Special("⇒" clauses) match. group_clauses(clauses)
+            .ClauseGrouping(params list.(ClauseGroup(ColonSep() list.(ret))))
+                U_Function(map(params r_expr→u_type) r_expr→u_type(ret))
+            ._
+                error(InvalidType() file_pos)
+                U_Named(empty empty)
+        ._
+            error(InvalidType() file_pos)
+            U_Named(empty empty)
+    U_Type(type_data file_pos)
+
+type. U_PatternData
+    U_IntLiteralPattern(Int)
+    U_IdentPattern(List(Int))
+    U_WildcardPattern()
+    U_TuplePattern(List(U_Pattern))
+    U_VariantPattern(List(Int) List(U_Pattern))
+    U_ListPattern(List(U_Pattern))
+    U_TypedPattern(U_Pattern U_Type)
+
+type. U_Pattern U_Pattern(U_PatternData FilePos)
+
+let. dummy_u_expr U_Expr(U_IntLiteral(0) FilePos(empty 0 0))
+let. dummy_u_pattern U_Pattern(U_WildcardPattern() FilePos(empty 0 0))
+
+let. mut, r_expr→u_pattern λ.{expr 'R_Expr} dummy_u_pattern
+set. r_expr→u_pattern λ.{expr 'R_Expr}
+    let. R_Expr(expr_data file_pos) expr
+    let. pattern_data match. expr_data
+        .R_IntLiteral(n) U_IntLiteralPattern(n)
+        .R_CharLiteral(c) U_IntLiteralPattern(c)
+        .R_StringLiteral(s) U_ListPattern(map(s λ.(c 'Int U_Pattern(U_IntLiteralPattern(c) file_pos))))
+        .R_Ident(name) U_IdentPattern(name)
+        .R_Wildcard() U_WildcardPattern()
+        .R_Apply(R_Expr(R_Ident(ctor) _) args) U_VariantPattern(ctor map(args r_expr→u_pattern))
+        .R_Special("*" clauses) U_TuplePattern(map(clauses λ.(clause 'Clause
+            match. clause
+            .ExprClause(expr) r_expr→u_pattern(expr)
+            ._
+                error(InvalidPattern() file_pos)
+                dummy_u_pattern
+        )))
+        .R_Special("∈" list.(ExprClause(pattern) ExprClause(type)))
+            U_TypedPattern(r_expr→u_pattern(pattern) r_expr→u_type(type))
+        .R_Special("list" clauses) U_ListPattern(map(clauses λ.(clause 'Clause
+            match. clause
+            .ExprClause(expr) r_expr→u_pattern(expr)
+            ._
+                error(InvalidPattern() file_pos)
+                dummy_u_pattern
+        )))
+        ._
+            error(InvalidPattern() file_pos)
+            U_WildcardPattern()
+    U_Pattern(pattern_data file_pos)
+
+let. mut, clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} U_IntLiteral(0)
+let. mut, clauses→u_statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} U_ExprStatement(dummy_u_expr)
+let. mut, r_expr→u_expr λ.{r_expr 'R_Expr} dummy_u_expr
+let. mut, r_expr→u_expr λ.{r_expr 'R_Expr} dummy_u_expr
+let. mut, r_expr→u_statement λ.{r_expr 'R_Expr} U_ExprStatement(dummy_u_expr)
+
+let. r_expr→string λ.{expr 'R_Expr kw 'List(Int) file_pos 'FilePos}
+    match. expr
+    .R_Expr(R_Ident(s) _) s
+    ._
+        error(InvalidExpr(Some(kw)) file_pos)
+        empty
+
+let. block→u_expr λ.{exprs 'List(R_Expr) file_pos 'FilePos}
+    U_Expr(U_Do(map(exprs r_expr→u_statement)) file_pos)
+
 let. split_off λ.{exprs 'List(R_Expr) kw 'List(Int) file_pos 'FilePos}
     if. ≥(len(exprs) 1)
     then, #(get(exprs 0) drop(exprs 1))
@@ -179,6 +196,19 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
                 invalid_expr()
                 U_ExprStatement(dummy_u_expr)
         )))
+    ."*"
+        U_Tuple(map(clauses λ.(clause
+            match. clause
+            .ExprClause(elem) r_expr→u_expr(elem)
+            ._
+                invalid_expr()
+                dummy_u_expr
+        )))
+    ."∈" match. clauses
+        .list.(ExprClause(val) ExprClause(type)) U_Typed(r_expr→u_expr(val) r_expr→u_type(type))
+        ._
+            invalid_expr()
+            U_IntLiteral(0)
     ."if"
         let. #(cond then else) match. group_clauses(clauses)
             .ClauseGrouping(cond list.(ClauseGroup(NamedSep("then") then) ClauseGroup(NamedSep("else") else)))
@@ -319,8 +349,6 @@ set. r_expr→u_expr λ.{r_expr 'R_Expr}
         .R_CharLiteral(c) U_IntLiteral(c)
         .R_StringLiteral(s) U_StringLiteral(s)
         .R_Ident(s) U_Ident(s)
-        .R_Tuple(exprs) U_Tuple(map(exprs r_expr→u_expr))
-        .R_Typed(expr type) U_Typed(r_expr→u_expr(expr) r_expr→u_type(type))
         .R_Apply(func args) U_Apply(r_expr→u_expr(func) map(args r_expr→u_expr))
         .R_Special(kw clauses) clauses→expr_data(kw clauses file_pos)
         ._

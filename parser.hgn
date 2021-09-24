@@ -4,9 +4,6 @@ type. R_ExprData
     R_StringLiteral(List(Int))
     R_Ident(List(Int))
     R_Wildcard()
-    R_Tuple(List(R_Expr))
-    R_FunctionExpr(List(R_Expr) R_Expr)
-    R_Typed(R_Expr R_Expr)
     R_Apply(R_Expr List(R_Expr))
     R_Special(List(Int) List(Clause))
 
@@ -18,8 +15,6 @@ let. mut, read_noncall_expr λ.{lexer 'Lexer} #(lexer dummy_r_expr)
 let. mut, read_expr λ.{lexer 'Lexer} #(lexer dummy_r_expr)
 let. mut, read_arg_list_r λ.{lexer 'Lexer exprs 'List(R_Expr)} #(lexer exprs)
 let. mut, read_arg_list λ.{lexer 'Lexer} #(lexer empty)
-let. mut, read_arg_list_cr λ.{lexer 'Lexer exprs 'List(R_Expr)} #(lexer exprs)
-let. mut, read_arg_list_c λ.{lexer 'Lexer} #(lexer empty)
 let. mut, read_expr_calls λ.{lexer 'Lexer expr 'R_Expr} #(lexer expr)
 let. mut, read_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos se_type 'SpecialExprType} #(lexer dummy_r_expr)
 let. mut, read_paren_special_expr_r λ.{lexer 'Lexer indent_depth 'Int kw 'List(Int) file_pos 'FilePos} #(lexer dummy_r_expr)
@@ -34,30 +29,8 @@ set. read_noncall_expr λ.{lexer 'Lexer}
     .IntLiteralToken(n) #(lexer R_Expr(R_IntLiteral(n) file_pos))
     .CharLiteral(c) #(lexer R_Expr(R_CharLiteral(c) file_pos))
     .StringLiteral(s) #(lexer R_Expr(R_StringLiteral(s) file_pos))
-    .IdentToken(s)
-        match. read_token(lexer)
-        .#(lexer′ Apostrophe() _ _ _)
-            set. lexer lexer′
-            let. #(lexer′ type) read_expr(lexer)
-            set. lexer lexer′
-            #(lexer R_Expr(R_Typed(R_Expr(R_Ident(s) file_pos) type) file_pos))
-        ._ #(lexer R_Expr(R_Ident(s) file_pos))
+    .IdentToken(s) #(lexer R_Expr(R_Ident(s) file_pos))
     .WildcardToken() #(lexer R_Expr(R_Wildcard() file_pos))
-    .Hash()
-        let. #(lexer′ args) read_arg_list(lexer)
-        set. lexer lexer′
-        #(lexer R_Expr(R_Tuple(args) file_pos))
-    .DoubleDagger()
-        let. #(lexer′ args) read_arg_list_c(lexer)
-        set. lexer lexer′
-        let. #(lexer′ ret) read_expr(lexer)
-        set. lexer lexer′
-        let. #(lexer′ right _ _ right_file_pos) read_token(lexer)
-        set. lexer lexer′
-        match. right
-        .RParen() #()
-        ._ error(UnexpectedToken(right) right_file_pos)
-        #(lexer R_Expr(R_FunctionExpr(args ret) file_pos))
     .PriKeyword(kw)
         match. read_token(lexer)
         .#(lexer′ LParen() _ _ _)
@@ -106,25 +79,6 @@ set. read_arg_list λ.{lexer 'Lexer}
     .LParen() #()
     ._ error(UnexpectedToken(token) file_pos)
     read_arg_list_r(lexer empty)
-
-set. read_arg_list_cr λ.{lexer 'Lexer exprs 'List(R_Expr)}
-    let. mut, lexer lexer
-    match. read_token(lexer)
-    .#(lexer′ Colon() _ _ _)
-        #(lexer′ exprs)
-    ._
-        let. #(lexer′ expr) read_expr(lexer)
-        set. lexer lexer′
-        read_arg_list_cr(lexer push(exprs expr))
-
-set. read_arg_list_c λ.{lexer 'Lexer}
-    let. mut, lexer lexer
-    let. #(lexer′ token _ _ file_pos) read_token(lexer)
-    set. lexer lexer′
-    match. token
-    .LParen() #()
-    ._ error(UnexpectedToken(token) file_pos)
-    read_arg_list_cr(lexer empty)
 
 type. Clause
     ExprClause(R_Expr)

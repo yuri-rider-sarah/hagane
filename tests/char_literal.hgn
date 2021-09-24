@@ -9,13 +9,13 @@
 ※ 8595
 ※ 128512
 
-print_int(#!a)
-print_int(#!!)
-print_int(#! )
-print_int(#!))
-print_int(#!\")
-print_int(#!\\)
-print_int(#!\n)
-print_int(#!π)
-print_int(#!↓)
-print_int(#!😀)
+print_int(#a)
+print_int(#!)
+print_int(# )
+print_int(#))
+print_int(#\")
+print_int(#\\)
+print_int(#\n)
+print_int(#π)
+print_int(#↓)
+print_int(#😀)

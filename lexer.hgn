@@ -8,10 +8,7 @@ type. Token
     SecKeyword(List(Int))
     LParen()
     RParen()
-    Apostrophe()
     Colon()
-    Hash()
-    DoubleDagger()
     Period()
     Eof()
 
@@ -144,24 +141,19 @@ let. read_token_char λ.{lexer 'Lexer at_line_start 'Bool indent_depth 'Int}
     match. c
     .Some(#!() return(LParen())
     .Some(#!)) return(RParen())
-    .Some(#!') return(Apostrophe())
     .Some(#!:) return(Colon())
-    .Some(#!‡) return(DoubleDagger())
     .Some(#!.) return(Period())
-    .Some(#!#)
-        match. read_char(lexer)
-        .#(lexer′ Some(#!!) _)
-            set. lexer lexer′
-            let. #(lexer′ c) read_quoted_char(lexer)
-            set. lexer lexer′
-            check_after_ident(lexer)
-            return(CharLiteral(c))
-        ._ return(Hash())
     .Some(#!")
         let. #(lexer′ str) read_string_literal_contents(lexer empty)
         set. lexer lexer′
         check_after_ident(lexer)
         return(StringLiteral(str))
+    .Some(#!#)
+        set. lexer lexer′
+        let. #(lexer′ c) read_quoted_char(lexer)
+        set. lexer lexer′
+        check_after_ident(lexer)
+        return(CharLiteral(c))
     .Some(c)
         cond.
         .∧(≤(#!0 c) ≤(c #!9))

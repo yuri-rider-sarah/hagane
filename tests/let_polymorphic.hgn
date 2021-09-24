@@ -5,27 +5,27 @@
 ※ 1
 ※ 0
 
-let. ∀, T U: map λ. a 'List(T) f '‡(T : U):
+let. ∀, T U: map λ. ∈.(a List(T)) ∈.(f ⇒.(T : U)):
     let. mut, a′ empty
     while. <(len(a′) len(a))
         set. a′ push(a′ f(get(a len(a′))))
     a′
 
-let. ∀, T: foreach λ. a 'List(T) f '‡(T : #()):
+let. ∀, T: foreach λ. ∈.(a List(T)) ∈.(f ⇒.(T : *.())):
     let. mut, i 0
     while. <(i len(a))
         f(get(a i))
         set. i +(i 1)
-    #()
+    *.()
 
-let. ∀, T U V: ∘ λ. f '‡(U : V) g '‡(T : U):
-    λ.(x 'T: f(g(x)))
+let. ∀, T U V: ∘ λ. ∈.(f ⇒.(U : V)) ∈.(g ⇒.(T : U)):
+    λ.(∈.(x T): f(g(x)))
 
-let. succ λ. n 'Int: +(n 1)
+let. succ λ. ∈.(n Int): +(n 1)
 
-let. square λ. n 'Int: *(n n)
+let. square λ. ∈.(n Int): *(n n)
 
-let. bool→int λ. b 'Bool:
+let. bool→int λ. ∈.(b Bool):
     if.(b then, 1 else, 0)
 
 let. mut, a empty
@@ -33,7 +33,7 @@ set. a push(a 1)
 set. a push(a 2)
 set. a push(a 3)
 let. b map(a ∘(succ square))
-let. c map(a ∘(bool→int λ.(n'Int ⇒, =(%(n 2) 0))))
+let. c map(a ∘(bool→int λ.(∈.(n Int) ⇒, =(%(n 2) 0))))
 
 foreach(b print_int)
 foreach(c print_int)

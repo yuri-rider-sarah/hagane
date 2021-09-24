@@ -1,4 +1,4 @@
 ※ 1
-let. print_int′ print_int '‡(Int : #())
+let. print_int′ ∈.(print_int ⇒.(Int : *.()))
 
 print_int′(1)

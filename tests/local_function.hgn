@@ -1,7 +1,7 @@
 ※ 20
-let. f λ. x'Int y'Int:
+let. f λ. x y:
     let. w +(x y)
-    let. g λ. x'Int z'Int:
+    let. g λ. x z:
         +(x +(y +(z w)))
     g(1 5)
 
