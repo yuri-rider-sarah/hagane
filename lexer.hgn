@@ -6,6 +6,7 @@ type. Token
     WildcardToken()
     PriKeyword(List(Int))
     SecKeyword(List(Int))
+    CallToken()
     LParen()
     RParen()
     Colon()
@@ -52,7 +53,7 @@ let. read_char λ.{lexer 'Lexer}
     let. #(chars′ c file_pos) read_char(chars)
     #(Lexer(chars′ indent_char this_indent_depth) c file_pos)
 
-let. after_ident_chars list.(#!( #!) #!{ #!} #!' #!: #!※)
+let. after_ident_chars list.(#!( #!) #!‡ #!: #!※)
 
 let. read_quoted_char λ.{lexer 'Lexer}
     let. mut, lexer lexer
@@ -143,6 +144,7 @@ let. read_token_char λ.{lexer 'Lexer at_line_start 'Bool indent_depth 'Int}
     .Some(#!)) return(RParen())
     .Some(#!:) return(Colon())
     .Some(#!.) return(Period())
+    .Some(#!‡) return(CallToken())
     .Some(#!")
         let. #(lexer′ str) read_string_literal_contents(lexer empty)
         set. lexer lexer′
