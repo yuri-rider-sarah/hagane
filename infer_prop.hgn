@@ -1,10 +1,12 @@
-type. I_Statement
+type. I_StatementData
     I_ExprStatement(I_Expr)
     I_Let(I_Pattern I_Expr)
     I_Let∀(List(TypeName) List(Int) I_Expr)
     I_LetMut(List(Int) I_Expr)
     I_TypeStatement(TypeName List(TypeName) List(#(List(Int) List(TypeVar))))
     I_Extern(List(Int) TypeVar)
+
+type. I_Statement I_Statement(I_StatementData FilePos)
 
 type. I_ExprData
     I_IntLiteral(Int)
@@ -438,7 +440,7 @@ set. u_statements→i_statements λ.{statements 'List(U_Statement) context 'I_Co
     let. mut, context context
     let. type_names concat(map(statements λ.(statement 'U_Statement
         match. statement
-        .U_TypeStatement(name type_params _)
+        .U_Statement(U_TypeStatement(name type_params _) _)
             let. tn new_type_name(Some(name) len(type_params))
             set. context i_add_type_binding(context tn)
             list.(tn)
@@ -447,7 +449,8 @@ set. u_statements→i_statements λ.{statements 'List(U_Statement) context 'I_Co
     let. mut, next_type_name 0
     let. mut, last_expr_type I_TupleType(empty)
     let. i_statements map(statements λ.(statement 'U_Statement
-        match. statement
+        let. U_Statement(u_statement_data file_pos) statement
+        let. i_statement_data match.(u_statement_data
         .U_ExprStatement(u_expr)
             let. i_expr u_expr→i_expr(u_expr context)
             set. last_expr_type I_Equal(i_expr_type(i_expr))
@@ -488,7 +491,7 @@ set. u_statements→i_statements λ.{statements 'List(U_Statement) context 'I_Co
                     .None()
                         unreachable("unused_name is None")
                         empty
-                error(UnusedTypeParam(unused_name) i_expr_file_pos(i_expr))
+                error(UnusedTypeParam(unused_name) file_pos)
             else, #()
             set. context i_add_let_binding(context VarBinding(name type_params i_expr_type(i_expr)))
             I_Let∀(type_params name i_expr)
@@ -518,6 +521,8 @@ set. u_statements→i_statements λ.{statements 'List(U_Statement) context 'I_Co
             let. type new_type_var_with_type(u_type→i_type(u_type context))
             set. context i_add_let_binding(context VarBinding(name empty type))
             I_Extern(name type)
+        )
+        I_Statement(i_statement_data file_pos)
     ))
     set_type(this_type last_expr_type file_pos)
     i_statements

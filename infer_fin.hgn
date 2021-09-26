@@ -1,10 +1,12 @@
-type. T_Statement
+type. T_StatementData
     T_ExprStatement(T_Expr)
     T_Let(T_Pattern T_Expr)
     T_Let∀(Int List(Int) T_Expr)
     T_LetMut(List(Int) T_Expr)
     T_TypeStatement(Int List(#(List(Int) List(T_Type))))
     T_Extern(List(Int) T_Type)
+
+type. T_Statement T_Statement(T_StatementData FilePos)
 
 type. T_ExprData
     T_IntLiteral(Int)
@@ -99,14 +101,13 @@ set. i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_
     let. mut, context context
     for(i_statements λ.(i_statement 'I_Statement
         match. i_statement
-        .I_TypeStatement(type _ _) set. context t_add_type_binding(context type)
+        .I_Statement(I_TypeStatement(type _ _) _) set. context t_add_type_binding(context type)
         ._ #()
     ))
-    ※ A dummy file_pos is used since the errors shouldn't ever occur.
-    let. file_pos FilePos("[INTERNAL COMPILER ERROR]" 0 0)
     let. mut, context context
     map(i_statements λ.(i_statement 'I_Statement
-        match. i_statement
+        let. I_Statement(i_statement_data file_pos) i_statement
+        let. t_statement_data match.(i_statement_data
         .I_ExprStatement(i_expr) T_ExprStatement(i_expr→t_expr(i_expr context))
         .I_Let(i_pattern i_expr) T_Let(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_expr context))
         .I_Let∀(type_params name i_expr)
@@ -123,6 +124,8 @@ set. i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_
             ))
             T_TypeStatement(len(type_params) t_variants)
         .I_Extern(name type) T_Extern(name type_var→t_type(type context file_pos))
+        )
+        T_Statement(t_statement_data file_pos)
     ))
 
 let. i_patterns→t_patterns λ.{i_patterns 'List(I_Pattern) context 'T_Context}

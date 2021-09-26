@@ -1,10 +1,12 @@
-type. U_Statement
+type. U_StatementData
     U_ExprStatement(U_Expr)
     U_Let(U_Pattern U_Expr)
     U_Let∀(List(List(Int)) List(Int) U_Expr)
     U_LetMut(List(Int) U_Expr)
     U_TypeStatement(List(Int) List(List(Int)) List(#(List(Int) List(U_Type))))
     U_Extern(List(Int) U_Type)
+
+type. U_Statement U_Statement(U_StatementData FilePos)
 
 type. U_ExprData
     U_IntLiteral(Int)
@@ -158,10 +160,10 @@ set. r_expr→u_pattern λ.{expr 'R_Expr}
     U_Pattern(pattern_data file_pos)
 
 let. mut, clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} U_IntLiteral(0)
-let. mut, clauses→u_statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} U_ExprStatement(dummy_u_expr)
+let. mut, clauses→u_statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos} U_Statement(U_ExprStatement(dummy_u_expr) FilePos("" 0 0))
 let. mut, r_expr→u_expr λ.{r_expr 'R_Expr} dummy_u_expr
 let. mut, r_expr→u_expr λ.{r_expr 'R_Expr} dummy_u_expr
-let. mut, r_expr→u_statement λ.{r_expr 'R_Expr} U_ExprStatement(dummy_u_expr)
+let. mut, r_expr→u_statement λ.{r_expr 'R_Expr} U_Statement(U_ExprStatement(dummy_u_expr) FilePos("" 0 0))
 
 let. r_expr→string λ.{expr 'R_Expr kw 'List(Int) file_pos 'FilePos}
     match. expr
@@ -205,7 +207,7 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
             .ExprClause(elem) r_expr→u_statement(elem)
             ._
                 invalid_expr()
-                U_ExprStatement(dummy_u_expr)
+                U_Statement(U_ExprStatement(dummy_u_expr) FilePos("" 0 0))
         )))
     ."*"
         U_Tuple(map(clauses λ.(clause
@@ -299,7 +301,7 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
         invalid_expr()
         U_IntLiteral(0)
 
-set. clauses→u_statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
+let. clauses→statement_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
     let. r_expr→string λ.{expr 'R_Expr} r_expr→string(expr kw file_pos)
     let. block→u_expr λ.{exprs 'List(R_Expr)} block→u_expr(exprs file_pos)
     let. invalid_expr λ.{} error(InvalidExpr(Some(kw)) file_pos)
@@ -363,6 +365,9 @@ set. clauses→u_statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'Fil
             U_TypeStatement("" list.() list.())
     ._ U_ExprStatement(U_Expr(clauses→expr_data(kw clauses file_pos) file_pos))
 
+set. clauses→u_statement λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
+    U_Statement(clauses→statement_data(kw clauses file_pos) file_pos)
+
 set. r_expr→u_expr λ.{r_expr 'R_Expr}
     let. R_Expr(r_expr_data file_pos) r_expr
     let. expr_data match. r_expr_data
@@ -386,4 +391,4 @@ set. r_expr→u_statement λ.{r_expr 'R_Expr}
     let. R_Expr(r_expr_data file_pos) r_expr
     match. r_expr_data
     .R_Special(kw clauses) clauses→u_statement(kw clauses file_pos)
-    ._ U_ExprStatement(r_expr→u_expr(r_expr))
+    ._ U_Statement(U_ExprStatement(r_expr→u_expr(r_expr)) file_pos)

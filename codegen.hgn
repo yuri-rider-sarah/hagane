@@ -242,7 +242,8 @@ set. free_vars λ.{expr 'T_Expr}
         let. mut, bound_vars empty
         let. mut, do_free_vars empty
         for(statements λ.(statement 'T_Statement
-            match. statement
+            let. T_Statement(statement_data _) statement
+            match. statement_data
             .T_ExprStatement(expr) set. do_free_vars ++(do_free_vars \(free_vars(expr) bound_vars =list_int))
             .T_Let(pattern expr)
                 set. do_free_vars ++(do_free_vars \(free_vars(expr) bound_vars =list_int))
@@ -528,12 +529,12 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
     let. mut, type_index_base len(old_context_types)
     for(statements λ.(statement 'T_Statement
         match. statement
-        .T_TypeStatement(num_type_params variants) set. type_index_base +(type_index_base 1)
+        .T_Statement(T_TypeStatement(num_type_params variants) _) set. type_index_base +(type_index_base 1)
         ._ #()
     ))
     for(statements λ.(statement 'T_Statement
         match. statement
-        .T_TypeStatement(num_type_params variants) set. context c_add_type_binding(context
+        .T_Statement(T_TypeStatement(num_type_params variants) _) set. context c_add_type_binding(context
             map_ι(num_type_params λ.(i 'Int +(type_index_base i)))
             map(variants λ.(v '#(List(Int) List(T_Type))
                 let. #(_ v) v
@@ -544,16 +545,17 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
     ))
     let. mut, block_val None()
     for(statements λ.(statement 'T_Statement
-        match. statement
+        let. T_Statement(statement_data file_pos) statement
+        match. statement_data
         .T_ExprStatement(expr)
             match. block_val
             .Some(val) codegen_rc_decr(val)
             .None() #()
             set. block_val Some(codegen_expr(expr context))
         .T_Let(pattern expr)
-            let. T_Expr(_ expr_type expr_file_pos) expr
+            let. T_Expr(_ expr_type _) expr
             if. ¬(is_match_exhaustive(list.(list.(pattern)) list.(expr_type) context))
-            then, error(InexhaustivePatterns() expr_file_pos)
+            then, error(InexhaustivePatterns() file_pos)
             else, #()
             let. val codegen_expr(expr context)
             let. #(bindings pattern_ends) codegen_pattern_test(val pattern context)
@@ -582,7 +584,6 @@ set. codegen_statements λ.{statements 'List(T_Statement) context 'C_Context}
                     set. context c_add_let_binding(context name C_Ctor(codegen_create_tagged_ctor(len(params) i) Some(i)))
                 ))
         .T_Extern(name type)
-            let. file_pos FilePos("[extern.]" 0 0)
             match. type
             .T_Function(params ret)
                 let. TypeName(int_type_index) int_type
