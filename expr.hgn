@@ -15,11 +15,10 @@ type. U_ExprData
     U_Apply(U_Expr List(U_Expr))
     U_Typed(U_Expr U_Type)
     U_Set(List(Int) U_Expr)
-    U_If(U_Expr U_Expr U_Expr)
+    U_If(List(#(U_Expr U_Expr)) U_Expr)
     U_While(U_Expr U_Expr)
     U_Do(List(U_Statement))
     U_Lambda(List(U_Pattern) U_Expr)
-    U_Cond(List(#(U_Expr U_Expr)))
     U_Match(U_Expr List(#(U_Pattern U_Expr)))
     U_ListLiteral(List(U_Expr))
     U_StringLiteral(List(Int)) ※ This must be separate from U_ListLiteral at this stage, so that "" can later be assigned type List(Int)
@@ -182,6 +181,56 @@ let. split_off λ.{exprs 'List(R_Expr) kw 'List(Int) file_pos 'FilePos}
         error(InvalidExpr(Some(kw)) file_pos)
         #(dummy_r_expr list.())
 
+let. mut, <grouping→if>_loop λ.{groups 'List(ClauseGroup) i 'Int branches 'List(#(U_Expr U_Expr)) file_pos 'FilePos} U_IntLiteral(0)
+set. <grouping→if>_loop λ.{groups 'List(ClauseGroup) i 'Int branches 'List(#(U_Expr U_Expr)) file_pos 'FilePos}
+    let. invalid_expr λ.{} error(InvalidExpr(Some("if")) file_pos)
+    if. <(i len(groups))
+        let. ClauseGroup(sep content) get(groups i)
+        match. sep
+        .LabelSep(cond)
+            <grouping→if>_loop(groups +(i 1) push(branches #(r_expr→u_expr(cond) block→u_expr(content file_pos))) file_pos)
+        .NamedSep("else")
+            if. ≠(len(groups) +(i 1))
+                invalid_expr()
+            else, #()
+            U_If(branches block→u_expr(content file_pos))
+        ._
+            if. match.(sep
+                .ColonSep() ⊤
+                .NamedSep("if") ⊤
+                ._ ⊥)
+            then, #()
+            else, invalid_expr()
+            if. <(+(i 1) len(groups))
+                let. ClauseGroup(sep′ content′) get(groups +(i 1))
+                match. sep′
+                .NamedSep("then")
+                    <grouping→if>_loop(groups +(i 2) push(branches #(block→u_expr(content file_pos) block→u_expr(content′ file_pos))) file_pos)
+                ._
+                    let. #(cond then) split_off(content "if" file_pos)
+                    <grouping→if>_loop(groups +(i 1) push(branches #(r_expr→u_expr(cond) block→u_expr(then file_pos))) file_pos)
+            else,
+                U_If(branches block→u_expr(content file_pos))
+    else,
+        invalid_expr()
+        U_IntLiteral(0)
+
+let. grouping→if λ.{ClauseGrouping(first_group groups) file_pos 'FilePos}
+    let. invalid_expr λ.{} error(InvalidExpr(Some("if")) file_pos)
+    if. =(len(groups) 0)
+    then, if. =(%(len(first_group) 2) 1)
+        then, U_If(
+            map_ι(/(len(first_group) 2) λ.(i #(r_expr→u_expr(get(first_group *(2 i))) r_expr→u_expr(get(first_group +(*(2 i) 1))))))
+            r_expr→u_expr(get(first_group -(len(first_group) 1)))
+        )
+        else,
+            invalid_expr()
+            U_IntLiteral(0)
+    else,
+        if. =(len(first_group) 0)
+        then, <grouping→if>_loop(groups 0 empty file_pos)
+        else, <grouping→if>_loop(++(list.(ClauseGroup(ColonSep() first_group)) groups) 0 empty file_pos)
+
 set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FilePos}
     let. r_expr→string λ.{expr 'R_Expr} r_expr→string(expr kw file_pos)
     let. block→u_expr λ.{exprs 'List(R_Expr)} block→u_expr(exprs file_pos)
@@ -222,28 +271,7 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
         ._
             invalid_expr()
             U_IntLiteral(0)
-    ."if"
-        let. #(cond then else) match. group_clauses(clauses)
-            .ClauseGrouping(cond list.(ClauseGroup(NamedSep("then") then) ClauseGroup(NamedSep("else") else)))
-                #(cond then else)
-            .ClauseGrouping(cond list.(ClauseGroup(NamedSep("then") then) ClauseGroup(ColonSep() else)))
-                #(cond then else)
-            .ClauseGrouping(cond list.(ClauseGroup(ColonSep() then) ClauseGroup(NamedSep("else") else)))
-                #(cond then else)
-            .ClauseGrouping(cond list.(ClauseGroup(ColonSep() then) ClauseGroup(ColonSep() else)))
-                #(cond then else)
-            .ClauseGrouping(cond+then list.(ClauseGroup(NamedSep("else") else)))
-                let. #(cond then) split_off(cond+then)
-                #(list.(cond) then else)
-            .ClauseGrouping(cond+then list.(ClauseGroup(ColonSep() else)))
-                let. #(cond then) split_off(cond+then)
-                #(list.(cond) then else)
-            .ClauseGrouping(list.(cond then else) list.())
-                #(list.(cond) list.(then) list.(else))
-            ._
-                invalid_expr()
-                #(list.() list.() list.())
-        U_If(block→u_expr(cond) block→u_expr(then) block→u_expr(else))
+    ."if" grouping→if(group_clauses(clauses) file_pos)
     ."while"
         let. #(cond body) match. group_clauses(clauses)
             .ClauseGrouping(cond list.(ClauseGroup(NamedSep("do") body)))
@@ -267,19 +295,6 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
                 invalid_expr()
                 #(list.() list.())
         U_Lambda(map(params r_expr→u_pattern) block→u_expr(body))
-    ."cond"
-        let. groups match. group_clauses(clauses)
-            .ClauseGrouping(list.() groups) groups
-            ._
-                invalid_expr()
-                list.()
-        U_Cond(map(groups λ.(ClauseGroup(sep body)
-            match. sep
-            .LabelSep(cond) #(r_expr→u_expr(cond) block→u_expr(body))
-            ._
-                invalid_expr()
-                #(dummy_u_expr dummy_u_expr)
-        )))
     ."match"
         let. ClauseGrouping(matched groups) group_clauses(clauses)
         U_Match(block→u_expr(matched) map(groups λ.(ClauseGroup(sep body)

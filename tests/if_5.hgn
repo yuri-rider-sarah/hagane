@@ -1,0 +1,8 @@
+※ 3
+let. x if.
+    if, >(1 2) 1
+    if, =(1 2) 2
+    if, <(1 2) 3
+    else, 4
+
+print_int(x)

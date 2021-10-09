@@ -14,11 +14,10 @@ type. T_ExprData
     T_Tuple(List(T_Expr))
     T_Apply(T_Expr List(T_Expr))
     T_Set(List(Int) T_Expr)
-    T_If(T_Expr T_Expr T_Expr)
+    T_If(List(#(T_Expr T_Expr)) T_Expr)
     T_While(T_Expr T_Expr)
     T_Do(List(T_Statement))
     T_Lambda(List(T_Pattern) T_Expr)
-    T_Cond(List(#(T_Expr T_Expr)))
     T_Match(T_Expr List(#(T_Pattern T_Expr)))
     T_ListLiteral(List(T_Expr))
 
@@ -82,14 +81,13 @@ set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
         .I_Tuple(i_exprs) T_Tuple(i_exprs→t_exprs(i_exprs context))
         .I_Apply(i_func i_args) T_Apply(i_expr→t_expr(i_func context) i_exprs→t_exprs(i_args context))
         .I_Set(name i_expr) T_Set(name i_expr→t_expr(i_expr context))
-        .I_If(i_cond i_then i_else) T_If(i_expr→t_expr(i_cond context) i_expr→t_expr(i_then context) i_expr→t_expr(i_else context))
+        .I_If(i_cases i_else) T_If(map(i_cases λ.(i_case '#(I_Expr I_Expr)
+            let. #(i_cond i_body) i_case
+            #(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
+        )) i_expr→t_expr(i_else context))
         .I_While(i_cond i_body) T_While(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
         .I_Do(i_statements) T_Do(i_statements→t_statements(i_statements context))
         .I_Lambda(i_params i_body) T_Lambda(map(i_params λ.(p 'I_Pattern i_pattern→t_pattern(p context))) i_expr→t_expr(i_body context))
-        .I_Cond(i_cases) T_Cond(map(i_cases λ.(i_case '#(I_Expr I_Expr)
-            let. #(i_cond i_body) i_case
-            #(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
-        )))
         .I_Match(i_expr i_cases) T_Match(i_expr→t_expr(i_expr context) map(i_cases λ.(i_case '#(I_Pattern I_Expr)
             let. #(i_pattern i_body) i_case
             #(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_body context))

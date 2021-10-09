@@ -1,8 +1,8 @@
 ※ 3
-let. x cond.
+let. x if.
     .>(1 2) 1
     .=(1 2) 2
     .<(1 2) 3
-    .⊤ 4
+    else, 4
 
 print_int(x)

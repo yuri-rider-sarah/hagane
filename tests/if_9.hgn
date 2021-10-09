@@ -1,0 +1,6 @@
+※ 4
+if.
+: >(1 2) then, print_int(1)
+: =(1 2) then, print_int(2)
+: =(2 4) then, print_int(3)
+: print_int(4)
