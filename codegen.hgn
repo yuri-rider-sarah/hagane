@@ -260,7 +260,7 @@ set. free_vars λ.{expr 'T_Expr}
         ))
         dedup(do_free_vars =list_int)
     .T_Lambda(params body) \(free_vars(body) concat(map(params pattern_vars)) =list_int)
-    .T_Match(subexpr cases) dedup(concat(push(map(cases λ.(case '#(T_Pattern T_Expr)
+    .T_Case(subexpr cases) dedup(concat(push(map(cases λ.(case '#(T_Pattern T_Expr)
         let. #(pattern body) case
         \(free_vars(body) pattern_vars(pattern) =list_int)
     )) free_vars(subexpr))) =list_int)
@@ -439,7 +439,7 @@ set. codegen_expr λ.{expr 'T_Expr context 'C_Context}
         codegen_ret(ret_val)
         set_insert_block(parent_block)
         codegen_func_val(func outer_captures captures_type)
-    .T_Match(expr cases)
+    .T_Case(expr cases)
         let. T_Expr(_ expr_type expr_file_pos) expr
         if. ¬(is_match_exhaustive(map(cases λ.(case '#(T_Pattern T_Expr)
             let. #(pattern _) case

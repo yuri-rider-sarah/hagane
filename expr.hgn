@@ -19,7 +19,7 @@ type. U_ExprData
     U_While(U_Expr U_Expr)
     U_Do(List(U_Statement))
     U_Lambda(List(U_Pattern) U_Expr)
-    U_Match(U_Expr List(#(U_Pattern U_Expr)))
+    U_Case(U_Expr List(#(U_Pattern U_Expr)))
     U_ListLiteral(List(U_Expr))
     U_StringLiteral(List(Int)) ※ This must be separate from U_ListLiteral at this stage, so that "" can later be assigned type List(Int)
 
@@ -295,9 +295,9 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
                 invalid_expr()
                 #(list.() list.())
         U_Lambda(map(params r_expr→u_pattern) block→u_expr(body))
-    ."match"
+    ."case"
         let. ClauseGrouping(matched groups) group_clauses(clauses)
-        U_Match(block→u_expr(matched) map(groups λ.(ClauseGroup(sep body)
+        U_Case(block→u_expr(matched) map(groups λ.(ClauseGroup(sep body)
             match. sep
             .LabelSep(pattern) #(r_expr→u_pattern(pattern) block→u_expr(body))
             ._

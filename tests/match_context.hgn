@@ -1,5 +1,5 @@
 ※ 1
 type. T T()
 
-match. *.(T T())
+case. *.(T T())
 .*.(T T()) print_int(1)

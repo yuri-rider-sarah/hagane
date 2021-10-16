@@ -4,7 +4,7 @@ type. T
     B(Int)
     C(Int Int)
 
-match. C(2 3)
+case. C(2 3)
 .B(2) *.()
 .A() *.()
 .C(_ 1) *.()

@@ -4,10 +4,10 @@ type. OptInt
     Some(Int)
     None()
 
-match. Some(4)
+case. Some(4)
 .Some(x) print_int(+(x 1))
 .None() print_int(0)
 
-match. None()
+case. None()
 .Some(x) print_int(+(x 1))
 .None() print_int(0)

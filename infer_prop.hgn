@@ -18,7 +18,7 @@ type. I_ExprData
     I_While(I_Expr I_Expr)
     I_Do(List(I_Statement))
     I_Lambda(List(I_Pattern) I_Expr)
-    I_Match(I_Expr List(#(I_Pattern I_Expr)))
+    I_Case(I_Expr List(#(I_Pattern I_Expr)))
     I_ListLiteral(List(I_Expr))
 
 type. I_Expr I_Expr(I_ExprData TypeVar FilePos)
@@ -402,7 +402,7 @@ set. u_expr→i_expr λ.{expr 'U_Expr context 'I_Context}
             let. i_body u_expr→i_expr(u_body context′)
             set_type(this_type I_Function(map(i_params i_pattern_type) i_expr_type(i_body)) file_pos)
             I_Lambda(i_params i_body)
-        .U_Match(u_expr u_cases)
+        .U_Case(u_expr u_cases)
             let. i_expr u_expr→i_expr(u_expr context)
             let. i_cases map(u_cases λ.(u_case '#(U_Pattern U_Expr)
                 let. #(u_pattern u_body) u_case
@@ -416,7 +416,7 @@ set. u_expr→i_expr λ.{expr 'U_Expr context 'I_Context}
                 unify_type(this_type i_expr_type(i_body) file_pos)
                 #(i_pattern i_body)
             ))
-            I_Match(i_expr i_cases)
+            I_Case(i_expr i_cases)
         .U_ListLiteral(u_exprs)
             let. i_exprs map(u_exprs λ.(u_expr 'U_Expr u_expr→i_expr(u_expr context)))
             let. elem_type new_type_var()

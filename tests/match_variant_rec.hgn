@@ -7,7 +7,7 @@ type. ListInt
 
 let. mut, l Cons(1 Cons(2 Cons(3 Nil())))
 while.
-    match. l
+    case. l
     .Cons(h t)
         print_int(h)
         set. l t

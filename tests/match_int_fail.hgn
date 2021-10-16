@@ -1,5 +1,5 @@
 ※-cfail
-match. *(2 4)
+case. *(2 4)
 .1 print_int(0)
 .5 print_int(1)
 .9 print_int(3)
