@@ -101,10 +101,14 @@ set. read_int_literal λ.{lexer 'Lexer n 'Int}
     let. #(lexer′ c file_pos) read_char(lexer)
     match. c
     .Some(c)
-        if. ∧(≤(#!0 c) ≤(c #!9))
+        cond.
+        .∧(≤(#!0 c) ≤(c #!9))
             set. lexer lexer′
             read_int_literal(lexer +(*(n 10) -(c #!0)))
-        else,
+        .=(c #!~)
+            set. lexer lexer′
+            #(lexer -(0 n))
+        .⊤
             #(lexer n)
     .None()
         #(lexer n)
