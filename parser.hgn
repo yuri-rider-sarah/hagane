@@ -11,9 +11,16 @@ type. R_Expr R_Expr(R_ExprData FilePos)
 
 let. dummy_r_expr R_Expr(R_Wildcard() FilePos(empty 0 0))
 
+type. Clause
+    ExprClause(R_Expr)
+    SecKeywordClause(List(Int))
+    ColonClause()
+    Label(R_Expr)
+
 let. mut, read_noncall_expr λ.{lexer 'Lexer} #(lexer dummy_r_expr)
 let. mut, read_expr λ.{lexer 'Lexer} #(lexer dummy_r_expr)
 let. mut, read_expr_calls λ.{lexer 'Lexer expr 'R_Expr at_line_start 'Bool indent_depth 'Int} #(lexer expr)
+let. mut, read_clause λ.{lexer 'Lexer} #(lexer ColonClause())
 let. mut, read_clauses_r λ.{lexer 'Lexer indent_depth 'Int clauses 'List(Clause) se_type 'SpecialExprType} #(lexer empty)
 let. mut, read_paren_clauses_r λ.{lexer 'Lexer indent_depth 'Int} #(lexer empty)
 let. mut, read_block_clauses_r λ.{lexer 'Lexer indent_depth 'Int} #(lexer empty)
@@ -39,6 +46,12 @@ set. read_noncall_expr λ.{lexer 'Lexer}
                 else, read_inner_clauses_r(lexer indent_depth)
         set. lexer lexer′
         #(lexer R_Expr(R_Special(kw clauses) file_pos))
+    .PriKeywordOne(kw)
+        let. #(lexer′ clause) read_clause(lexer)
+        set. lexer lexer′
+        #(lexer R_Expr(R_Special(kw list.(clause)) file_pos))
+    .PriKeywordZero(kw)
+        #(lexer R_Expr(R_Special(kw list.()) file_pos))
     ._
         error(UnexpectedToken(token) file_pos)
         #(lexer dummy_r_expr)
@@ -66,19 +79,38 @@ set. read_expr_calls λ.{lexer 'Lexer expr 'R_Expr at_line_start 'Bool indent_de
             else, read_inner_clauses_r(lexer indent_depth)
         set. lexer lexer′
         #(lexer R_Expr(R_Apply(expr clauses) file_pos))
+    .#(lexer′ CallOneToken() _ _ _)
+        set. lexer lexer′
+        let. #(lexer′ clause) read_clause(lexer)
+        set. lexer lexer′
+        #(lexer R_Expr(R_Apply(expr list.(clause)) file_pos))
     ._
         #(lexer expr)
-
-type. Clause
-    ExprClause(R_Expr)
-    SecKeywordClause(List(Int))
-    ColonClause()
-    Label(R_Expr)
 
 type. SpecialExprType
     ParenSE()
     BlockSE()
     InnerSE()
+
+set. read_clause λ.{lexer 'Lexer}
+    let. mut, lexer lexer
+    let. #(lexer′ token _ _ _) read_token(lexer)
+    match. token
+    .SecKeyword(skw)
+        set. lexer lexer′
+        #(lexer SecKeywordClause(skw))
+    .Colon()
+        set. lexer lexer′
+        #(lexer ColonClause())
+    .Period()
+        set. lexer lexer′
+        let. #(lexer′ expr) read_expr(lexer)
+        set. lexer lexer′
+        #(lexer Label(expr))
+    ._
+        let. #(lexer′ expr) read_expr(lexer)
+        set. lexer lexer′
+        #(lexer ExprClause(expr))
 
 set. read_clauses_r λ.{lexer 'Lexer kw_indent_depth 'Int clauses 'List(Clause) se_type 'SpecialExprType}
     let. mut, lexer lexer

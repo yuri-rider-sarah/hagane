@@ -2,6 +2,9 @@
 ※ 2
 ※ 3
 ※ 4
+※ 1
+※ 2
+※ 3
 print_int‡ 1
 
 print_int‡
@@ -13,3 +16,11 @@ print_int‡
 print_int
     ‡
     4
+
+print_int†1
+
+print_int † 2
+
+print_int
+†
+3

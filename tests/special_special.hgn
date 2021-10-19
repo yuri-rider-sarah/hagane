@@ -1,0 +1,6 @@
+※ 1
+※ 0
+
+let. x get‡ list!1 0
+print_int(x)
+print_int‡ len‡ ∈. list¡ List(Int)
