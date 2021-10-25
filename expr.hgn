@@ -17,6 +17,8 @@ type. U_ExprData
     U_Set(List(Int) U_Expr)
     U_If(List(#(U_Expr U_Expr)) U_Expr)
     U_While(U_Expr U_Expr)
+    U_And(List(U_Expr))
+    U_Or(List(U_Expr))
     U_Do(List(U_Statement))
     U_Lambda(List(U_Pattern) U_Expr)
     U_Case(U_Expr List(#(U_Pattern U_Expr)))
@@ -236,6 +238,11 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
     let. block→u_expr λ.{exprs 'List(R_Expr)} block→u_expr(exprs file_pos)
     let. invalid_expr λ.{} error(InvalidExpr(Some(kw)) file_pos)
     let. split_off λ.{exprs 'List(R_Expr)} split_off(exprs kw file_pos)
+    let. clause→expr λ.{clause 'Clause} match. clause
+        .ExprClause(elem) r_expr→u_expr(elem)
+        ._
+            invalid_expr()
+            dummy_u_expr
 
     match. kw
     ."set" match. group_clauses(clauses)
@@ -304,14 +311,9 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
                 invalid_expr()
                 #(dummy_u_pattern dummy_u_expr)
         )))
-    ."list"
-        U_ListLiteral(map(clauses λ.(clause
-            match. clause
-            .ExprClause(elem) r_expr→u_expr(elem)
-            ._
-                invalid_expr()
-                dummy_u_expr
-        )))
+    ."∧" U_And(map(clauses clause→expr))
+    ."∨" U_Or(map(clauses clause→expr))
+    ."list" U_ListLiteral(map(clauses clause→expr))
     ._
         invalid_expr()
         U_IntLiteral(0)

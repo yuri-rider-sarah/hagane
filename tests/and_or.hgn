@@ -1,0 +1,38 @@
+※ 0
+※ 1
+※ 1
+※ 1
+※ 1
+※ 0
+※ 0
+※ 1
+※ 0
+※ 1
+※ 1
+※ 1
+※ 0
+※ 0
+※ 0
+※ 1
+※ 0
+※ 1
+let. print_bool λ. b: print_int(if.(b 1 0))
+
+print_bool(∧.(>(1 0) =(1 0) <(1 0)))
+print_bool(∨.(>(1 0) =(1 0) <(1 0)))
+print_bool(∧.(>(1 0) >(1 1~)))
+print_bool(∨.(>(1 0) >(1 1~)))
+print_bool(∧.())
+print_bool(∨.())
+print_bool(∧.(⊤ ⊤ ⊤ ⊤ ⊥))
+print_bool(∨.(⊤ ⊤ ⊤ ⊤ ⊥))
+print_bool(∧.(⊥ ⊥ ⊥ ⊥ ⊤))
+print_bool(∨.(⊥ ⊥ ⊥ ⊥ ⊤))
+print_bool(∧.(⊤ ⊤ ⊤ ⊤ ⊤))
+print_bool(∨.(⊤ ⊤ ⊤ ⊤ ⊤))
+print_bool(∧.(⊥ ⊥ ⊥ ⊥ ⊥))
+print_bool(∨.(⊥ ⊥ ⊥ ⊥ ⊥))
+print_bool(∧.(⊥ ⊤ ⊤ ⊤ ⊤))
+print_bool(∨.(⊥ ⊤ ⊤ ⊤ ⊤))
+print_bool(∧.(⊤ ⊥ ⊥ ⊥ ⊥))
+print_bool(∨.(⊤ ⊥ ⊥ ⊥ ⊥))

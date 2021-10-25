@@ -16,6 +16,8 @@ type. T_ExprData
     T_Set(List(Int) T_Expr)
     T_If(List(#(T_Expr T_Expr)) T_Expr)
     T_While(T_Expr T_Expr)
+    T_And(List(T_Expr))
+    T_Or(List(T_Expr))
     T_Do(List(T_Statement))
     T_Lambda(List(T_Pattern) T_Expr)
     T_Case(T_Expr List(#(T_Pattern T_Expr)))
@@ -92,6 +94,8 @@ set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
             let. #(i_pattern i_body) i_case
             #(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_body context))
         )))
+        .I_And(i_exprs) T_And(i_exprs→t_exprs(i_exprs context))
+        .I_Or(i_exprs) T_Or(i_exprs→t_exprs(i_exprs context))
         .I_ListLiteral(i_exprs) T_ListLiteral(i_exprs→t_exprs(i_exprs context))
     T_Expr(t_expr_data t_type file_pos)
 
