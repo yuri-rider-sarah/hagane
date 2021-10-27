@@ -1,10 +1,10 @@
 ※ 80
 type. ∀, T: List
     Cons(T List(T))
-    Nil()
+    Nil
 
-case. Cons(10 Cons(90 Cons(13 Nil())))
-.Nil() print_int(0)
-.Cons(x Nil()) print_int(x)
-.Cons(x Cons(y Nil())) print_int(+(x y))
+case. Cons(10 Cons(90 Cons(13 Nil)))
+.Nil print_int(0)
+.Cons(x Nil) print_int(x)
+.Cons(x Cons(y Nil)) print_int(+(x y))
 .Cons(x Cons(y _)) print_int(-(y x))

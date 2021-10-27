@@ -1,8 +1,8 @@
 ※ 1
 type. ∀, T: Option
     Some(T)
-    None()
+    None
 
 case. Some(*.())
 .Some(*.()) print_int(1)
-.None() print_int(2)
+.None print_int(2)

@@ -1,13 +1,23 @@
 ※ 5
 ※ 0
+※ 5
+※ 0
 type. OptInt
     Some(Int)
-    None()
+    None
 
 case. Some(4)
 .Some(x) print_int(+(x 1))
-.None() print_int(0)
+.None print_int(0)
 
-case. None()
+case. None
 .Some(x) print_int(+(x 1))
-.None() print_int(0)
+.None print_int(0)
+
+case. Some(4)
+.None print_int(0)
+.Some(x) print_int(+(x 1))
+
+case. None
+.None print_int(0)
+.Some(x) print_int(+(x 1))

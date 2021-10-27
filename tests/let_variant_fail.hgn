@@ -1,7 +1,7 @@
 ※-cfail
 type. ∀, T: Option
     Some(T)
-    None()
+    None
 
-let. Some(x) None()
+let. Some(x) None
 print_int(x)

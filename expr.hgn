@@ -133,6 +133,9 @@ set. r_expr→u_pattern λ.{expr 'R_Expr}
         .R_Ident(name) U_IdentPattern(name)
         .R_Wildcard() U_WildcardPattern()
         .R_Apply(R_Expr(R_Ident(ctor) _) args)
+            if. =(len(args) 0)
+                error(InvalidPattern() file_pos)
+            else, #()
             U_VariantPattern(ctor map(args λ.(arg match.(arg
                 .ExprClause(expr) r_expr→u_pattern(expr)
                 ._
@@ -344,12 +347,18 @@ let. clauses→statement_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos '
             let. variants map(variant_exprs λ.(expr 'R_Expr
                 match. expr
                 .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
-                    #(variant_name map(params λ.(param match.(param
-                        .ExprClause(expr) r_expr→u_type(expr)
-                        ._
-                            error(InvalidExpr(Some(kw)) file_pos)
-                            U_Type(U_Named("" empty) FilePos("" 0 0))
-                    ))))
+                    if. >(len(params) 0)
+                        #(variant_name map(params λ.(param match.(param
+                            .ExprClause(expr) r_expr→u_type(expr)
+                            ._
+                                error(InvalidExpr(Some(kw)) file_pos)
+                                U_Type(U_Named("" empty) FilePos("" 0 0))
+                        ))))
+                    else,
+                        error(InvalidExpr(Some(kw)) file_pos)
+                        #(empty empty)
+                .R_Expr(R_Ident(variant_name) _)
+                    #(variant_name list.())
                 ._
                     error(InvalidExpr(Some(kw)) file_pos)
                     #(empty empty)
@@ -360,12 +369,18 @@ let. clauses→statement_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos '
             let. variants map(variant_exprs λ.(expr 'R_Expr
                 match. expr
                 .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
-                    #(variant_name map(params λ.(param match.(param
-                        .ExprClause(expr) r_expr→u_type(expr)
-                        ._
-                            error(InvalidExpr(Some(kw)) file_pos)
-                            U_Type(U_Named("" empty) FilePos("" 0 0))
-                    ))))
+                    if. >(len(params) 0)
+                        #(variant_name map(params λ.(param match.(param
+                            .ExprClause(expr) r_expr→u_type(expr)
+                            ._
+                                error(InvalidExpr(Some(kw)) file_pos)
+                                U_Type(U_Named("" empty) FilePos("" 0 0))
+                        ))))
+                    else,
+                        error(InvalidExpr(Some(kw)) file_pos)
+                        #(empty empty)
+                .R_Expr(R_Ident(variant_name) _)
+                    #(variant_name list.())
                 ._
                     error(InvalidExpr(Some(kw)) file_pos)
                     #(empty empty)

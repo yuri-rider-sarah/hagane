@@ -450,16 +450,20 @@ extern "C" Value *codegen_func_val(Function *func, vector<Value *> *captures, Ty
 }
 
 static Value *codegen_create_ctor_(u64 num_params, i64 tag) {
-    FunctionType *ctor_type = get_function_type(num_params);
-    BasicBlock *saved_bb = get_insert_block();
-    Function *ctor = Function::Create(ctor_type, Function::PrivateLinkage, "ctor", module_);
-    set_insert_block(create_basic_block(ctor));
-    vector<Value *> elems;
-    for (u64 i = 0; i < num_params; i++)
-        elems.push_back(ctor->getArg(i));
-    cg_ret(codegen_tuple_(elems, tag));
-    set_insert_block(saved_bb);
-    return codegen_boxed_fuction(ctor);
+    if (num_params > 0) {
+        FunctionType *ctor_type = get_function_type(num_params);
+        BasicBlock *saved_bb = get_insert_block();
+        Function *ctor = Function::Create(ctor_type, Function::PrivateLinkage, "ctor", module_);
+        set_insert_block(create_basic_block(ctor));
+        vector<Value *> elems;
+        for (u64 i = 0; i < num_params; i++)
+            elems.push_back(ctor->getArg(i));
+        cg_ret(codegen_tuple_(elems, tag));
+        set_insert_block(saved_bb);
+        return codegen_boxed_fuction(ctor);
+    } else {
+        return codegen_tuple_({}, tag);
+    }
 }
 
 extern "C" Value *codegen_create_tagless_ctor(u64 num_params) {

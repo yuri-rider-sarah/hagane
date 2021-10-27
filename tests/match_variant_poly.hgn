@@ -1,13 +1,18 @@
 ※ 5
 ※ 0
+※ 2
 type. ∀, T: Opt
     Some(T)
-    None()
+    None
 
 case. Some(4)
 .Some(x) print_int(+(x 1))
-.None() print_int(0)
+.None print_int(0)
 
-case. None()
+case. None
 .Some(x) print_int(+(x 1))
-.None() print_int(0)
+.None print_int(0)
+
+case. Some(⊤)
+.None print_int(0)
+.Some(x) print_int(if.(x 2 3))

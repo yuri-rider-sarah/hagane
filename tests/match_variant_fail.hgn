@@ -1,13 +1,13 @@
 ※-cfail
 type. T
-    A()
+    A
     B(Int)
     C(Int Int)
 
 case. C(2 3)
-.B(2) *.()
-.A() *.()
-.C(_ 1) *.()
-.A() *.()
-.B(_) *.()
-.C(0 _) *.()
+.B(2) print_int(1)
+.A print_int(2)
+.C(_ 1) print_int(3)
+.A print_int(4)
+.B(_) print_int(5)
+.C(0 _) print_int(6)
