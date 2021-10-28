@@ -221,8 +221,8 @@ let. builtin_types list.(int_type bool_type list_type)
 
 let. empty_i_context I_Context(
     list.(
-    VarBinding("⊤" empty bool_tv ⊥)
-    VarBinding("⊥" empty bool_tv ⊥)
+    VarBinding("⊤" empty bool_tv ⊤)
+    VarBinding("⊥" empty bool_tv ⊤)
     VarBinding("+" empty arith_tv ⊥)
     VarBinding("-" empty arith_tv ⊥)
     VarBinding("*" empty arith_tv ⊥)

@@ -81,6 +81,7 @@ static Value *cg_call(Function *func, ArrayRef<Value *> args) {
 #define cg_sub builder->CreateSub
 #define cg_mul builder->CreateMul
 #define cg_icmp_eq builder->CreateICmpEQ
+#define cg_icmp_ne builder->CreateICmpNE
 #define cg_icmp_sge builder->CreateICmpSGE
 #define cg_icmp_ult builder->CreateICmpULT
 #define cg_icmp_uge builder->CreateICmpUGE
@@ -283,10 +284,6 @@ static Value *codegen_boxed(Value *v) {
     return cg_bitcast(val, box_type);
 }
 
-extern "C" Value *codegen_const_bool(u64 value) {
-    return codegen_boxed(cg_i1(value));
-}
-
 extern "C" Value *codegen_const_int(u64 value) {
     return codegen_boxed(cg_i64(value));
 }
@@ -371,10 +368,10 @@ extern "C" void codegen_br(BasicBlock *bb) {
 }
 
 extern "C" void codegen_cond_br(Value *cond_box, BasicBlock *then, BasicBlock *else_) {
-    Value *cond = cg_bitcast(cond_box, pointer_type(struct_type({box_header_type, i1_type})));
-    Value *cond_i1 = cg_load(cg_sgep(cond, 1));
+    Value *cond = cg_bitcast(cond_box, pointer_type(tagged_header_type));
+    Value *cond_i64 = cg_load(cg_sgep(cond, 1));
     codegen_rc_decr(cond_box);
-    cg_cond_br(cond_i1, then, else_);
+    cg_cond_br(cg_icmp_ne(cond_i64, cg_i64(0)), then, else_);
 }
 
 extern "C" PHINode *codegen_phi(u64 reserved) {
@@ -472,6 +469,10 @@ extern "C" Value *codegen_create_tagless_ctor(u64 num_params) {
 
 extern "C" Value *codegen_create_tagged_ctor(u64 num_params, u64 tag) {
     return codegen_create_ctor_(num_params, tag);
+}
+
+extern "C" Value *codegen_const_bool(u64 value) {
+    return codegen_create_tagged_ctor(0, value);
 }
 
 struct PatternEnd {

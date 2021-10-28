@@ -109,8 +109,8 @@ let. extern_binding λ.{name 'List(Int) num_params 'Int ret_int 'Int}
 let. get_empty_c_context λ.{}
     C_Context(
         list.(
-        #("⊤" C_ConstVar(codegen_const_bool(1)))
-        #("⊥" C_ConstVar(codegen_const_bool(0)))
+        #("⊤" C_Ctor(codegen_const_bool(1) Some(1)))
+        #("⊥" C_Ctor(codegen_const_bool(0) Some(0)))
         #("+" C_ConstVar(codegen_arith_primitive(0)))
         #("-" C_ConstVar(codegen_arith_primitive(1)))
         #("*" C_ConstVar(codegen_arith_primitive(2)))
@@ -136,7 +136,7 @@ let. get_empty_c_context λ.{}
         extern_binding("get_argv_len" 1 1)
         extern_binding("get_argv_byte" 2 1)
         )
-        list.(#(empty list.(empty)) #(empty list.(empty)) #(list.(3) list.(empty)))
+        list.(#(empty list.(empty)) #(empty list.(list.() list.())) #(list.(3) list.(empty)))
     )
 
 let. mut, c_substitute_in_type λ.{type 'T_Type subs 'List(#(Int T_Type))} type
