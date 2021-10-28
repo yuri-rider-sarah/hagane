@@ -29,6 +29,10 @@ void pop_bounds_error(void) {
     error("Pop from empty list");
 }
 
+void unreachable_error(void) {
+    error("Unreachable code");
+}
+
 static void *s_malloc(size_t n) {
     void *p = malloc(n);
     if (p == NULL)

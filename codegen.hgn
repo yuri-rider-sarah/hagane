@@ -46,6 +46,7 @@ extern. codegen_get_primitive ‡(: Int)
 extern. codegen_put_primitive ‡(: Int)
 extern. codegen_push_primitive ‡(: Int)
 extern. codegen_pop_primitive ‡(: Int)
+extern. codegen_unreachable_primitive ‡(: Int)
 
 let. begin_new_block λ.{}
     let. bb create_block()
@@ -135,6 +136,7 @@ let. get_empty_c_context λ.{}
         extern_binding("get_argc" 0 1)
         extern_binding("get_argv_len" 1 1)
         extern_binding("get_argv_byte" 2 1)
+        #("unreachable" C_ConstVar(codegen_unreachable_primitive()))
         )
         list.(#(empty list.(empty)) #(empty list.(list.() list.())) #(list.(3) list.(empty)))
     )

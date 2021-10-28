@@ -1,0 +1,4 @@
+※-fail
+
+let. mut, x 1
+set. x unreachable()

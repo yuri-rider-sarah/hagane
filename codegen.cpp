@@ -45,6 +45,7 @@ static Function *overflow_error_func;
 static Function *div_by_zero_error_func;
 static Function *bounds_error_func;
 static Function *pop_bounds_error_func;
+static Function *unreachable_error_func;
 
 static StructType *struct_type(ArrayRef<Type *> elems) {
     return StructType::get(*context, elems);
@@ -225,6 +226,7 @@ extern "C" void llvm_init(u64 opt_level) {
     div_by_zero_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "div_by_zero_error", module_);
     bounds_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "bounds_error", module_);
     pop_bounds_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "pop_bounds_error", module_);
+    unreachable_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "unreachable_error", module_);
     Function *main = Function::Create(FunctionType::get(Type::getVoidTy(*context), false), Function::ExternalLinkage, "hagane_main", module_);
     set_insert_block(create_basic_block(main));
 }
@@ -838,6 +840,16 @@ extern "C" Value *codegen_pop_primitive() {
     codegen_copy_loop(new_len, cg_sgep(l, 3), cg_sgep(val, 3));
     codegen_rc_decr(func->getArg(0));
     cg_ret(cg_bitcast(val, box_type));
+    set_insert_block(saved_bb);
+    return codegen_boxed_fuction(func);
+}
+
+extern "C" Value *codegen_unreachable_primitive() {
+    BasicBlock *saved_bb = builder->GetInsertBlock();
+    Function *func = create_function(get_function_type(0));
+    set_insert_block(create_basic_block(func));
+    cg_call(unreachable_error_func, {});
+    cg_unreachable();
     set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
 }

@@ -247,6 +247,7 @@ let. empty_i_context I_Context(
     VarBinding("get_argc" empty new_type_var_with_type(I_Function(empty int_tv)) ⊥)
     VarBinding("get_argv_len" empty new_type_var_with_type(I_Function(list.(int_tv) int_tv)) ⊥)
     VarBinding("get_argv_byte" empty new_type_var_with_type(I_Function(list.(int_tv int_tv) int_tv)) ⊥)
+    VarBinding("unreachable" list.(t_type) new_type_var_with_type(I_Function(list.() t_tv)) ⊥)
     )
     builtin_types
 )
