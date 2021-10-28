@@ -5,6 +5,7 @@ type. U_StatementData
     U_LetMut(List(Int) U_Expr)
     U_TypeStatement(List(Int) List(List(Int)) List(#(List(Int) List(U_Type))))
     U_Extern(List(Int) U_Type)
+    U_Set(List(Int) U_Expr)
 
 type. U_Statement U_Statement(U_StatementData FilePos)
 
@@ -14,7 +15,6 @@ type. U_ExprData
     U_Tuple(List(U_Expr))
     U_Apply(U_Expr List(U_Expr))
     U_Typed(U_Expr U_Type)
-    U_Set(List(Int) U_Expr)
     U_If(List(#(U_Expr U_Expr)) U_Expr)
     U_While(U_Expr U_Expr)
     U_And(List(U_Expr))
@@ -248,18 +248,6 @@ set. clauses→expr_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos 'FileP
             dummy_u_expr
 
     match. kw
-    ."set" match. group_clauses(clauses)
-        .ClauseGrouping(name+body list.())
-            let. #(name_r_expr body) split_off(name+body)
-            let. name match. name_r_expr
-                .R_Expr(R_Ident(name) _) name
-                ._
-                    invalid_expr()
-                    ""
-            U_Set(name block→u_expr(body))
-        ._
-            invalid_expr()
-            U_IntLiteral(0)
     ."do"
         U_Do(map(clauses λ.(clause
             match. clause
@@ -392,6 +380,18 @@ let. clauses→statement_data λ.{kw 'List(Int) clauses 'List(Clause) file_pos '
     ."extern" match. group_clauses(clauses)
         .ClauseGrouping(list.(R_Expr(R_Ident(name) _) type) list.())
             U_Extern(name r_expr→u_type(type))
+        ._
+            invalid_expr()
+            U_TypeStatement("" list.() list.())
+    ."set" match. group_clauses(clauses)
+        .ClauseGrouping(name+body list.())
+            let. #(name_r_expr body) split_off(name+body)
+            let. name match. name_r_expr
+                .R_Expr(R_Ident(name) _) name
+                ._
+                    invalid_expr()
+                    ""
+            U_Set(name block→u_expr(body))
         ._
             invalid_expr()
             U_TypeStatement("" list.() list.())

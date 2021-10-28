@@ -5,6 +5,7 @@ type. T_StatementData
     T_LetMut(List(Int) T_Expr)
     T_TypeStatement(Int List(#(List(Int) List(T_Type))))
     T_Extern(List(Int) T_Type)
+    T_Set(List(Int) T_Expr)
 
 type. T_Statement T_Statement(T_StatementData FilePos)
 
@@ -13,7 +14,6 @@ type. T_ExprData
     T_Ident(List(Int) List(T_Type))
     T_Tuple(List(T_Expr))
     T_Apply(T_Expr List(T_Expr))
-    T_Set(List(Int) T_Expr)
     T_If(List(#(T_Expr T_Expr)) T_Expr)
     T_While(T_Expr T_Expr)
     T_And(List(T_Expr))
@@ -82,7 +82,6 @@ set. i_expr→t_expr λ.{i_expr 'I_Expr context 'T_Context}
         .I_Ident(name i_type_args) T_Ident(name map(i_type_args λ.(t 'TypeVar type_var→t_type(t context file_pos))))
         .I_Tuple(i_exprs) T_Tuple(i_exprs→t_exprs(i_exprs context))
         .I_Apply(i_func i_args) T_Apply(i_expr→t_expr(i_func context) i_exprs→t_exprs(i_args context))
-        .I_Set(name i_expr) T_Set(name i_expr→t_expr(i_expr context))
         .I_If(i_cases i_else) T_If(map(i_cases λ.(i_case '#(I_Expr I_Expr)
             let. #(i_cond i_body) i_case
             #(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
@@ -126,6 +125,7 @@ set. i_statements→t_statements λ.{i_statements 'List(I_Statement) context 'T_
             ))
             T_TypeStatement(len(type_params) t_variants)
         .I_Extern(name type) T_Extern(name type_var→t_type(type context file_pos))
+        .I_Set(name i_expr) T_Set(name i_expr→t_expr(i_expr context))
         )
         T_Statement(t_statement_data file_pos)
     ))
