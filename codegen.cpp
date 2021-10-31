@@ -694,7 +694,7 @@ extern "C" Value *codegen_cmp_primitive(u64 pred) {
     codegen_rc_decr(func->getArg(0));
     Value *b = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
     codegen_rc_decr(func->getArg(1));
-    cg_ret(codegen_boxed(builder->CreateICmp(cmp_predicates[pred], a, b)));
+    cg_ret(codegen_boxed(builder->CreateZExt(builder->CreateICmp(cmp_predicates[pred], a, b), i64_type)));
     set_insert_block(saved_bb);
     return codegen_boxed_fuction(func);
 }
