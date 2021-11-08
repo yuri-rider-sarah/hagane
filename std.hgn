@@ -1,87 +1,87 @@
-let. ¬ λ.{x 'Bool}
+let. ¬ λ. ∈.(x Bool):
     if. x ⊥ ⊤
 
-let. ∧ λ.{x 'Bool y 'Bool}
+let. ∧ λ. ∈.(x Bool) ∈.(y Bool):
     if. x y ⊥
 
-let. ∨ λ.{x 'Bool y 'Bool}
+let. ∨ λ. ∈.(x Bool) ∈.(y Bool):
     if. x ⊤ y
 
-type. ∀,{T} Option
+type. ∀, T: Option
     Some(T)
-    None()
+    None
 
-let. ∀,{T} default λ.{v 'T x 'Option(T)}
-    match. x
+let. ∀, T: default λ. ∈.(v T) ∈.(x Option(T)):
+    case. x
     .Some(x) x
-    .None() v
+    .None v
 
-let. for_ι λ.{n 'Int f '‡(Int : #())}
+let. for_ι λ. ∈.(n Int) ∈.(f ⇒.(Int : *.())):
     let. mut, i 0
     while. <(i n)
         f(i)
         set. i +(i 1)
 
-let. ∀,{T} for λ.{xs 'List(T) f '‡(T : #())}
-    for_ι(len(xs) λ.(i 'Int f(get(xs i))))
+let. ∀, T: for λ. ∈.(xs List(T)) ∈.(f ⇒.(T : *.())):
+    for_ι(len(xs) λ.(i: f(get(xs i))))
 
-let. ∀,{T U} for2 λ.{xs 'List(T) ys 'List(U) f '‡(T U : #())}
+let. ∀, T U: for2 λ. ∈.(xs List(T)) ∈.(ys List(U)) ∈.(f ⇒.(T U : *.())):
     if. =(len(xs) len(ys))
-        for_ι(len(xs) λ.(i 'Int f(get(xs i) get(ys i))))
-        Some(#())
-    else, None()
+        for_ι(len(xs) λ.(i: f(get(xs i) get(ys i))))
+        Some(*.())
+    else, None
 
-let. ∀,{T U} map λ.{xs 'List(T) f '‡(T : U)}
+let. ∀, T U: map λ. ∈.(xs List(T)) ∈.(f ⇒.(T : U)):
     let. mut, ys empty
-    for(xs λ.(x 'T set.(ys push(ys f(x)))))
+    for(xs λ.(x: set.(ys push(ys f(x)))))
     ys
 
-let. ∀,{T} map_ι λ.{n 'Int f '‡(Int : T)}
+let. ∀, T: map_ι λ. ∈.(n Int) ∈.(f ⇒.(Int : T)):
     let. mut, ys empty
-    for_ι(n λ.(i 'Int set.(ys push(ys f(i)))))
+    for_ι(n λ.(i: set.(ys push(ys f(i)))))
     ys
 
-let. ∀,{T U} map_opt λ.{xs 'List(T) f '‡(T : Option(U))}
+let. ∀, T U: map_opt λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Option(U))):
     let. mut, ys empty
-    for(xs λ.(x 'T
-        match. f(x)
+    for(xs λ.(x:
+        case. f(x)
         .Some(y) set. ys push(ys y)
-        .None() #()
+        .None *.()
     ))
     ys
 
-let. ∀,{T} ι* λ.{xs 'List(T)}
-    map_ι(len(xs) λ.(i 'Int
-        #(i get(xs i))
+let. ∀, T: ι* λ. ∈.(xs List(T)):
+    map_ι(len(xs) λ.(i:
+        *.(i get(xs i))
     ))
 
-let. ∀,{T} ∀ λ.{xs 'List(T) f '‡(T : Bool)}
+let. ∀, T: ∀ λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
     let. mut, r ⊤
-    for(xs λ.(x 'T
-        if. f(x) then, #() else, set.(r ⊥)
+    for(xs λ.(x:
+        if. f(x) then, *.() else, set.(r ⊥)
     ))
     r
 
-let. ∀,{T} ∃ λ.{xs 'List(T) f '‡(T : Bool)}
+let. ∀, T: ∃ λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
     let. mut, r ⊥
-    for(xs λ.(x 'T
-        if. f(x) then, set.(r ⊤) else, #()
+    for(xs λ.(x:
+        if. f(x) then, set.(r ⊤) else, *.()
     ))
     r
 
-let. ∀,{T} count λ.{xs 'List(T) f '‡(T : Bool)}
+let. ∀, T: count λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
     let. mut, r 0
-    for(xs λ.(x 'T
-        if. f(x) then, set.(r +(r 1)) else, #()
+    for(xs λ.(x:
+        if. f(x) then, set.(r +(r 1)) else, *.()
     ))
     r
 
-let. ∀,{T} last λ.{xs 'List(T)}
+let. ∀, T: last λ. ∈.(xs List(T)):
     if. >(len(xs) 0)
     then, Some(get(xs -(len(xs) 1)))
-    else, None()
+    else, None
 
-let. ∀,{T} drop λ.{xs 'List(T) n 'Int}
+let. ∀, T: drop λ. ∈.(xs List(T)) ∈.(n Int):
     let. mut, r empty
     let. mut, i n
     while. <(i len(xs))
@@ -89,93 +89,93 @@ let. ∀,{T} drop λ.{xs 'List(T) n 'Int}
         set. i +(i 1)
     r
 
-let. ∀,{T} ∈ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
+let. ∀, T: ∈ λ. ∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
     let. mut, r ⊥
-    for(ys λ.(y 'T
+    for(ys λ.(y:
         if. =T(y x)
         then, set. r ⊤
-        else, #()
+        else, *.()
     ))
     r
 
-let. ∀,{T} ∉ λ.{x 'T ys 'List(T) =T '‡(T T : Bool)}
+let. ∀, T: ∉ λ. ∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
     ¬(∈(x ys =T))
 
-let. ∀,{T} dedup λ.{xs 'List(T) =T '‡(T T : Bool)}
+let. ∀, T: dedup λ. ∈.(xs List(T)) ∈.(=T ⇒.(T T : Bool)):
     let. mut, r empty
-    for(xs λ.(x 'T
+    for(xs λ.(x:
         if. ∉(x r =T)
         then, set. r push(r x)
-        else, #()
+        else, *.()
     ))
     r
 
-let. ∀,{T} =list λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
+let. ∀, T: =list λ. ∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
     if. =(len(xs) len(ys))
         let. mut, r ⊤
-        for_ι(len(xs) λ.(i 'Int
+        for_ι(len(xs) λ.(i:
             if. ¬(=T(get(xs i) get(ys i)))
             then, set. r ⊥
-            else, #()
+            else, *.()
         ))
         r
     else, ⊥
 
-let. =list_int λ.{x 'List(Int) y 'List(Int)}
+let. =list_int λ. ∈.(x List(Int)) ∈.(y List(Int)):
     =list(x y =)
 
-let. ∀,{T} filter λ.{xs 'List(T) f '‡(T : Bool)}
+let. ∀, T: filter λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
     let. mut, r empty
-    for(xs λ.(x 'T set.(r if.(f(x) push(r x) r))))
+    for(xs λ.(x: set.(r if.(f(x) push(r x) r))))
     r
 
-let. ∀,{T} \ λ.{xs 'List(T) ys 'List(T) =T '‡(T T : Bool)}
-    filter(xs λ.(x 'T ∉(x ys =T)))
+let. ∀, T: \ λ. ∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
+    filter(xs λ.(x: ∉(x ys =T)))
 
-let. ∀,{T} ++ λ.{xs 'List(T) ys 'List(T)}
+let. ∀, T: ++ λ. ∈.(xs List(T)) ∈.(ys List(T)):
     let. mut, r xs
-    for(ys λ.(y 'T set.(r push(r y))))
+    for(ys λ.(y: set.(r push(r y))))
     r
 
-let. ∀,{T} concat λ.{xss 'List(List(T))}
+let. ∀, T: concat λ. ∈.(xss List(List(T))):
     let. mut, r empty
-    for(xss λ.(xs 'List(T) set.(r ++(r xs))))
+    for(xss λ.(xs: set.(r ++(r xs))))
     r
 
-let. ∀,{T} intercalate λ.{xss 'List(List(T)) sep 'List(T)}
+let. ∀, T: intercalate λ. ∈.(xss List(List(T))) ∈.(sep List(T)):
     if. =(len(xss) 0)
         empty
     else,
         let. mut, r get(xss 0)
-        for_ι(-(len(xss) 1) λ.(i 'Int set.(r ++(r ++(sep get(xss +(i 1)))))))
+        for_ι(-(len(xss) 1) λ.(i: set.(r ++(r ++(sep get(xss +(i 1)))))))
         r
 
-let. ∀,{T U} zip λ.{xs 'List(T) ys 'List(U)}
+let. ∀, T U: zip λ. ∈.(xs List(T)) ∈.(ys List(U)):
     if. =(len(xs) len(ys))
-        Some(map_ι(len(xs) λ.(i 'Int #(get(xs i) get(ys i)))))
-    else, None()
+        Some(map_ι(len(xs) λ.(i: *.(get(xs i) get(ys i)))))
+    else, None
 
-let. ∀,{T U} unzip λ.{xs 'List(#(T U))}
+let. ∀, T U: unzip λ. ∈.(xs List(*.(T U))):
     let. mut, xs1 empty
     let. mut, xs2 empty
-    for(xs λ.(x '#(T U)
-        let. #(x1 x2) x
+    for(xs λ.(x:
+        let. *.(x1 x2) x
         set. xs1 push(xs1 x1)
         set. xs2 push(xs2 x2)
     ))
-    #(xs1 xs2)
+    *.(xs1 xs2)
 
-let. int→string λ.{n 'Int}
+let. int→string λ. ∈.(n Int):
     let. mut, n n
-    let. mut, s cond.
-        .>(n 0)
+    let. mut, s
+        if. >(n 0)
             empty
-        .<(n 0)
+        if, <(n 0)
             set. n -(0 n)
             "-"
-        .⊤
+        else,
             "0"
     while. >(n 0)
-        set. s ++(list.(+(#!0 %(n 10))) s)
+        set. s ++(list.(+(#0 %(n 10))) s)
         set. n /(n 10)
     s
