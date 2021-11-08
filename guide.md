@@ -1,4 +1,4 @@
-# The Hagane Language Guide (version 0.1)
+# The Hagane Language Guide (version 0.1.1)
 
 Welcome! This document will explain how to use the Hagane programming language.
 
@@ -75,7 +75,7 @@ Additionally, it means new keywords can be added without breaking older programs
 ## Mutable variables
 
 Variables created with `let.` are immutable, that is, they can't have their values reassigned.
-To create a mutable variable, use `let. mut,`. Such a variable's value can be modified with a `set.` expression.
+To create a mutable variable, use `let. mut,`. Such a variable's value can be modified with a `set.` statement.
 ```
 let. mut, x 1
 print_int(x)
@@ -130,8 +130,85 @@ When calling a function, the function is guaranteed to be evaluated first, follo
 
 ## Special expressions
 
-`let.` and `set.` are examples of special expressions, which are expressions that begin with a primary keyword.
-The full set of rules behind special expressions is confusing and unintuitive, which is why it's going to be changed in the next version and isn't described here.
+`let.` and `set.` are examples of special expressions, which are constructs that begin with a primary keyword.
+Special expressions are the basis around which Hagane syntax is formed.
+
+A special expression, in its most basic form, consists of a primary keyword followed by a series of clauses written between parentheses.
+Each clause may be an expression, secondary keyword, colon, or label.
+
+We've seen secondary keywords in use already.
+A colon is just that - a colon: `:`.
+A label is an expression preceded by a period, for example `.1`, `.x`, or `.f(x)`.
+
+Examples of special expressions include:
+```
+let.(x 1)
+let.(mut, x y)
+set.(x 2)
+if.(>(x 0) then, a else, b)
+λ.(x y: *(x +(2 y)))
+case.(opt_val .Some(val) val .None default)
+```
+
+As we've seen before, the parentheses may be dropped in certain contexts.
+
+First, if the parentheses are dropped, the expression will last until the end of the line.
+For example,
+```
+let.(mut, x 1)
+set.(x 2)
+```
+is equivalent to
+```
+let. mut, x 1
+set. x 2
+```
+
+To make an expression span multiple lines, indent all lines after the first one.
+The previous example can also be written as
+```
+let.
+    mut,
+    x 1
+set. x
+    2
+```
+
+Also, if the primary keyword begins a line (that is, it is the first thing other than whitespace in a line of code),
+the expression will also extend to non-indented lines that start with a secondary keyword, colon, or label.
+For example,
+```
+case.(opt_val .Some(val) val .None default)
+```
+can be also written as
+```
+case. opt_val
+.Some(val) val
+.None default
+```
+But the same can't be done to write
+```
+let.(x case.(opt_val .Some(val) val .None default))
+```
+as
+```
+let. x case. opt_val
+.Some(val) val
+.None default
+```
+since `case.` does not begin a line. The labels will be associated with the `let.` instead, which forms an invalid expression.
+
+Additionally, non-parenthesized special expressions may be included within parenthesized special expressions and function calls, where they will also end before the outer expression's closing parenthesis (unless one of the earlier rules also applies).
+For example,
+```
+f(if.(x then, y else, z))
+```
+can also be written as
+```
+f(if. x then, y else, z)
+```
+
+## `do.` and scope
 
 One important special expression is `do.`.
 The expressions contained in a `do.` expression are executed in a separate scope - the variables defined inside the expression are not available outside it.
@@ -144,11 +221,9 @@ do.
 print_int(2)
 ※ print_int(x) - this would be a compilation error
 ```
-The expressions contained in a `do.` expression are indicated by indentation.
-The end of the indentation marks the end of the `do.` expression.
 
-Other special expressions also allow creating scope with indentations.
-For example, the value bound to the variable in a `let.` or `set.` expression may be an indented scope.
+There are other special expressions that allow creating scope by giving multiple statements.
+For example, the value bound to the variable in a `let.` or `set.` expression may be the result of evaluating a scope.
 ```
 let. x
     let. a read_int()
@@ -160,48 +235,63 @@ print_int(x)
 Here, x is bound to the product of two integers read from the user, but the variables the integers are stored in don't persist past the end of the indented scope.
 The value of the last expression in a scope (here `*(a b)`) becomes the value of the entire scope.
 
-The syntax shown here is only valid at the top level of a file or indented scope.
-In other contexts, everything after the primary keyword must be surrounded in parentheses.
-So for example, `let. x 1` would instead be written as `let.(x 1)`.
+## Additional syntax
+
+There exists alternative syntax for some function calls and special expressions.
+
+Function calls may be written without parentheses by following the function with a `‡` symbol.
+For example, `f(x y)` can be written as `f‡ x y`.
+The same rules apply as for unparenthesized special expressions.
+
+Function calls with only one argument can be written with a `†` symbol.
+For example, `f(x)` can be written as `f†x` (or `f† x` - whitespace is allowed).
+Since there is always only one argument, there is no need for a terminator like a closed parenthesis.
+
+Similar syntax is available for special expressions with only one argument by replacing the period with a `!`.
+Special expressions with zero arguments also have a shorter syntax, written by replacing the period with a `¡`.
+
+The following table sums up all the options:
+
+|| Function call | Special expression
+|---|---|---
+Parenthesized | `f(x y)` | `f.(x y)`
+Unparenthesized | `f‡ x y` | `f. x y`
+One argument | `f†x` | `f!x`
+Zero arguments | `f()` | `f¡`
 
 ## Defining functions
 
 A function can be created with a `λ.` (lambda) expression.
 For example, the following program uses a function to print the (rounded-down) average of two user-provided numbers.
 ```
-let. avg λ.{x y} /(+(x y) 2)
+let. avg λ. x y: /(+(x y) 2)
 
 let. n1 print_int()
 let. n2 print_int()
 print_int(avg(n1 n2))
 ```
 
-The variable `avg` is bound to the value of the expression `λ.{x y} /(+(x y) 2)`.
-This expression creates a function taking the arguments given in curly braces - `x` and `y`.
+The variable `avg` is bound to the value of the expression `λ. x y: /(+(x y) 2)`.
+This expression creates a function taking the arguments given before the colon - `x` and `y`.
 When provided with arguments as values for `x` and `y`, the function returns the value given in its body, that is `/(+(x y) 2)`.
 
 As with other expressions, the body of a `λ.` expression may be (and ususally is) indented, which allows placing multiple statements inside it.
 ```
-let. avg λ.{x y}
+let. avg λ. x y:
     let. sum +(x y)
     /(sum 2)
-```
-
-If the function has only one parameter, the braces may be omitted.
-```
-let. double λ. x *(2 x)
 ```
 
 Since Hagane is a functional language, functions are first-class objects and may be used in the same ways as other values.
 As such, they don't have to be immediately assigned to a variable - they can be freely passed to, returned from, and created inside other functions.
 ```
-let. apply_twice λ.{f x}
+let. apply_twice λ. f x:
     f(f(x))
 
-print_int(apply_twice(λ.(x *(2 x)) 5))
+print_int(apply_twice(λ.(x: *(2 x)) 5))
 ```
 Here, the function `apply_twice` takes a function and a value and applies the function to the value twice.
-Applying the function `λ.(x *(2 x))`, which doubles a number, to `5` twice will yield `20`.
+Applying the function `λ.(x: *(2 x))`, which doubles a number, to `5` twice will yield `20`.
 
 ## Types
 
@@ -211,6 +301,9 @@ Hagane contains three built-in types: `Int`, `Bool`, and the polymorphic type `L
 
 `Int` is a signed 64-bit integer. Any overflow in arithmetic operations results in an error.
 
+To write a negative integer literal, put the minus sign after the number as a `~`.
+For example, -1 will be written as `1~`.
+
 `Bool` represents a true/false value, denoted respectively as `⊤`/`⊥`. Note that these are not keywords, but names of variables.
 
 `List` is polymorphic, and therefore can't be used on its own. What this means is explained in a later section.
@@ -219,37 +312,37 @@ Hagane uses type inference - the types of expressions and variables are determin
 As such, most of the time there is no need to manually specify the types of variables.
 
 But for those cases where it's useful or necessary to do so, type annotations exist.
-A type annotation occurs after a variable name and takes the form of `'<type>`.
+A type annotation has the form of `∈.(<variable> <type>)`.
 For example, our earlier `avg` function may be written like this:
 ```
-let. avg λ.{x 'Int y 'Int}
+let. avg λ. ∈.(x Int) ∈.(y Int):
     /(+(x y) 2)
 ```
 This makes it explicit that `x` and `y` both have type `Int`.
 
-Functions also have types. The type of a function taking n arguments of types `<arg_1>` to `<arg_n>` and returning a value of type `<ret>` is written as `‡(<arg_1> ... <arg_n> : <ret>)`.
-For example, our `avg` function has type `‡(Int Int : Int)` and the function `read_int` has type `‡(: Int)`.
+Functions also have types. The type of a function taking n arguments of types `<arg_1>` to `<arg_n>` and returning a value of type `<ret>` is written as `⇒.(<arg_1> ... <arg_n> : <ret>)`.
+For example, our `avg` function has type `⇒.(Int Int : Int)` and the function `read_int` has type `⇒.(: Int)`.
 
 ## Tuples
 
 A tuple is a collection of values, possibly of different types. The type of a tuple describes which elements the tuple may contain.
 
-An example of a tuple is `#(4 ⊥ 10)`. The type of this tuple is `#(Int Bool Int)` - the type of tuples consisting of an `Int`, `Bool`, and `Int`.
+An example of a tuple is `*.(4 ⊥ 10)`. The type of this tuple is `*.(Int Bool Int)` - the type of tuples consisting of an `Int`, `Bool`, and `Int`.
 
-The values from which a tuple is constructed may be arbitrary expressions - for example, if `x` and `y` are both variables of type `Int`, `#(x y +(x y))` is a tuple of type `#(Int Int Int)`.
+The values from which a tuple is constructed may be arbitrary expressions - for example, if `x` and `y` are both variables of type `Int`, `*.(x y +(x y))` is a tuple of type `*.(Int Int Int)`.
 
 A tuple can be deconstructed into its components using a `let.` expression.
 ```
-let. tuple #(1 ⊤)
-let. #(x y) tuple
+let. tuple *.(1 ⊤)
+let. *.(x y) tuple
 ```
 Here, the variable `x` is bound to the first element of `tuple`, in this case `1`, and `y` is bound to the second element, in this case `⊤`.
 
 This is actually a special case of a more general concept - a pattern.
 The variables inside a tuple pattern may actually be replaced with any pattern, including another tuple pattern.
 ```
-let. nested_tuple #(1 #(2 3))
-let. #(x #(y z)) nested_tuple
+let. nested_tuple *.(1 *.(2 3))
+let. *.(x *.(y z)) nested_tuple
 ```
 Here, `x`, `y`, and `z` will be bound to `1`, `2`, and `3` respectively.
 
@@ -257,24 +350,24 @@ Aside from variables and pattern tuples, another useful type of pattern is the w
 It behaves similar to a variable pattern, except it doesn't create a variable.
 It's useful for ignoring parts of data.
 ```
-let. #(x _) tuple
+let. *.(x _) tuple
 ```
 Here, the first element of the tuple is bound to `x`, and the second is ignored.
 
 Also, function parameters don't have to be identifiers either, they can actually be arbitrary patterns.
 ```
-let. fst λ. #(x _) x
+let. fst λ. *.(x _): x
 ```
 This function extracts the first element from a two-element tuple.
 
-One particular case of a tuple is `#()` - the tuple with no elements (typically pronounced "unit").
-Such a tuple has type `#()` (distinct from the tuple itself!), which only contains the value `#()`.
-Since a value of this type can only be `#()`, it carries no information.
+One particular case of a tuple is `*¡` (`*.()`) - the tuple with no elements (typically pronounced "unit").
+Such a tuple has type `*¡` (distinct from the tuple itself!), which only contains the value `*¡`.
+Since a value of this type can only be `*¡`, it carries no information.
 
 It's primarily used as the return type for functions that return any meaningful value, in a way analogous to `void` in many programming languages.
-For example, the `print_int` function has type `‡(Int : #())`.
+For example, the `print_int` function has type `‡(Int : *¡)`.
 
-## Control flow
+## `if.`
 
 The `if.` expression can be used to create branching code.
 ```
@@ -288,51 +381,52 @@ This program reads two integers from the user and prints the larger of them.
 The `≥` function returns a `Bool` indicating whether its first argument is greater or equal to its second argument.
 The expression `if. ≥(x y) then, x else, y` evaluates to `x` if `≥(x y)` and to `y` otherwise.
 
-There are other ways to write an `if.` expression:
+Each of the three parts of an `if.` expression may consist of multiple statements forming a scope.
+If the condition is only a single expression (as it usually is), the `then,` may be omitted:
 ```
-let. max if. ≥(x y)
-    then, x
-    else, y
+if. ≥(x y)
+    print_int(x)
+    print_int(y)
+else,
+    print_int(y)
+    print_int(x)
 ```
+This expression prints `x` and `y` in order.
+
+And if all three parts are only a single expression, both the `then,` and `else,` may be omitted.
 ```
 let. max if. ≥(x y) x y
 ```
 
-And of course, the variable `max` can be omitted entirely and the `if.` expression used only for its side effect:
-```
-if. ≥(x y) then, print_int(x) else, print_int(y)
-```
-```
-if. ≥(x y)
-    print_int(x)
-else,
-    print_int(y)
-```
-```
-if.
-    ≥(x y)
-then,
-    print_int(x)
-else,
-    print_int(y)
-```
-
 Six comparison functions are built into the language: these are `=`, `≠`, `<`, `≤`, `>`, `≥`.
 
-To do multiway branching, a `cond.` expression is used.
+To do multiway branching, additional `if,` (note the comma) and `then,` parts are added.
 ```
-let. sgn λ.{n 'Int}
-    cond.
-    .>(n 0) 1
-    .<(n 0) -(0 1)
-    .⊤ 0
+let. sgn λ. ∈.(n Int):
+    if. >(n 0) then, 1
+    if, <(n 0) then, 1~
+    else, 0
 ```
-The `sgn` function defined here returns the sign of the input (1 for positive numbers, -1 for negative, 0 for zero).
-`-(0 1)` is written to get -1 since there are no negative integer literals.
+The `sgn` function defined here returns the sign of the input (`1` for positive numbers, `1~` for negative, `0` for zero).
 
-The `cond.` expression consists of a series of labels (indicated by starting with a `.`) and corresponding bodies.
-The labels are evaluated in order and the first one to evaluate to `⊤` has its associated body evaluated and returned.
-The final label has to be `⊤` to guarantee that at least one body is evaluated.
+As before, if a condition is only one expression, the `then,` may be omitted:
+```
+let. sgn λ. ∈.(n Int):
+    if. >(n 0) 1
+    if, <(n 0) 1~
+    else, 0
+```
+
+Alternatively, a syntax using labels is available:
+```
+let. sgn λ. ∈.(n Int):
+    if.
+    .>(n 0) 1
+    .<(n 0) 1~
+    else, 0
+```
+
+## Other control flow constructs
 
 A `while.` loop executes its body as long as the condition is true.
 ```
@@ -343,44 +437,55 @@ while. ≥(i 0)
 ```
 This program reads an integer from the user and counts down from it to zero.
 
+Like with `if.`, the condition of a `while.` loop may consist of multiple statements, in which case it is separated from the body with a `do,` keyword.
+
+`∧.` ("and") and `∨.` ("or") expressions take several expressions of type `Bool`.
+`∧.` returns `⊤` if they all evaluate to `⊤`, and `⊥` otherwise.
+`∨.` returns `⊤` if at least one evaluates to `⊤`, and `⊥` otherwise.
+
+These expressions have the typical short-circuiting behavior where the expressions are evaluted in order.
+For `∧.`, if one of the expressions evaluates to `⊥`, `⊥` is immediately returned and the following expressions will not be evaluated.
+For `∨.`, if one of the expressions evaluates to `⊤`, `⊤` is immediately returned and the following expressions will not be evaluated.
+
 ## Custom types
 
 Custom types may be defined with the `type.` statement.
 ```
 type. Shape
-    Point()
+    Point
     Circle(Int)
     Rectangle(Int Int)
 ```
 The `Shape` type is declared as having three variants.
-`Point`, `Circle`, and `Rectangle` are the variants' constructors - functions used to construct values of type `Shape`.
+`Point`, `Circle`, and `Rectangle` are the variants' constructors, used to construct values of type `Shape`.
 The types written between parentheses are the parameters that the constructors take.
+`Point` has no parentheses, as it takes no arguments and is already a value on its own.
 
-`Point()`, `Circle(3)`, and `Rectangle(2 10)` are examples of expressions of type `Shape`.
+`Point`, `Circle(3)`, and `Rectangle(2 10)` are examples of expressions of type `Shape`.
 
-A value with a custom type can be deconstructed with a `match.` expression.
+A value with a custom type can be deconstructed with a `case.` expression.
 ```
-let. area λ. shape 'Shape
-    match. shape
-    .Point() 0
+let. area λ. ∈.(shape Shape):
+    case. shape
+    .Point 0
     .Circle(r) *(3 *(r r))
     .Rectangle(w h) *(w h)
 ```
 This function takes a shape and returns an approximation of its area (approximating π as 3).
 
-A `match.` expression matches a value to a series of patterns. and returns the body associated with the first one that matches.
-For example, if `shape` is `Circle(4)`, the `Point()` pattern will fail to match.
+A `case.` expression matches a value to a series of patterns. and returns the body associated with the first one that matches.
+For example, if `shape` is `Circle(4)`, the `Point` pattern will fail to match.
 The next pattern, `Circle(r)`, matches, so the variable `r` is bound to `4`.
 `*(3 *(r r))` is evaluated, giving `48`, which is returned as the value.
 
-The patterns in a `match.` expression must be exhaustive.
+The patterns in a `case.` expression must be exhaustive.
 That is, any possible value of the matched expression has to match at least one pattern.
 
-All patterns mentioned in the section on `let.` may also be used in `match.` expressions.
+All patterns mentioned in the section on `let.` may also be used in `case.` expressions.
 ```
-let. are_both_points λ. shapes '#(Shape Shape)
-    match. shapes
-    .#(Point() Point()) ⊤
+let. are_both_points λ. ∈.(shapes *.(Shape Shape)):
+    case. shapes
+    .*.(Point Point) ⊤
     ._ ⊥
 ```
 
@@ -397,15 +502,29 @@ The same applies to patterns in function parameters.
 
 Another type of pattern that may fail is the integer pattern, which only matches an `Int` with a given value.
 ```
-let. is_zero λ. n
-    match. n
+let. is_zero λ. n:
+    case. n
     .0 ⊤
     ._ ⊥
 ```
 ```
-let. is_origin λ. point
-    match. point
+let. is_origin λ. point:
+    case. point
     .Point2D(0 0) ⊤
+    ._ ⊥
+```
+
+Also, the built-in type `Bool` is defined as a type with two variants:
+```
+type. Bool
+    ⊥
+    ⊤
+```
+Therefore, it is possible to match on it:
+```
+let. ∧ λ. ∈.(x Bool) ∈.(y Bool)
+    match. *.(x y)
+    .*.(⊤ ⊤) ⊤
     ._ ⊥
 ```
 
@@ -413,32 +532,33 @@ let. is_origin λ. point
 
 Consider the following function:
 ```
-let. swap λ.{#(x y)} #(y x)
+let. swap λ. *.(x y): *.(y x)
 ```
 It takes a two-element tuple and swaps its elements. But what is its type?
-The argument to this function can be of type `#(T U)` for any types `T` and `U`, and the return value is then of type `#(U T)`.
-So the function has type `‡(#(T U) : #(U T))` for all types `T` and `U`.
+The argument to this function can be of type `*.(T U)` for any types `T` and `U`, and the return value is then of type `*.(U T)`.
+So the function has type `⇒.(*.(T U) : *.(U T))` for all types `T` and `U`.
 The function is said to be polymorphic over these types.
 
 Any value can be polymorphic, not just functions, but polymorphism is most commonly encountered in functions.
 
 Values are allowed to be polymorphic only when bound to immutable variables.
 When a polymorphic variable is used, it is instantiated to some specific version of itself, with the types it's polymorphic over filled in appropriately.
-For example, in the expression `swap(#(2 ⊥))`, the function `swap` is instantiated to have type `‡(#(Int Bool) : #(Bool Int))`.
+For example, in the expression `swap(*.(2 ⊥))`, the function `swap` is instantiated to have type `⇒.(*.(Int Bool) : *.(Bool Int))`.
 
 A value's type will automatically be inferred as the broadest possible type when it's bound to a variable.
 The type can be manually narrowed with type annotations.
 
 To manually specify that the type of a variable is polymorphic, use the `∀,` keyword in the `let.` statement.
 ```
-let. ∀,{T U} λ.{#(x y) '#(T U)} #(y x)
+let. ∀, T U: λ. ∈.(*.(x y) *.(T U)):
+    *.(y x)
 ```
 
 A type can also be polymorphic.
 To declare a polymorphic type, use the `∀,` keyword in the `type.` statement.
 ```
-type. ∀,{T} BinTree
-    Leaf()
+type. ∀, T: BinTree
+    Leaf
     Node(T BinTree(T) BinTree(T))
 ```
 This is the type of a binary tree with values of type `T` in its nodes.
@@ -483,8 +603,8 @@ print_int(len(a)) ※ 4
 
 `list.` can also be used as a pattern.
 ```
-let. has_one_element λ. list
-    match. list
+let. has_one_element λ. list:
+    case. list
     .list.(_) ⊤
     ._ ⊥
 ```
@@ -492,12 +612,12 @@ let. has_one_element λ. list
 ## Characters and strings
 
 Hagane currently has no dedicated character or string type, but it has character and string literals.
-A character literal is written as `#!<character>` and has type `Int`. Its value is the Unicode codepoint of the character.
-For example, `#!A` has value `65`, `#!π` has value `960`, and `#! ` has value `32`.
+A character literal is written as `#<character>` and has type `Int`. Its value is the Unicode codepoint of the character.
+For example, `#A` has value `65`, `#π` has value `960`, and `# ` has value `32`.
 
 A string literal is written by placing the string contents between double quotes (").
 It has type `List(Int)` and is equivalent to the list of the characters making it up.
-For example, `"hello"` is equivalent to `list.(#!h #!e #!l #!l #!o)` and further to `list.(104 101 108 108 111)`.
+For example, `"hello"` is equivalent to `list.(#h #e #l #l #o)` and further to `list.(104 101 108 108 111)`.
 
 Character and string literals may also be used as patterns, where they are pretty much equivalent to integer and list patterns.
 
@@ -506,11 +626,15 @@ These are: `\n` for the newline character, `\"` for the double quote character (
 
 ## Other features
 
+`unreachable` is a function of type `⇒.(: T)` for all `T`.
+It's meant to be used code that's unreachable, but can't be proven as such by the compiler.
+When `unreachable()` is evaluated, the program exits with an error message.
+
 `print_byte` and `read_byte` are functions similar to `print_int` and `read_int`, but they allow printing and reading individual bytes.
-`read_byte` returns `-1` on end of file.
+`read_byte` returns `1~` on end of file.
 ```
 let. mut, b read_byte()
-while. ≠(b -(0 1))
+while. ≠(b 1~)
     print_byte(b)
     set. b read_byte()
 ```
@@ -524,8 +648,8 @@ For reading command-line arguments three functions exist:
 The `extern.` statement is used to declare variables defined in external modules, written in a language like C.
 
 Its syntax is `extern. <name> <type>`.
-The type must be a function taking some (possibly zero) number of integer arguments and returning either an integer or `#()`.
-The `Int` type in Hagane corresponds to the `int64_t` type in C, and `#()` corresponds to `void`.
+The type must be a function taking some (possibly zero) number of integer arguments and returning either an integer or `*¡`.
+The `Int` type in Hagane corresponds to the `int64_t` type in C, and `*¡` corresponds to `void`.
 
 For how to include external modules, see the chapter on command-line arguments.
 
