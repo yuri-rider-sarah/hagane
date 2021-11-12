@@ -100,18 +100,16 @@ set. r_expr→u_type λ. ∈.(expr R_Expr):
             if. =(len(params) 0)
                 error(InvalidType file_pos)
             else, *.()
-            U_Named(base map(params λ.(param: case.(param
+            U_Named‡ base map‡ params λ. param: case. param
                 .ExprClause(expr) r_expr→u_type(expr)
                 ._
                     error(InvalidType file_pos)
                     U_Type(U_Named(list.() list.()) FilePos("" 0 0))
-            ))))
-        .R_Special("*" clauses) U_TupleType(map(clauses λ.(clause: case.(clause
+        .R_Special("*" clauses) U_TupleType‡ map‡ clauses λ. clause: case. clause
             .ExprClause(expr) r_expr→u_type(expr)
             ._
                 error(InvalidType file_pos)
                 U_Type(U_Named(list.() list.()) FilePos("" 0 0))
-        ))))
         .R_Special("⇒" clauses) case. group_clauses(clauses)
             .ClauseGrouping(params list.(ClauseGroup(ColonSep list.(ret))))
                 U_Function(map(params r_expr→u_type) r_expr→u_type(ret))
@@ -136,28 +134,25 @@ set. r_expr→u_pattern λ. ∈.(expr R_Expr):
             if. =(len(args) 0)
                 error(InvalidPattern file_pos)
             else, *.()
-            U_VariantPattern(ctor map(args λ.(arg: case.(arg
+            U_VariantPattern‡ ctor map‡ args λ. arg: case. arg
                 .ExprClause(expr) r_expr→u_pattern(expr)
                 ._
                     error(InvalidPattern file_pos)
                     dummy_u_pattern
-            ))))
-        .R_Special("*" clauses) U_TuplePattern(map(clauses λ.(clause:
+        .R_Special("*" clauses) U_TuplePattern‡ map‡ clauses λ. clause:
             case. clause
             .ExprClause(expr) r_expr→u_pattern(expr)
             ._
                 error(InvalidPattern file_pos)
                 dummy_u_pattern
-        )))
         .R_Special("∈" list.(ExprClause(pattern) ExprClause(type)))
             U_TypedPattern(r_expr→u_pattern(pattern) r_expr→u_type(type))
-        .R_Special("list" clauses) U_ListPattern(map(clauses λ.(clause:
+        .R_Special("list" clauses) U_ListPattern‡ map‡ clauses λ. clause:
             case. clause
             .ExprClause(expr) r_expr→u_pattern(expr)
             ._
                 error(InvalidPattern file_pos)
                 dummy_u_pattern
-        )))
         ._
             error(InvalidPattern file_pos)
             U_WildcardPattern
@@ -224,10 +219,9 @@ let. grouping→if λ. ClauseGrouping(first_group groups) ∈.(file_pos FilePos)
     let. invalid_expr λ.: error(InvalidExpr(Some("if")) file_pos)
     if. =(len(groups) 0)
     then, if. =(%(len(first_group) 2) 1)
-        then, U_If(
+        then, U_If‡
             map_ι(/(len(first_group) 2) λ.(i: *.(r_expr→u_expr(get(first_group *(2 i))) r_expr→u_expr(get(first_group +(*(2 i) 1))))))
             r_expr→u_expr(get(first_group -(len(first_group) 1)))
-        )
         else,
             invalid_expr()
             U_IntLiteral(0)
@@ -249,21 +243,19 @@ set. clauses→expr_data λ. ∈.(kw List(Int)) ∈.(clauses List(Clause)) ∈.(
 
     case. kw
     ."do"
-        U_Do(map(clauses λ.(clause:
+        U_Do‡ map‡ clauses λ. clause:
             case. clause
             .ExprClause(elem) r_expr→u_statement(elem)
             ._
                 invalid_expr()
                 U_Statement(U_ExprStatement(dummy_u_expr) FilePos("" 0 0))
-        )))
     ."*"
-        U_Tuple(map(clauses λ.(clause:
+        U_Tuple‡ map‡ clauses λ. clause:
             case. clause
             .ExprClause(elem) r_expr→u_expr(elem)
             ._
                 invalid_expr()
                 dummy_u_expr
-        )))
     ."∈" case. clauses
         .list.(ExprClause(val) ExprClause(type)) U_Typed(r_expr→u_expr(val) r_expr→u_type(type))
         ._
@@ -295,13 +287,12 @@ set. clauses→expr_data λ. ∈.(kw List(Int)) ∈.(clauses List(Clause)) ∈.(
         U_Lambda(map(params r_expr→u_pattern) block→u_expr(body))
     ."case"
         let. ClauseGrouping(matched groups) group_clauses(clauses)
-        U_Case(block→u_expr(matched) map(groups λ.(ClauseGroup(sep body):
+        U_Case‡ block→u_expr(matched) map‡ groups λ. ClauseGroup(sep body):
             case. sep
             .LabelSep(pattern) *.(r_expr→u_pattern(pattern) block→u_expr(body))
             ._
                 invalid_expr()
                 *.(dummy_u_pattern dummy_u_expr)
-        )))
     ."∧" U_And(map(clauses clause→expr))
     ."∨" U_Or(map(clauses clause→expr))
     ."list" U_ListLiteral(map(clauses clause→expr))
@@ -332,16 +323,17 @@ let. clauses→statement_data λ. ∈.(kw List(Int)) ∈.(clauses List(Clause)) 
     ."type" case. group_clauses(clauses)
         .ClauseGrouping(name+variants list.())
             let. *.(name variant_exprs) split_off(name+variants)
-            let. variants map(variant_exprs λ.(expr:
+            let. variants map‡ variant_exprs λ. expr:
                 case. expr
                 .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
                     if. >(len(params) 0)
-                        *.(variant_name map(params λ.(param: case.(param
-                            .ExprClause(expr) r_expr→u_type(expr)
-                            ._
-                                error(InvalidExpr(Some(kw)) file_pos)
-                                U_Type(U_Named("" list.()) FilePos("" 0 0))
-                        ))))
+                        *.
+                            variant_name 
+                            map‡ params λ. param: case. param
+                                .ExprClause(expr) r_expr→u_type(expr)
+                                ._
+                                    error(InvalidExpr(Some(kw)) file_pos)
+                                    U_Type(U_Named("" list.()) FilePos("" 0 0))
                     else,
                         error(InvalidExpr(Some(kw)) file_pos)
                         *.(list.() list.())
@@ -350,20 +342,20 @@ let. clauses→statement_data λ. ∈.(kw List(Int)) ∈.(clauses List(Clause)) 
                 ._
                     error(InvalidExpr(Some(kw)) file_pos)
                     *.(list.() list.())
-            ))
             U_TypeStatement(r_expr→string(name) list.() variants)
         .ClauseGrouping(list.() list.(ClauseGroup(NamedSep("∀") type_params) ClauseGroup(ColonSep name+variants)))
             let. *.(name variant_exprs) split_off(name+variants)
-            let. variants map(variant_exprs λ.(expr:
+            let. variants map‡ variant_exprs λ. expr:
                 case. expr
                 .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
                     if. >(len(params) 0)
-                        *.(variant_name map(params λ.(param: case.(param
-                            .ExprClause(expr) r_expr→u_type(expr)
-                            ._
-                                error(InvalidExpr(Some(kw)) file_pos)
-                                U_Type(U_Named("" list.()) FilePos("" 0 0))
-                        ))))
+                        *.
+                            variant_name
+                            map‡ params λ. param: case. param
+                                .ExprClause(expr) r_expr→u_type(expr)
+                                ._
+                                    error(InvalidExpr(Some(kw)) file_pos)
+                                    U_Type(U_Named("" list.()) FilePos("" 0 0))
                     else,
                         error(InvalidExpr(Some(kw)) file_pos)
                         *.(list.() list.())
@@ -372,7 +364,6 @@ let. clauses→statement_data λ. ∈.(kw List(Int)) ∈.(clauses List(Clause)) 
                 ._
                     error(InvalidExpr(Some(kw)) file_pos)
                     *.(list.() list.())
-            ))
             U_TypeStatement(r_expr→string(name) map(type_params r_expr→string) variants)
         ._
             invalid_expr()
@@ -407,12 +398,11 @@ set. r_expr→u_expr λ. ∈.(r_expr R_Expr):
         .R_CharLiteral(c) U_IntLiteral(c)
         .R_StringLiteral(s) U_StringLiteral(s)
         .R_Ident(s) U_Ident(s)
-        .R_Apply(func args) U_Apply(r_expr→u_expr(func) map(args λ.(arg: case.(arg
+        .R_Apply(func args) U_Apply‡ r_expr→u_expr(func) map‡ args λ. arg: case. arg
             .ExprClause(expr) r_expr→u_expr(expr)
             ._
                 error(InvalidExpr(None) file_pos)
                 dummy_u_expr
-        ))))
         .R_Special(kw clauses) clauses→expr_data(kw clauses file_pos)
         ._
             error(InvalidExpr(None) file_pos)

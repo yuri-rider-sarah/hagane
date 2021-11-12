@@ -11,7 +11,7 @@ let. mut, print_ir ⊥
 let. mut, cc_args list.()
 let. mut, output_file "out"
 
-for(argv λ.(arg:
+for‡ argv λ. arg:
     if. if.(>(len(arg) 0) =(get(arg 0) #-) ⊥)
     then, case. arg
         ."-O0" set. opt_level 0
@@ -28,15 +28,13 @@ for(argv λ.(arg:
                 ._ string_error(++("Error: Invalid argument: " arg) 0)
             else, string_error(++("Error: Invalid argument: " arg) 0)
     else, set. filenames push(filenames arg)
-))
 
 if. =(len(filenames) 0)
 then, string_error("Error: No input files given" 0)
 else, *.()
 
-let. files map(filenames λ.(filename:
+let. files map‡ filenames λ. filename:
     *.(filename vector→list(utf8_decode(file_contents(list→vector(filename)))))
-))
 let. mut, lexer lexer(files)
 let. mut, u_statements list.()
 while.

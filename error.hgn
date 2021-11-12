@@ -13,15 +13,12 @@ set. partial_type→string λ. ∈.(type PartialType):
     case. type
     .P_Var(n) ++("?" int→string(n))
     .P_Applied(name list.()) name
-    .P_Applied(name types) concat(list.(
-    name "(" intercalate(map(types partial_type→string) " ") ")"
-    ))
-    .P_TupleType(types) concat(list.(
-    "*.(" intercalate(map(types partial_type→string) " ") ")"
-    ))
-    .P_Function(params ret) concat(list.(
-    "⇒.(" concat(map(params λ.(p: ++(partial_type→string(p) " ")))) ": " partial_type→string(ret) ")"
-    ))
+    .P_Applied(name types) concat‡ list.
+        name "(" intercalate(map(types partial_type→string) " ") ")"
+    .P_TupleType(types) concat‡ list.
+        "*.(" intercalate(map(types partial_type→string) " ") ")"
+    .P_Function(params ret) concat‡ list.
+        "⇒.(" concat(map(params λ.(p: ++(partial_type→string(p) " ")))) ": " partial_type→string(ret) ")"
 
 type. Error
     UnexpectedChar(Option(Int))

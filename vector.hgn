@@ -5,7 +5,7 @@ extern. vector_get ⇒.(Int Int : Int)
 
 let. list→vector λ. ∈.(a List(Int)):
     let. v vector_new()
-    for(a λ.(x: vector_push(v x)))
+    for‡ a λ. x: vector_push(v x)
     v
 
 let. vector→list λ. ∈.(v Int):

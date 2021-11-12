@@ -55,11 +55,10 @@ let. t_add_type_binding λ. ∈.(context T_Context) ∈.(type TypeName):
 let. t_locate_type_in_context λ. ∈.(type TypeName) ∈.(context T_Context) ∈.(file_pos FilePos):
     let. T_Context(types) context
     let. mut, index None
-    for_ι(len(types) λ.(i:
+    for_ι‡ len(types) λ. i:
         if. =type_name(get(types i) type)
             set. index Some(i)
         else, *.()
-    ))
     case. index
     .Some(index) index
     .None
@@ -89,10 +88,9 @@ set. i_expr→t_expr λ. ∈.(i_expr I_Expr) ∈.(context T_Context):
         .I_While(i_cond i_body) T_While(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
         .I_Do(i_statements) T_Do(i_statements→t_statements(i_statements context))
         .I_Lambda(i_params i_body) T_Lambda(map(i_params λ.(p: i_pattern→t_pattern(p context))) i_expr→t_expr(i_body context))
-        .I_Case(i_expr i_cases) T_Case(i_expr→t_expr(i_expr context) map(i_cases λ.(i_case:
+        .I_Case(i_expr i_cases) T_Case‡ i_expr→t_expr(i_expr context) map‡ i_cases λ. i_case:
             let. *.(i_pattern i_body) i_case
             *.(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_body context))
-        )))
         .I_And(i_exprs) T_And(i_exprs→t_exprs(i_exprs context))
         .I_Or(i_exprs) T_Or(i_exprs→t_exprs(i_exprs context))
         .I_ListLiteral(i_exprs) T_ListLiteral(i_exprs→t_exprs(i_exprs context))
@@ -100,35 +98,31 @@ set. i_expr→t_expr λ. ∈.(i_expr I_Expr) ∈.(context T_Context):
 
 set. i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(context T_Context):
     let. mut, context context
-    for(i_statements λ.(i_statement:
+    for‡ i_statements λ. i_statement:
         case. i_statement
         .I_Statement(I_TypeStatement(type _ _) _) set. context t_add_type_binding(context type)
         ._ *.()
-    ))
     let. mut, context context
-    map(i_statements λ.(i_statement:
+    map‡ i_statements λ. i_statement:
         let. I_Statement(i_statement_data file_pos) i_statement
-        let. t_statement_data case.(i_statement_data
-        .I_ExprStatement(i_expr) T_ExprStatement(i_expr→t_expr(i_expr context))
-        .I_Let(i_pattern i_expr) T_Let(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_expr context))
-        .I_Let∀(type_params name i_expr)
-            let. mut, context′ context
-            for(type_params λ.(type: set.(context′ t_add_type_binding(context′ type))))
-            T_Let∀(len(type_params) name i_expr→t_expr(i_expr context′))
-        .I_LetMut(name i_expr) T_LetMut(name i_expr→t_expr(i_expr context))
-        .I_TypeStatement(type type_params i_variants)
-            let. mut, context′ context
-            for(type_params λ.(type: set.(context′ t_add_type_binding(context′ type))))
-            let. t_variants map(i_variants λ.(i_variant:
-                let. *.(name i_param_types) i_variant
-                *.(name map(i_param_types λ.(i_type: type_var→t_type(i_type context′ file_pos))))
-            ))
-            T_TypeStatement(len(type_params) t_variants)
-        .I_Extern(name type) T_Extern(name type_var→t_type(type context file_pos))
-        .I_Set(name i_expr) T_Set(name i_expr→t_expr(i_expr context))
-        )
+        let. t_statement_data case. i_statement_data
+            .I_ExprStatement(i_expr) T_ExprStatement(i_expr→t_expr(i_expr context))
+            .I_Let(i_pattern i_expr) T_Let(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_expr context))
+            .I_Let∀(type_params name i_expr)
+                let. mut, context′ context
+                for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type))
+                T_Let∀(len(type_params) name i_expr→t_expr(i_expr context′))
+            .I_LetMut(name i_expr) T_LetMut(name i_expr→t_expr(i_expr context))
+            .I_TypeStatement(type type_params i_variants)
+                let. mut, context′ context
+                for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type))
+                let. t_variants map‡ i_variants λ. i_variant:
+                    let. *.(name i_param_types) i_variant
+                    *.(name map(i_param_types λ.(i_type: type_var→t_type(i_type context′ file_pos))))
+                T_TypeStatement(len(type_params) t_variants)
+            .I_Extern(name type) T_Extern(name type_var→t_type(type context file_pos))
+            .I_Set(name i_expr) T_Set(name i_expr→t_expr(i_expr context))
         T_Statement(t_statement_data file_pos)
-    ))
 
 let. i_patterns→t_patterns λ. ∈.(i_patterns List(I_Pattern)) ∈.(context T_Context):
     map(i_patterns λ.(p: i_pattern→t_pattern(p context)))

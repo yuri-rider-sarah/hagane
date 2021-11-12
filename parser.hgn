@@ -115,16 +115,14 @@ set. read_clause λ. ∈.(lexer Lexer):
 set. read_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int) ∈.(clauses List(Clause)) ∈.(se_type SpecialExprType):
     let. mut, lexer lexer
     let. *.(lexer′ token at_line_start clause_indent_depth token_file_pos) read_token(lexer)
-    let. separator_continue ∨(¬(at_line_start) case.(se_type
+    let. separator_continue ∨‡ ¬(at_line_start) case. se_type
         .ParenSE ⊤
         .BlockSE ≥(clause_indent_depth kw_indent_depth)
         .InnerSE >(clause_indent_depth kw_indent_depth)
-    ))
-    let. content_continue ∨(¬(at_line_start) case.(se_type
+    let. content_continue ∨‡ ¬(at_line_start) case. se_type
         .ParenSE ⊤
         .BlockSE >(clause_indent_depth kw_indent_depth)
         .InnerSE >(clause_indent_depth kw_indent_depth)
-    ))
 
     case. token
     .RParen

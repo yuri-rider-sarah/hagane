@@ -33,7 +33,7 @@ let. ∀, T U: for2 λ. ∈.(xs List(T)) ∈.(ys List(U)) ∈.(f ⇒.(T U : *.()
 
 let. ∀, T U: map λ. ∈.(xs List(T)) ∈.(f ⇒.(T : U)):
     let. mut, ys list.()
-    for(xs λ.(x: set.(ys push(ys f(x)))))
+    for‡ xs λ. x: set.(ys push(ys f(x)))
     ys
 
 let. ∀, T: map_ι λ. ∈.(n Int) ∈.(f ⇒.(Int : T)):
@@ -43,37 +43,32 @@ let. ∀, T: map_ι λ. ∈.(n Int) ∈.(f ⇒.(Int : T)):
 
 let. ∀, T U: map_opt λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Option(U))):
     let. mut, ys list.()
-    for(xs λ.(x:
+    for‡ xs λ. x:
         case. f(x)
         .Some(y) set. ys push(ys y)
         .None *.()
-    ))
     ys
 
 let. ∀, T: ι* λ. ∈.(xs List(T)):
-    map_ι(len(xs) λ.(i:
+    map_ι‡ len(xs) λ. i:
         *.(i get(xs i))
-    ))
 
 let. ∀, T: ∀ λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
     let. mut, r ⊤
-    for(xs λ.(x:
+    for‡ xs λ. x:
         if. f(x) then, *.() else, set.(r ⊥)
-    ))
     r
 
 let. ∀, T: ∃ λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
     let. mut, r ⊥
-    for(xs λ.(x:
+    for‡ xs λ. x:
         if. f(x) then, set.(r ⊤) else, *.()
-    ))
     r
 
 let. ∀, T: count λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
     let. mut, r 0
-    for(xs λ.(x:
+    for‡ xs λ. x:
         if. f(x) then, set.(r +(r 1)) else, *.()
-    ))
     r
 
 let. ∀, T: last λ. ∈.(xs List(T)):
@@ -91,11 +86,10 @@ let. ∀, T: drop λ. ∈.(xs List(T)) ∈.(n Int):
 
 let. ∀, T: ∈ λ. ∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
     let. mut, r ⊥
-    for(ys λ.(y:
+    for‡ ys λ. y:
         if. =T(y x)
         then, set. r ⊤
         else, *.()
-    ))
     r
 
 let. ∀, T: ∉ λ. ∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
@@ -103,21 +97,19 @@ let. ∀, T: ∉ λ. ∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
 
 let. ∀, T: dedup λ. ∈.(xs List(T)) ∈.(=T ⇒.(T T : Bool)):
     let. mut, r list.()
-    for(xs λ.(x:
+    for‡ xs λ. x:
         if. ∉(x r =T)
         then, set. r push(r x)
         else, *.()
-    ))
     r
 
 let. ∀, T: =list λ. ∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
     if. =(len(xs) len(ys))
         let. mut, r ⊤
-        for_ι(len(xs) λ.(i:
+        for_ι‡ len(xs) λ. i:
             if. ¬(=T(get(xs i) get(ys i)))
             then, set. r ⊥
             else, *.()
-        ))
         r
     else, ⊥
 
@@ -126,7 +118,7 @@ let. =list_int λ. ∈.(x List(Int)) ∈.(y List(Int)):
 
 let. ∀, T: filter λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
     let. mut, r list.()
-    for(xs λ.(x: set.(r if.(f(x) push(r x) r))))
+    for‡ xs λ. x: set.(r if.(f(x) push(r x) r))
     r
 
 let. ∀, T: \ λ. ∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
@@ -134,12 +126,12 @@ let. ∀, T: \ λ. ∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
 
 let. ∀, T: ++ λ. ∈.(xs List(T)) ∈.(ys List(T)):
     let. mut, r xs
-    for(ys λ.(y: set.(r push(r y))))
+    for‡ ys λ. y: set.(r push(r y))
     r
 
 let. ∀, T: concat λ. ∈.(xss List(List(T))):
     let. mut, r list.()
-    for(xss λ.(xs: set.(r ++(r xs))))
+    for‡ xss λ. xs: set.(r ++(r xs))
     r
 
 let. ∀, T: intercalate λ. ∈.(xss List(List(T))) ∈.(sep List(T)):
@@ -158,11 +150,10 @@ let. ∀, T U: zip λ. ∈.(xs List(T)) ∈.(ys List(U)):
 let. ∀, T U: unzip λ. ∈.(xs List(*.(T U))):
     let. mut, xs1 list.()
     let. mut, xs2 list.()
-    for(xs λ.(x:
+    for‡ xs λ. x:
         let. *.(x1 x2) x
         set. xs1 push(xs1 x1)
         set. xs2 push(xs2 x2)
-    ))
     *.(xs1 xs2)
 
 let. int→string λ. ∈.(n Int):
