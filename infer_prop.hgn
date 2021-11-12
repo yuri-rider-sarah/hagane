@@ -157,8 +157,7 @@ let. unify_type_value′ λ. ∈.(t1 I_Type) ∈.(t2 I_Type) ∈.(err Error) ∈
         if. =(n1 n2) case. for2(args1 args2 λ.(tv1 tv2: unify_type′(tv1 tv2 err file_pos)))
             .None error(err file_pos)
             .Some(*.()) *.()
-        else,
-            error(err file_pos)
+        else, error(err file_pos)
     .*.(I_TupleType(types1) I_TupleType(types2))
         case. for2(types1 types2 λ.(tv1 tv2: unify_type′(tv1 tv2 err file_pos)))
         .None error(err file_pos)
@@ -168,8 +167,7 @@ let. unify_type_value′ λ. ∈.(t1 I_Type) ∈.(t2 I_Type) ∈.(err Error) ∈
         .None error(err file_pos)
         .Some(*.()) *.()
         unify_type′(ret1 ret2 err file_pos)
-    ._
-        error(err file_pos)
+    ._ error(err file_pos)
 
 set. unify_type′ λ. ∈.(tv1 TypeVar) ∈.(tv2 TypeVar) ∈.(err Error) ∈.(file_pos FilePos):
     if. =type_var(tv1 tv2) *.()
@@ -277,9 +275,7 @@ let. variable_type λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_po
         else, *.()
     case. type
     .Some(t) t
-    .None
-        error(UnboundVariable(name) file_pos)
-        *.(list.() TypeVar(0))
+    .None error(UnboundVariable(name) file_pos)
 
 let. type_from_name λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos FilePos):
     let. mut, type None
@@ -295,9 +291,7 @@ let. type_from_name λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_p
         .None *.()
     case. type
     .Some(t) t
-    .None
-        error(UnboundType(name) file_pos)
-        TypeName(0)
+    .None error(UnboundType(name) file_pos)
 
 let. mut, substitute_type_names λ. ∈.(subs List(*.(TypeName TypeVar))) ∈.(tv TypeVar): tv
 set. substitute_type_names λ. ∈.(subs List(*.(TypeName TypeVar))) ∈.(tv TypeVar):
@@ -482,9 +476,7 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
                 let. *.(unused_name _) get(named_types tni)
                 let. unused_name case. unused_name
                     .Some(name) name
-                    .None
-                        unreachable("unused_name is None")
-                        list.()
+                    .None internal_error("unused_name is None")
                 error(UnusedTypeParam(unused_name) file_pos)
             else, *.()
             set. context i_add_let_binding(context VarBinding(name type_params i_expr_type(i_expr) ⊥))

@@ -71,14 +71,10 @@ let. read_quoted_char λ. ∈.(lexer Lexer):
             *.(lexer #\n)
         .Some(#")
             *.(lexer #")
-        ._
-            error(UnexpectedChar(c) file_pos)
-            *.(lexer 0)
+        ._ error(UnexpectedChar(c) file_pos)
     .Some(c)
         *.(lexer c)
-    .None
-        error(UnexpectedChar(None) file_pos)
-        *.(lexer 0)
+    .None error(UnexpectedChar(None) file_pos)
 
 let. mut, read_string_literal_contents λ. ∈.(lexer Lexer) ∈.(s List(Int)): *.(lexer s)
 set. read_string_literal_contents λ. ∈.(lexer Lexer) ∈.(s List(Int)):
@@ -92,9 +88,7 @@ set. read_string_literal_contents λ. ∈.(lexer Lexer) ∈.(s List(Int)):
         let. *.(lexer′ c) read_quoted_char(lexer)
         set. lexer lexer′
         read_string_literal_contents(lexer push(s c))
-    .None
-        error(UnexpectedChar(None) file_pos)
-        *.(lexer s)
+    .None error(UnexpectedChar(None) file_pos)
 
 let. mut, read_int_literal λ. ∈.(lexer Lexer) ∈.(n Int): *.(lexer n)
 set. read_int_literal λ. ∈.(lexer Lexer) ∈.(n Int):
@@ -133,8 +127,7 @@ let. check_after_ident λ. ∈.(lexer Lexer):
     .Some(c)
         if. ∨(is_white_space(c) ∈(c after_ident_chars =))
             *.()
-        else,
-            error(UnexpectedChar(Some(c)) file_pos)
+        else, error(UnexpectedChar(Some(c)) file_pos)
     .None
         *.()
 
@@ -193,9 +186,7 @@ let. read_token_char λ. ∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_
                 .*.(_ _ _)
                     check_after_ident(lexer)
                     return(IdentToken(s))
-        else,
-            error(UnexpectedChar(Some(c)) file_pos)
-            return(Eof)
+        else, error(UnexpectedChar(Some(c)) file_pos)
     .None
         return(Eof)
 
@@ -244,9 +235,7 @@ set. read_token′ λ. ∈.(lexer Lexer) ∈.(this_indent Option(Int)):
                 .Some(indent_char)
                     if. =(c indent_char)
                         read_token′(lexer Some(+(indent_depth 1)))
-                    else,
-                        error(UnexpectedChar(Some(c)) file_pos)
-                        *.(lexer Eof ⊥ 0 FilePos(list.() 0 0))
+                    else, error(UnexpectedChar(Some(c)) file_pos)
             .None
                 read_token′(lexer None)
         else, read_token_char(lexer at_line_start this_indent_depth)

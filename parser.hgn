@@ -52,9 +52,7 @@ set. read_noncall_expr λ. ∈.(lexer Lexer):
         *.(lexer R_Expr(R_Special(kw list.(clause)) file_pos))
     .PriKeywordZero(kw)
         *.(lexer R_Expr(R_Special(kw list.()) file_pos))
-    ._
-        error(UnexpectedToken(token) file_pos)
-        *.(lexer dummy_r_expr)
+    ._ error(UnexpectedToken(token) file_pos)
 
 set. read_expr λ. ∈.(lexer Lexer):
     let. mut, lexer lexer

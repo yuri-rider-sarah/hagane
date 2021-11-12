@@ -41,6 +41,7 @@ type. Error
 
 let. string_error λ. ∈.(str List(Int)) ∈.(internal Int):
     vector_string_error(utf8_encode(list→vector(str)) internal)
+    unreachable()
 
 let. file_pos_string λ. ∈.(file_pos FilePos):
     let. FilePos(file_name line col) file_pos
@@ -71,5 +72,5 @@ let. error_string λ. ∈.(err Error):
 let. error λ. ∈.(err Error) ∈.(file_pos FilePos):
     string_error(concat(list.(file_pos_string(file_pos) ": " error_string(err))) 0)
 
-let. unreachable λ. ∈.(err List(Int)):
+let. internal_error λ. ∈.(err List(Int)):
     string_error(++("Internal compiler error: " err) 1)

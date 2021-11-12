@@ -98,9 +98,7 @@ let. c_lookup_var λ. ∈.(name List(Int)) ∈.(context C_Context):
         else, *.()
     case. r
     .Some(val) val
-    .None
-        unreachable("Variable not found in context")
-        C_ConstVar(0)
+    .None internal_error("Variable not found in context")
 
 let. extern_binding λ. ∈.(name List(Int)) ∈.(num_params Int) ∈.(ret_int Int):
     *.(name C_ConstVar(codegen_extern(list→vector(name) num_params ret_int)))
@@ -172,9 +170,7 @@ set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(type
                 let. *.(type_params variants) get(ctx_types ti)
                 let. subs case. zip(type_params type_args)
                     .Some(subs) subs
-                    .None
-                        unreachable("type_args and type_params are not equal length")
-                        list.()
+                    .None internal_error("type_args and type_params are not equal length")
                 let. variants map‡ variants λ. variant:
                     map(variant λ.(t: c_substitute_in_type(t subs)))
                 ∀‡ ι*(variants) λ. vs:
@@ -190,7 +186,6 @@ set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(type
                                 else, None
                             ._
                                 error(NotACtor(name) file_pos)
-                                None
                         ._ None
                     if. ≠(len(pattern_lists′) 0)
                     then, is_match_exhaustive(pattern_lists′ ++(subtypes drop(types 1)) context)
@@ -273,12 +268,8 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
             .C_ConstVar(val) val
             .C_MutVar(var) codegen_load_mut_var(var)
             .C_Ctor(ctor _) ctor
-            .C_Unused
-                unreachable("Variable incorrectly marked as unused")
-                0
-            .C_DCtor(_)
-                unreachable("Variable incorrectly marked as unused")
-                0
+            .C_Unused internal_error("Variable incorrectly marked as unused")
+            .C_DCtor(_) internal_error("Variable incorrectly marked as unused")
         codegen_rc_incr(val)
         val
     .T_Tuple(exprs)
@@ -402,12 +393,8 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
                     .C_Ctor(ctor _)
                         codegen_rc_incr(ctor)
                         ctor
-                    .C_Unused
-                        unreachable("Variable incorrectly marked as unused")
-                        0
-                    .C_DCtor(_)
-                        unreachable("Variable incorrectly marked as unused")
-                        0
+                    .C_Unused internal_error("Variable incorrectly marked as unused")
+                    .C_DCtor(_) internal_error("Variable incorrectly marked as unused")
                 Some(cap)
             else, None
         let. captures_type get_captures_type(len(params) outer_captures)
@@ -425,9 +412,7 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
                         .C_ConstVar(_) C_ConstVar(cap)
                         .C_MutVar(_) C_MutVar(cap)
                         .C_Ctor(_ tag) C_Ctor(cap tag)
-                        .C_Unused
-                            unreachable("Variable incorrectly marked as unused")
-                            C_Unused
+                        .C_Unused internal_error("Variable incorrectly marked as unused")
                         .C_DCtor(tag) C_DCtor(tag)
                     codegen_var_rc_incr(var′)
                     *.(name var′)
@@ -440,8 +425,7 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
             concat‡ map_ι‡ len(params) λ. i:
                 let. arg codegen_get_arg(i)
                 let. *.(bindings pattern_ends) codegen_pattern_test(arg get(params i) context)
-                if. ≠(len(pattern_ends) 0)
-                    unreachable("pattern_ends not empty")
+                if. ≠(len(pattern_ends) 0) internal_error("pattern_ends not empty")
                 else, *.()
                 for‡ bindings λ. binding:
                     let. *.(_ var) binding
@@ -535,7 +519,7 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
             let. val codegen_expr(expr context)
             let. *.(bindings pattern_ends) codegen_pattern_test(val pattern context)
             if. ≠(len(pattern_ends) 0)
-                unreachable("pattern_ends not empty")
+                internal_error("pattern_ends not empty")
             else, *.()
             for‡ bindings λ. bind:
                 let. *.(name var) bind
@@ -575,9 +559,7 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
                         else, *.()
                         ⊤
                     .T_TupleType(list.()) ⊥
-                    ._
-                        error(InvalidExternType(name) file_pos)
-                        ⊥
+                    ._ error(InvalidExternType(name) file_pos)
                 set. context c_add_let_binding(context name C_ConstVar(codegen_extern(utf8_encode(list→vector(name)) len(params) if.(ret_int 1 0))))
             ._
                 error(InvalidExternType(name) file_pos)
@@ -588,7 +570,7 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
                 codegen_rc_decr(codegen_load_mut_var(var))
                 codegen_store_mut_var(var val)
             .C_Unused
-                unreachable("Variable incorrectly marked as unused")
+                internal_error("Variable incorrectly marked as unused")
             ._ error(AssignToConst(name) file_pos)
     let. C_Context(context_vars _) context
     for_ι‡ -(len(context_vars) old_context_len) λ. i:
@@ -615,7 +597,6 @@ set. codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context
             .C_DCtor(tag) tag
             ._
                 error(NotACtor(ctor) file_pos)
-                None
         case. tag
         .Some(tag)
             let. tagged codegen_tagged_cast(val len(patterns))
