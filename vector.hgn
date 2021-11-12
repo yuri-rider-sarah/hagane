@@ -9,7 +9,7 @@ let. list→vector λ. ∈.(a List(Int)):
     v
 
 let. vector→list λ. ∈.(v Int):
-    let. mut, a empty
+    let. mut, a list.()
     for_ι(vector_len(v) λ.(i: set.(a push(a vector_get(v i)))))
     a
 

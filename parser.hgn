@@ -9,7 +9,7 @@ type. R_ExprData
 
 type. R_Expr R_Expr(R_ExprData FilePos)
 
-let. dummy_r_expr R_Expr(R_Wildcard FilePos(empty 0 0))
+let. dummy_r_expr R_Expr(R_Wildcard FilePos(list.() 0 0))
 
 type. Clause
     ExprClause(R_Expr)
@@ -21,10 +21,10 @@ let. mut, read_noncall_expr λ. ∈.(lexer Lexer): *.(lexer dummy_r_expr)
 let. mut, read_expr λ. ∈.(lexer Lexer): *.(lexer dummy_r_expr)
 let. mut, read_expr_calls λ. ∈.(lexer Lexer) ∈.(expr R_Expr) ∈.(at_line_start Bool) ∈.(indent_depth Int): *.(lexer expr)
 let. mut, read_clause λ. ∈.(lexer Lexer): *.(lexer ColonClause)
-let. mut, read_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int) ∈.(clauses List(Clause)) ∈.(se_type SpecialExprType): *.(lexer empty)
-let. mut, read_paren_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer empty)
-let. mut, read_block_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer empty)
-let. mut, read_inner_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer empty)
+let. mut, read_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int) ∈.(clauses List(Clause)) ∈.(se_type SpecialExprType): *.(lexer list.())
+let. mut, read_paren_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer list.())
+let. mut, read_block_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer list.())
+let. mut, read_inner_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer list.())
 
 set. read_noncall_expr λ. ∈.(lexer Lexer):
     let. mut, lexer lexer
@@ -166,10 +166,10 @@ set. read_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int) ∈.(clauses
             *.(lexer clauses)
 
 set. read_paren_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int):
-    read_clauses_r(lexer kw_indent_depth empty ParenSE)
+    read_clauses_r(lexer kw_indent_depth list.() ParenSE)
 
 set. read_block_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int):
-    read_clauses_r(lexer kw_indent_depth empty BlockSE)
+    read_clauses_r(lexer kw_indent_depth list.() BlockSE)
 
 set. read_inner_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int):
-    read_clauses_r(lexer kw_indent_depth empty InnerSE)
+    read_clauses_r(lexer kw_indent_depth list.() InnerSE)

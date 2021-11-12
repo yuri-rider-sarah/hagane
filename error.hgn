@@ -8,7 +8,7 @@ type. PartialType
     P_TupleType(List(PartialType))
     P_Function(List(PartialType) PartialType)
 
-let. mut, partial_type→string λ. ∈.(type PartialType): empty
+let. mut, partial_type→string λ. ∈.(type PartialType): list.()
 set. partial_type→string λ. ∈.(type PartialType):
     case. type
     .P_Var(n) ++("?" int→string(n))

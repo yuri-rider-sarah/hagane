@@ -66,10 +66,10 @@ let. t_locate_type_in_context λ. ∈.(type TypeName) ∈.(context T_Context) �
         error(LeakedType(type_name_string(type)) file_pos)
         0
 
-let. mut, i_expr→t_expr λ. ∈.(i_expr I_Expr) ∈.(context T_Context): T_Expr(T_IntLiteral(0) T_Named(0 empty) FilePos(" " 0 0))
-let. mut, i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(context T_Context): empty
-let. mut, i_pattern→t_pattern λ. ∈.(i_pattern I_Pattern) ∈.(context T_Context): T_Pattern(T_IntLiteralPattern(0) T_Named(0 empty) FilePos(" " 0 0))
-let. mut, type_var→t_type λ. ∈.(i_type TypeVar) ∈.(context T_Context) ∈.(file_pos FilePos): T_Named(0 empty)
+let. mut, i_expr→t_expr λ. ∈.(i_expr I_Expr) ∈.(context T_Context): T_Expr(T_IntLiteral(0) T_Named(0 list.()) FilePos(" " 0 0))
+let. mut, i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(context T_Context): list.()
+let. mut, i_pattern→t_pattern λ. ∈.(i_pattern I_Pattern) ∈.(context T_Context): T_Pattern(T_IntLiteralPattern(0) T_Named(0 list.()) FilePos(" " 0 0))
+let. mut, type_var→t_type λ. ∈.(i_type TypeVar) ∈.(context T_Context) ∈.(file_pos FilePos): T_Named(0 list.())
 
 let. i_exprs→t_exprs λ. ∈.(i_exprs List(I_Expr)) ∈.(context T_Context):
     map(i_exprs λ.(e: i_expr→t_expr(e context)))
@@ -144,13 +144,13 @@ set. i_pattern→t_pattern λ. ∈.(i_pattern I_Pattern) ∈.(context T_Context)
         .I_ListPattern(i_patterns) T_ListPattern(i_patterns→t_patterns(i_patterns context))
     T_Pattern(t_pattern_data type_var→t_type(i_type context file_pos) file_pos)
 
-let. mut, type_var→t_type′ λ. ∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos): T_Named(0 empty)
+let. mut, type_var→t_type′ λ. ∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos): T_Named(0 list.())
 set. type_var→t_type′ λ. ∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos):
     let. TypeVar(tvi) tv
     case. get(type_variables tvi)
     .I_Any
         error(err file_pos)
-        T_Named(0 empty)
+        T_Named(0 list.())
     .I_Equal(tv′) type_var→t_type′(tv′ context err file_pos)
     .I_Named(name type_args) T_Named(t_locate_type_in_context(name context file_pos) map(type_args λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
     .I_TupleType(tvs) T_TupleType(map(tvs λ.(tv′: type_var→t_type′(tv′ context err file_pos))))

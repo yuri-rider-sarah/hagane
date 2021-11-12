@@ -123,7 +123,7 @@ let. get_empty_c_context λ.:
         *.("≤" C_ConstVar(codegen_cmp_primitive(3)))
         *.(">" C_ConstVar(codegen_cmp_primitive(4)))
         *.("≥" C_ConstVar(codegen_cmp_primitive(5)))
-        *.("empty" C_ConstVar(codegen_list(list→vector(empty))))
+        *.("empty" C_ConstVar(codegen_list(list→vector(list.()))))
         *.("len" C_ConstVar(codegen_len_primitive()))
         *.("get" C_ConstVar(codegen_get_primitive()))
         *.("put" C_ConstVar(codegen_put_primitive()))
@@ -138,7 +138,7 @@ let. get_empty_c_context λ.:
         extern_binding("get_argv_byte" 2 1)
         *.("unreachable" C_ConstVar(codegen_unreachable_primitive()))
         )
-        list.(*.(empty list.(empty)) *.(empty list.(list.() list.())) *.(list.(3) list.(empty)))
+        list.(*.(list.() list.(list.())) *.(list.() list.(list.() list.())) *.(list.(3) list.(list.())))
     )
 
 let. mut, c_substitute_in_type λ. ∈.(type T_Type) ∈.(subs List(*.(Int T_Type))): type
@@ -180,7 +180,7 @@ set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(type
                     .Some(subs) subs
                     .None
                         unreachable("type_args and type_params are not equal length")
-                        empty
+                        list.()
                 let. variants map(variants λ.(variant:
                     map(variant λ.(t: c_substitute_in_type(t subs)))
                 ))
@@ -216,32 +216,32 @@ set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(type
                 else, ⊥
             .T_Function(_ _) ⊥
 
-let. mut, pattern_vars λ. ∈.(pattern T_Pattern): empty
+let. mut, pattern_vars λ. ∈.(pattern T_Pattern): list.()
 set. pattern_vars λ. ∈.(pattern T_Pattern):
     let. rec λ. ∈.(subpatterns List(T_Pattern)): dedup(concat(map(subpatterns pattern_vars)) =list_int)
     let. T_Pattern(pattern_data _ _) pattern
     case. pattern_data
-    .T_IntLiteralPattern(_) empty
+    .T_IntLiteralPattern(_) list.()
     .T_IdentPattern(name) list.(name)
-    .T_WildcardPattern empty
+    .T_WildcardPattern list.()
     .T_TuplePattern(subpatterns) rec(subpatterns)
     .T_VariantPattern(_ subpatterns _) rec(subpatterns)
     .T_ListPattern(subpatterns) rec(subpatterns)
 
-let. mut, free_vars λ. ∈.(expr T_Expr): empty
+let. mut, free_vars λ. ∈.(expr T_Expr): list.()
 set. free_vars λ. ∈.(expr T_Expr):
     let. rec λ. subexprs: dedup(concat(map(subexprs free_vars)) =list_int)
     let. T_Expr(expr_data _ _) expr
     case. expr_data
-    .T_IntLiteral(_) empty
+    .T_IntLiteral(_) list.()
     .T_Ident(name _) list.(name)
     .T_Tuple(subexprs) rec(subexprs)
     .T_Apply(func args) rec(push(args func))
     .T_If(cases else) rec(++(concat(map(cases λ.(*.(cond body): list.(cond body)))) list.(else)))
     .T_While(cond body) rec(list.(cond body))
     .T_Do(statements)
-        let. mut, bound_vars empty
-        let. mut, do_free_vars empty
+        let. mut, bound_vars list.()
+        let. mut, do_free_vars list.()
         for(statements λ.(statement:
             let. T_Statement(statement_data _) statement
             case. statement_data
@@ -273,7 +273,7 @@ set. free_vars λ. ∈.(expr T_Expr):
 
 let. mut, codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context): 0
 let. mut, codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Context): 0
-let. mut, codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context): *.(empty empty)
+let. mut, codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context): *.(list.() list.())
 
 set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
     let. T_Expr(expr_data expr_type file_pos) expr
@@ -387,13 +387,13 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
         set_insert_block(cond_val_block)
         codegen_cond_br(cond_val body_block merge_block)
         set_insert_block(merge_block)
-        codegen_tuple(list→vector(empty))
+        codegen_tuple(list→vector(list.()))
     .T_Do(statements) codegen_statements(statements context)
     .T_Lambda(params body)
         let. parent_block get_insert_block()
         let. C_Context(vars types) context
         let. body_free_vars free_vars(body)
-        let. mut, is_captured empty
+        let. mut, is_captured list.()
         for(vars λ.(var: set.(is_captured push(is_captured ⊥))))
         for(body_free_vars λ.(name:
             let. mut, cap_var_i None
@@ -579,7 +579,7 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
             codegen_rc_decr(val)
         .T_Let∀(type_params name expr)
             let. mut, context′ context
-            for_ι(type_params λ.(i: set.(context′ c_add_type_binding(context′ empty list.(empty)))))
+            for_ι(type_params λ.(i: set.(context′ c_add_type_binding(context′ list.() list.(list.())))))
             set. context c_add_let_binding(context name C_ConstVar(codegen_expr(expr context)))
         .T_LetMut(name expr)
             set. context c_add_let_binding(context name C_MutVar(codegen_create_mut_var(codegen_expr(expr context))))
@@ -635,14 +635,14 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
     ))
     case. block_val
     .Some(block_val) block_val
-    .None codegen_tuple(list→vector(empty))
+    .None codegen_tuple(list→vector(list.()))
 
 set. codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context):
     let. T_Pattern(pattern_data _ file_pos) pattern
     case. pattern_data
-    .T_IntLiteralPattern(n) *.(empty list.(codegen_int_pattern_test(val n)))
-    .T_IdentPattern(name) *.(list.(*.(name C_ConstVar(val))) empty)
-    .T_WildcardPattern *.(empty empty)
+    .T_IntLiteralPattern(n) *.(list.() list.(codegen_int_pattern_test(val n)))
+    .T_IdentPattern(name) *.(list.(*.(name C_ConstVar(val))) list.())
+    .T_WildcardPattern *.(list.() list.())
     .T_TuplePattern(patterns)
         let. tuple codegen_tuple_cast(val len(patterns))
         let. *.(bindings_ ends_) unzip(map_ι(len(patterns) λ.(i:

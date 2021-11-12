@@ -71,7 +71,7 @@ let. i_pattern_file_pos λ. ∈.(pattern I_Pattern):
     let. I_Pattern(_ _ file_pos) pattern
     file_pos
 
-let. mut, named_types empty
+let. mut, named_types list.()
 
 let. new_type_name λ. ∈.(name Option(List(Int))) ∈.(params Int):
     set. named_types push(named_types *.(name params))
@@ -88,9 +88,9 @@ let. type_name_string λ. ∈.(tn TypeName):
     .Some(name) name
     .None ++("?G" int→string(tni))
 
-let. mut, type_variables empty
+let. mut, type_variables list.()
 
-let. mut, type_referenced_types′ λ. ∈.(tv TypeVar): empty
+let. mut, type_referenced_types′ λ. ∈.(tv TypeVar): list.()
 set. type_referenced_types′ λ. ∈.(tv TypeVar):
     let. TypeVar(tvi) tv
     case. get(type_variables tvi)
@@ -102,11 +102,11 @@ set. type_referenced_types′ λ. ∈.(tv TypeVar):
 
 let. type_referenced_types λ. ∈.(tv TypeVar): dedup(type_referenced_types′(tv) =type_var)
 
-let. mut, type_referenced_type_names′ λ. ∈.(tv TypeVar): empty
+let. mut, type_referenced_type_names′ λ. ∈.(tv TypeVar): list.()
 set. type_referenced_type_names′ λ. ∈.(tv TypeVar):
     let. TypeVar(tvi) tv
     case. get(type_variables tvi)
-    .I_Any empty
+    .I_Any list.()
     .I_Equal(tv′) type_referenced_type_names′(tv′)
     .I_Named(tn args) push(concat(map(args type_referenced_type_names′)) tn)
     .I_TupleType(types) concat(map(types type_referenced_type_names′))
@@ -208,45 +208,45 @@ type. I_Context I_Context(
     List(TypeName)   ※ types
 )
 
-let. bool_tv new_type_var_with_type(I_Named(bool_type empty))
-let. int_tv new_type_var_with_type(I_Named(int_type empty))
-let. unit_tv new_type_var_with_type(I_TupleType(empty))
+let. bool_tv new_type_var_with_type(I_Named(bool_type list.()))
+let. int_tv new_type_var_with_type(I_Named(int_type list.()))
+let. unit_tv new_type_var_with_type(I_TupleType(list.()))
 let. arith_tv new_type_var_with_type(I_Function(list.(int_tv int_tv) int_tv))
 let. cmp_tv new_type_var_with_type(I_Function(list.(int_tv int_tv) bool_tv))
 let. t_type new_type_name(None 0)
-let. t_tv new_type_var_with_type(I_Named(t_type empty))
+let. t_tv new_type_var_with_type(I_Named(t_type list.()))
 let. list_tv new_type_var_with_type(I_Named(list_type list.(t_tv)))
 
 let. builtin_types list.(int_type bool_type list_type)
 
 let. empty_i_context I_Context(
     list.(
-    VarBinding("⊤" empty bool_tv ⊤)
-    VarBinding("⊥" empty bool_tv ⊤)
-    VarBinding("+" empty arith_tv ⊥)
-    VarBinding("-" empty arith_tv ⊥)
-    VarBinding("*" empty arith_tv ⊥)
-    VarBinding("/" empty arith_tv ⊥)
-    VarBinding("%" empty arith_tv ⊥)
-    VarBinding("=" empty cmp_tv ⊥)
-    VarBinding("≠" empty cmp_tv ⊥)
-    VarBinding("<" empty cmp_tv ⊥)
-    VarBinding("≤" empty cmp_tv ⊥)
-    VarBinding(">" empty cmp_tv ⊥)
-    VarBinding("≥" empty cmp_tv ⊥)
+    VarBinding("⊤" list.() bool_tv ⊤)
+    VarBinding("⊥" list.() bool_tv ⊤)
+    VarBinding("+" list.() arith_tv ⊥)
+    VarBinding("-" list.() arith_tv ⊥)
+    VarBinding("*" list.() arith_tv ⊥)
+    VarBinding("/" list.() arith_tv ⊥)
+    VarBinding("%" list.() arith_tv ⊥)
+    VarBinding("=" list.() cmp_tv ⊥)
+    VarBinding("≠" list.() cmp_tv ⊥)
+    VarBinding("<" list.() cmp_tv ⊥)
+    VarBinding("≤" list.() cmp_tv ⊥)
+    VarBinding(">" list.() cmp_tv ⊥)
+    VarBinding("≥" list.() cmp_tv ⊥)
     VarBinding("empty" list.(t_type) list_tv ⊥)
     VarBinding("len" list.(t_type) new_type_var_with_type(I_Function(list.(list_tv) int_tv)) ⊥)
     VarBinding("get" list.(t_type) new_type_var_with_type(I_Function(list.(list_tv int_tv) t_tv)) ⊥)
     VarBinding("put" list.(t_type) new_type_var_with_type(I_Function(list.(list_tv int_tv t_tv) list_tv)) ⊥)
     VarBinding("push" list.(t_type) new_type_var_with_type(I_Function(list.(list_tv t_tv) list_tv)) ⊥)
     VarBinding("pop" list.(t_type) new_type_var_with_type(I_Function(list.(list_tv) list_tv)) ⊥)
-    VarBinding("print_int" empty new_type_var_with_type(I_Function(list.(int_tv) unit_tv)) ⊥)
-    VarBinding("read_int" empty new_type_var_with_type(I_Function(empty int_tv)) ⊥)
-    VarBinding("print_byte" empty new_type_var_with_type(I_Function(list.(int_tv) unit_tv)) ⊥)
-    VarBinding("read_byte" empty new_type_var_with_type(I_Function(empty int_tv)) ⊥)
-    VarBinding("get_argc" empty new_type_var_with_type(I_Function(empty int_tv)) ⊥)
-    VarBinding("get_argv_len" empty new_type_var_with_type(I_Function(list.(int_tv) int_tv)) ⊥)
-    VarBinding("get_argv_byte" empty new_type_var_with_type(I_Function(list.(int_tv int_tv) int_tv)) ⊥)
+    VarBinding("print_int" list.() new_type_var_with_type(I_Function(list.(int_tv) unit_tv)) ⊥)
+    VarBinding("read_int" list.() new_type_var_with_type(I_Function(list.() int_tv)) ⊥)
+    VarBinding("print_byte" list.() new_type_var_with_type(I_Function(list.(int_tv) unit_tv)) ⊥)
+    VarBinding("read_byte" list.() new_type_var_with_type(I_Function(list.() int_tv)) ⊥)
+    VarBinding("get_argc" list.() new_type_var_with_type(I_Function(list.() int_tv)) ⊥)
+    VarBinding("get_argv_len" list.() new_type_var_with_type(I_Function(list.(int_tv) int_tv)) ⊥)
+    VarBinding("get_argv_byte" list.() new_type_var_with_type(I_Function(list.(int_tv int_tv) int_tv)) ⊥)
     VarBinding("unreachable" list.(t_type) new_type_var_with_type(I_Function(list.() t_tv)) ⊥)
     )
     builtin_types
@@ -284,7 +284,7 @@ let. variable_type λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_po
     .Some(t) t
     .None
         error(UnboundVariable(name) file_pos)
-        *.(empty TypeVar(0))
+        *.(list.() TypeVar(0))
 
 let. type_from_name λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos FilePos):
     let. mut, type None
@@ -322,7 +322,7 @@ set. substitute_type_names λ. ∈.(subs List(*.(TypeName TypeVar))) ∈.(tv Typ
             ))
             case. tvi′
             .Some(tvi′) I_Equal(TypeVar(tvi′))
-            .None I_Named(tn empty)
+            .None I_Named(tn list.())
         .I_Named(tn args) I_Named(tn map(args λ.(t: substitute_type_names(subs t))))
         .I_TupleType(types) I_TupleType(map(types λ.(t: substitute_type_names(subs t))))
         .I_Function(params ret) I_Function(map(params λ.(t: substitute_type_names(subs t))) substitute_type_names(subs ret))
@@ -345,10 +345,10 @@ let. context_referenced_types λ. ∈.(context I_Context):
 let. dummy_i_expr I_Expr(I_IntLiteral(0) TypeVar(0) FilePos(" " 0 0))
 let. dummy_i_pattern I_Pattern(I_IntLiteralPattern(0) TypeVar(0) FilePos(" " 0 0))
 
-let. mut, u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(context I_Context) ∈.(this_type TypeVar) ∈.(file_pos FilePos): empty
+let. mut, u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(context I_Context) ∈.(this_type TypeVar) ∈.(file_pos FilePos): list.()
 let. mut, u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context): dummy_i_expr
-let. mut, u_patterns→i_patterns λ. ∈.(u_patterns List(U_Pattern)) ∈.(context I_Context): *.(empty empty)
-let. mut, u_pattern→i_pattern λ. ∈.(u_pattern U_Pattern) ∈.(context I_Context): *.(dummy_i_pattern empty)
+let. mut, u_patterns→i_patterns λ. ∈.(u_patterns List(U_Pattern)) ∈.(context I_Context): *.(list.() list.())
+let. mut, u_pattern→i_pattern λ. ∈.(u_pattern U_Pattern) ∈.(context I_Context): *.(dummy_i_pattern list.())
 let. mut, u_type→i_type λ. ∈.(u_type U_Type) ∈.(context I_Context): I_Any
 
 set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
@@ -356,7 +356,7 @@ set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
     let. U_Expr(u_expr_data file_pos) expr
     let. i_expr_data case. u_expr_data
         .U_IntLiteral(n)
-            set_type(this_type I_Named(int_type empty) file_pos)
+            set_type(this_type I_Named(int_type list.()) file_pos)
             I_IntLiteral(n)
         .U_Ident(name)
             let. *.(type_params type) variable_type(name context file_pos)
@@ -382,7 +382,7 @@ set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
                 let. *.(u_cond u_body) u_case
                 let. i_cond u_expr→i_expr(u_cond context)
                 let. i_body u_expr→i_expr(u_body context)
-                set_type(i_expr_type(i_cond) I_Named(bool_type empty) i_expr_file_pos(i_cond))
+                set_type(i_expr_type(i_cond) I_Named(bool_type list.()) i_expr_file_pos(i_cond))
                 unify_type(this_type i_expr_type(i_body) file_pos)
                 *.(i_cond i_body)
             ))
@@ -392,9 +392,9 @@ set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
         .U_While(u_cond u_body)
             let. i_cond u_expr→i_expr(u_cond context)
             let. i_body u_expr→i_expr(u_body context)
-            set_type(i_expr_type(i_cond) I_Named(bool_type empty) i_expr_file_pos(i_cond))
-            set_type(i_expr_type(i_body) I_TupleType(empty) i_expr_file_pos(i_cond))
-            set_type(this_type I_TupleType(empty) file_pos)
+            set_type(i_expr_type(i_cond) I_Named(bool_type list.()) i_expr_file_pos(i_cond))
+            set_type(i_expr_type(i_body) I_TupleType(list.()) i_expr_file_pos(i_cond))
+            set_type(this_type I_TupleType(list.()) file_pos)
             I_While(i_cond i_body)
         .U_Do(u_statements)
             I_Do(u_statements→i_statements(u_statements context this_type file_pos))
@@ -424,13 +424,13 @@ set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
             I_Case(i_expr i_cases)
         .U_And(u_exprs)
             let. i_exprs map(u_exprs λ.(u_expr: u_expr→i_expr(u_expr context)))
-            for(i_exprs λ.(i_expr: set_type(i_expr_type(i_expr) I_Named(bool_type empty) i_expr_file_pos(i_expr))))
-            set_type(this_type I_Named(bool_type empty) file_pos)
+            for(i_exprs λ.(i_expr: set_type(i_expr_type(i_expr) I_Named(bool_type list.()) i_expr_file_pos(i_expr))))
+            set_type(this_type I_Named(bool_type list.()) file_pos)
             I_And(i_exprs)
         .U_Or(u_exprs)
             let. i_exprs map(u_exprs λ.(u_expr: u_expr→i_expr(u_expr context)))
-            for(i_exprs λ.(i_expr: set_type(i_expr_type(i_expr) I_Named(bool_type empty) i_expr_file_pos(i_expr))))
-            set_type(this_type I_Named(bool_type empty) file_pos)
+            for(i_exprs λ.(i_expr: set_type(i_expr_type(i_expr) I_Named(bool_type list.()) i_expr_file_pos(i_expr))))
+            set_type(this_type I_Named(bool_type list.()) file_pos)
             I_Or(i_exprs)
         .U_ListLiteral(u_exprs)
             let. i_exprs map(u_exprs λ.(u_expr: u_expr→i_expr(u_expr context)))
@@ -439,7 +439,7 @@ set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
             for(i_exprs λ.(i_expr: unify_type(i_expr_type(i_expr) elem_type i_expr_file_pos(i_expr))))
             I_ListLiteral(i_exprs)
         .U_StringLiteral(s)
-            let. elem_type new_type_var_with_type(I_Named(int_type empty))
+            let. elem_type new_type_var_with_type(I_Named(int_type list.()))
             set_type(this_type I_Named(list_type list.(elem_type)) file_pos)
             I_ListLiteral(map(s λ.(c: I_Expr(I_IntLiteral(c) elem_type file_pos))))
     I_Expr(i_expr_data this_type file_pos)
@@ -452,10 +452,10 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
             let. tn new_type_name(Some(name) len(type_params))
             set. context i_add_type_binding(context tn)
             list.(tn)
-        ._ empty
+        ._ list.()
     )))
     let. mut, next_type_name 0
-    let. mut, last_expr_type I_TupleType(empty)
+    let. mut, last_expr_type I_TupleType(list.())
     let. i_statements map(statements λ.(statement:
         let. U_Statement(u_statement_data file_pos) statement
         let. i_statement_data case.(u_statement_data
@@ -470,7 +470,7 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
                 let. type_params \(type_referenced_types(i_expr_type(i_expr)) context_referenced_types(context) =type_var)
                 let. type_names map(type_params λ.(tv:
                     let. tn new_type_name(None 0)
-                    set_type(tv I_Named(tn empty) file_pos)
+                    set_type(tv I_Named(tn list.()) file_pos)
                     tn
                 ))
                 set. context i_add_let_binding(context VarBinding(name type_names i_expr_type(i_expr) ⊥))
@@ -498,14 +498,14 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
                     .Some(name) name
                     .None
                         unreachable("unused_name is None")
-                        empty
+                        list.()
                 error(UnusedTypeParam(unused_name) file_pos)
             else, *.()
             set. context i_add_let_binding(context VarBinding(name type_params i_expr_type(i_expr) ⊥))
             I_Let∀(type_params name i_expr)
         .U_LetMut(name u_expr)
             let. i_expr u_expr→i_expr(u_expr context)
-            set. context i_add_let_binding(context VarBinding(name empty i_expr_type(i_expr) ⊥))
+            set. context i_add_let_binding(context VarBinding(name list.() i_expr_type(i_expr) ⊥))
             I_LetMut(name i_expr)
         .U_TypeStatement(name type_param_names u_variants)
             let. mut, context′ context
@@ -516,7 +516,7 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
             ))
             let. type_name get(type_names next_type_name)
             set. next_type_name +(next_type_name 1)
-            let. type I_Named(type_name map(type_params λ.(tn: new_type_var_with_type(I_Named(tn empty)))))
+            let. type I_Named(type_name map(type_params λ.(tn: new_type_var_with_type(I_Named(tn list.())))))
             let. type_tv new_type_var_with_type(type)
             let. i_variants map(u_variants λ.(variant:
                 let. *.(variant_name u_params) variant
@@ -528,7 +528,7 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
             I_TypeStatement(type_name type_params i_variants)
         .U_Extern(name u_type)
             let. type new_type_var_with_type(u_type→i_type(u_type context))
-            set. context i_add_let_binding(context VarBinding(name empty type ⊥))
+            set. context i_add_let_binding(context VarBinding(name list.() type ⊥))
             I_Extern(name type)
         .U_Set(name u_expr)
             let. *.(type_params var_type) variable_type(name context file_pos)
@@ -554,8 +554,8 @@ set. u_pattern→i_pattern λ. ∈.(u_pattern U_Pattern) ∈.(context I_Context)
     let. U_Pattern(u_pattern_data file_pos) u_pattern
     let. *.(i_pattern_data bindings) case. u_pattern_data
         .U_IntLiteralPattern(n)
-            set_type(this_type I_Named(int_type empty) file_pos)
-            *.(I_IntLiteralPattern(n) empty)
+            set_type(this_type I_Named(int_type list.()) file_pos)
+            *.(I_IntLiteralPattern(n) list.())
         .U_IdentPattern(name)
             case. ctor_type_if_exists(name context)
             .Some(*.(type_params type))
@@ -563,9 +563,9 @@ set. u_pattern→i_pattern λ. ∈.(u_pattern U_Pattern) ∈.(context I_Context)
                 unify_type(ctor_type this_type file_pos)
                 *.(I_VariantPattern(name list.() type_args) list.())
             .None
-                *.(I_IdentPattern(name) list.(VarBinding(name empty this_type ⊥)))
+                *.(I_IdentPattern(name) list.(VarBinding(name list.() this_type ⊥)))
         .U_WildcardPattern
-            *.(I_WildcardPattern empty)
+            *.(I_WildcardPattern list.())
         .U_TuplePattern(u_patterns)
             let. *.(i_patterns bindings) u_patterns→i_patterns(u_patterns context)
             set_type(this_type I_TupleType(map(i_patterns i_pattern_type)) file_pos)

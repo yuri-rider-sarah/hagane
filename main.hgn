@@ -4,11 +4,11 @@ extern. llvm_fin ⇒.(Int Int Int Int Int : *.())
 
 let. argv map_ι(-(get_argc() 1) λ.(i: map_ι(get_argv_len(+(i 1)) λ.(j: get_argv_byte(+(i 1) j)))))
 
-let. mut, filenames empty
+let. mut, filenames list.()
 let. mut, opt_level 0
 let. mut, print_ir_unopt ⊥
 let. mut, print_ir ⊥
-let. mut, cc_args empty
+let. mut, cc_args list.()
 let. mut, output_file "out"
 
 for(argv λ.(arg:
@@ -38,7 +38,7 @@ let. files map(filenames λ.(filename:
     *.(filename vector→list(utf8_decode(file_contents(list→vector(filename)))))
 ))
 let. mut, lexer lexer(files)
-let. mut, u_statements empty
+let. mut, u_statements list.()
 while.
     case. read_token(lexer)
     .*.(_ Eof _ _ _) ⊥
