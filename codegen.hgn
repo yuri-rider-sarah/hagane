@@ -162,9 +162,9 @@ set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(type
             .T_IdentPattern(_) Some(drop(ps 1))
             .T_WildcardPattern Some(drop(ps 1))
             ._ None
-        if. ≠(len(pattern_lists′) 0)
-        then, is_match_exhaustive(pattern_lists′ drop(types 1) context)
-        else, case. get(types 0)
+        ∨.(
+        ∧.(≠(len(pattern_lists′) 0) is_match_exhaustive(pattern_lists′ drop(types 1) context))
+        case. get(types 0)
             .T_Named(ti type_args)
                 let. C_Context(_ ctx_types) context
                 let. *.(type_params variants) get(ctx_types ti)
@@ -200,6 +200,7 @@ set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(type
                 then, is_match_exhaustive(pattern_lists′ ++(subtypes drop(types 1)) context)
                 else, ⊥
             .T_Function(_ _) ⊥
+        )
 
 let. mut, pattern_vars λ. ∈.(pattern T_Pattern): list.()
 set. pattern_vars λ. ∈.(pattern T_Pattern):

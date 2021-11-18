@@ -1,0 +1,12 @@
+※ 2
+
+type. T
+    A
+    B
+
+case. *.(A B)
+    .*.(A A) print_int(1)
+    .*.(_ B) print_int(2)
+    .*.(A B) print_int(3)
+    .*.(B A) print_int(4)
+    .*.(B B) print_int(5)
