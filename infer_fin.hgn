@@ -1,17 +1,17 @@
 type. T_StatementData
     T_ExprStatement(T_Expr)
     T_Let(T_Pattern T_Expr)
-    T_Let∀(Int List(Int) T_Expr)
-    T_LetMut(List(Int) T_Expr)
-    T_TypeStatement(Int List(*.(List(Int) List(T_Type))))
+    T_Let∀(Int T_Expr)
+    T_LetMut(T_Expr)
+    T_TypeStatement(Int List(List(T_Type)))
     T_Extern(List(Int) T_Type)
-    T_Set(List(Int) T_Expr)
+    T_Set(Int T_Expr)
 
 type. T_Statement T_Statement(T_StatementData FilePos)
 
 type. T_ExprData
     T_IntLiteral(Int)
-    T_Ident(List(Int) List(T_Type))
+    T_Ident(Int List(T_Type))
     T_Tuple(List(T_Expr))
     T_Apply(T_Expr List(T_Expr))
     T_If(List(*.(T_Expr T_Expr)) T_Expr)
@@ -27,10 +27,10 @@ type. T_Expr T_Expr(T_ExprData T_Type FilePos)
 
 type. T_PatternData
     T_IntLiteralPattern(Int)
-    T_IdentPattern(List(Int))
+    T_IdentPattern
     T_WildcardPattern
     T_TuplePattern(List(T_Pattern))
-    T_VariantPattern(List(Int) List(T_Pattern) List(T_Type))
+    T_VariantPattern(Int List(T_Pattern) List(T_Type))
     T_ListPattern(List(T_Pattern))
 
 type. T_Pattern T_Pattern(T_PatternData T_Type FilePos)
@@ -76,7 +76,7 @@ set. i_expr→t_expr λ. ∈.(i_expr I_Expr) ∈.(context T_Context):
     let. t_type type_var→t_type(i_type context file_pos)
     let. t_expr_data case. i_expr_data
         .I_IntLiteral(n) T_IntLiteral(n)
-        .I_Ident(name i_type_args) T_Ident(name map(i_type_args λ.(t: type_var→t_type(t context file_pos))))
+        .I_Ident(vi i_type_args) T_Ident(vi map(i_type_args λ.(t: type_var→t_type(t context file_pos))))
         .I_Tuple(i_exprs) T_Tuple(i_exprs→t_exprs(i_exprs context))
         .I_Apply(i_func i_args) T_Apply(i_expr→t_expr(i_func context) i_exprs→t_exprs(i_args context))
         .I_If(i_cases i_else) T_If(map(i_cases λ.(i_case:
@@ -106,20 +106,19 @@ set. i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(c
         let. t_statement_data case. i_statement_data
             .I_ExprStatement(i_expr) T_ExprStatement(i_expr→t_expr(i_expr context))
             .I_Let(i_pattern i_expr) T_Let(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_expr context))
-            .I_Let∀(type_params name i_expr)
+            .I_Let∀(type_params i_expr)
                 let. mut, context′ context
                 for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type))
-                T_Let∀(len(type_params) name i_expr→t_expr(i_expr context′))
-            .I_LetMut(name i_expr) T_LetMut(name i_expr→t_expr(i_expr context))
+                T_Let∀(len(type_params) i_expr→t_expr(i_expr context′))
+            .I_LetMut(i_expr) T_LetMut(i_expr→t_expr(i_expr context))
             .I_TypeStatement(type type_params i_variants)
                 let. mut, context′ context
                 for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type))
-                let. t_variants map‡ i_variants λ. i_variant:
-                    let. *.(name i_param_types) i_variant
-                    *.(name map(i_param_types λ.(i_type: type_var→t_type(i_type context′ file_pos))))
+                let. t_variants map‡ i_variants λ. i_param_types:
+                    map(i_param_types λ.(i_type: type_var→t_type(i_type context′ file_pos)))
                 T_TypeStatement(len(type_params) t_variants)
             .I_Extern(name type) T_Extern(name type_var→t_type(type context file_pos))
-            .I_Set(name i_expr) T_Set(name i_expr→t_expr(i_expr context))
+            .I_Set(vi i_expr) T_Set(vi i_expr→t_expr(i_expr context))
         T_Statement(t_statement_data file_pos)
 
 let. i_patterns→t_patterns λ. ∈.(i_patterns List(I_Pattern)) ∈.(context T_Context):
@@ -129,10 +128,10 @@ set. i_pattern→t_pattern λ. ∈.(i_pattern I_Pattern) ∈.(context T_Context)
     let. I_Pattern(i_pattern_data i_type file_pos) i_pattern
     let. t_pattern_data case. i_pattern_data
         .I_IntLiteralPattern(n) T_IntLiteralPattern(n)
-        .I_IdentPattern(name) T_IdentPattern(name)
+        .I_IdentPattern T_IdentPattern
         .I_WildcardPattern T_WildcardPattern
         .I_TuplePattern(i_patterns) T_TuplePattern(i_patterns→t_patterns(i_patterns context))
-        .I_VariantPattern(ctor i_args i_type_args) T_VariantPattern(ctor i_patterns→t_patterns(i_args context) map(i_type_args λ.(t: type_var→t_type(t context file_pos))))
+        .I_VariantPattern(vi i_args i_type_args) T_VariantPattern(vi i_patterns→t_patterns(i_args context) map(i_type_args λ.(t: type_var→t_type(t context file_pos))))
         .I_ListPattern(i_patterns) T_ListPattern(i_patterns→t_patterns(i_patterns context))
     T_Pattern(t_pattern_data type_var→t_type(i_type context file_pos) file_pos)
 
