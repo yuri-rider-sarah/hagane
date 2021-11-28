@@ -1,8 +1,8 @@
 ※ 20
 let. f λ. x y:
     let. w +(x y)
-    let. g λ. x z:
-        +(x +(y +(z w)))
+    let. g λ. v z:
+        +(v +(y +(z w)))
     g(1 5)
 
 print_int(f(2 6))

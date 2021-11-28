@@ -267,9 +267,13 @@ let. locate_var λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos F
     .Some(i) i
     .None error(UnboundVariable(name) file_pos)
 
-let. i_add_let_binding λ. ∈.(context I_Context) ∈.(var VarBinding):
-    let. I_Context(vars types) context
-    I_Context(push(vars var) types)
+let. i_add_let_binding λ. ∈.(context I_Context) ∈.(var VarBinding) ∈.(file_pos FilePos):
+    let. VarBinding(name _ _ _) var
+    case. locate_var_opt(name context)
+    .None
+        let. I_Context(vars types) context
+        I_Context(push(vars var) types)
+    .Some(_) error(DuplicateVar(name) file_pos)
 
 let. i_add_type_binding λ. ∈.(context I_Context) ∈.(type TypeName):
     let. I_Context(vars types) context
@@ -414,8 +418,8 @@ set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
         .U_Lambda(u_params u_body)
             let. *.(i_params bindings) u_patterns→i_patterns(u_params context)
             let. mut, context′ context
-            for‡ bindings λ. binding:
-                set. context′ i_add_let_binding(context′ binding)
+            for‡ bindings λ. *.(binding file_pos):
+                set. context′ i_add_let_binding(context′ binding file_pos)
             let. i_body u_expr→i_expr(u_body context′)
             set_type(this_type I_Function(map(i_params i_pattern_type) i_expr_type(i_body)) file_pos)
             I_Lambda(i_params i_body)
@@ -425,8 +429,8 @@ set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
                 let. *.(u_pattern u_body) u_case
                 let. *.(i_pattern bindings) u_pattern→i_pattern(u_pattern context)
                 let. mut, context′ context
-                for‡ bindings λ. binding:
-                    set. context′ i_add_let_binding(context′ binding)
+                for‡ bindings λ. *.(binding file_pos):
+                    set. context′ i_add_let_binding(context′ binding file_pos)
                 let. i_body u_expr→i_expr(u_body context′)
                 unify_type(i_pattern_type(i_pattern) i_expr_type(i_expr) i_pattern_file_pos(i_pattern))
                 unify_type(this_type i_expr_type(i_body) file_pos)
@@ -481,13 +485,13 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
                     let. tn new_type_name(None 0)
                     set_type(tv I_Named(tn list.()) file_pos)
                     tn
-                set. context i_add_let_binding(context VarBinding(name type_names i_expr_type(i_expr) ConstVB))
+                set. context i_add_let_binding(context VarBinding(name type_names i_expr_type(i_expr) ConstVB) file_pos)
                 I_Let∀(type_names i_expr)
             ._
                 let. *.(i_pattern bindings) u_pattern→i_pattern(u_pattern context)
                 unify_type(i_expr_type(i_expr) i_pattern_type(i_pattern) i_expr_file_pos(i_expr))
-                for‡ bindings λ. binding:
-                    set. context i_add_let_binding(context binding)
+                for‡ bindings λ. *.(binding file_pos):
+                    set. context i_add_let_binding(context binding file_pos)
                 I_Let(i_pattern i_expr)
         .U_Let∀(type_param_names name u_expr)
             let. mut, context′ context
@@ -505,11 +509,11 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
                     .None internal_error("unused_name is None")
                 error(UnusedTypeParam(unused_name) file_pos)
             else, *.()
-            set. context i_add_let_binding(context VarBinding(name type_params i_expr_type(i_expr) ConstVB))
+            set. context i_add_let_binding(context VarBinding(name type_params i_expr_type(i_expr) ConstVB) file_pos)
             I_Let∀(type_params i_expr)
         .U_LetMut(name u_expr)
             let. i_expr u_expr→i_expr(u_expr context)
-            set. context i_add_let_binding(context VarBinding(name list.() i_expr_type(i_expr) MutVB))
+            set. context i_add_let_binding(context VarBinding(name list.() i_expr_type(i_expr) MutVB) file_pos)
             I_LetMut(i_expr)
         .U_TypeStatement(name type_param_names u_variants)
             let. mut, context′ context
@@ -525,12 +529,12 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
                 let. *.(variant_name u_params) variant
                 let. i_params map(u_params λ.(t: new_type_var_with_type(u_type→i_type(t context′))))
                 let. ctor_type if.(>(len(i_params) 0) new_type_var_with_type(I_Function(i_params type_tv)) type_tv)
-                set. context i_add_let_binding(context VarBinding(variant_name type_params ctor_type CtorVB))
+                set. context i_add_let_binding(context VarBinding(variant_name type_params ctor_type CtorVB) file_pos)
                 i_params
             I_TypeStatement(type_name type_params i_variants)
         .U_Extern(name u_type)
             let. type new_type_var_with_type(u_type→i_type(u_type context))
-            set. context i_add_let_binding(context VarBinding(name list.() type ConstVB))
+            set. context i_add_let_binding(context VarBinding(name list.() type ConstVB) file_pos)
             I_Extern(name type)
         .U_Set(name u_expr)
             let. vi locate_var(name context file_pos)
@@ -566,9 +570,9 @@ set. u_pattern→i_pattern λ. ∈.(u_pattern U_Pattern) ∈.(context I_Context)
                     let. *.(ctor_type type_args) instantiate_params(type_params type)
                     unify_type(ctor_type this_type file_pos)
                     *.(I_VariantPattern(vi list.() type_args) list.())
-                else, error(NotACtor(name) file_pos)
+                else, error(DuplicateVar(name) file_pos)
             .None
-                *.(I_IdentPattern list.(VarBinding(name list.() this_type ConstVB)))
+                *.(I_IdentPattern list.(*.(VarBinding(name list.() this_type ConstVB) file_pos)))
         .U_WildcardPattern
             *.(I_WildcardPattern list.())
         .U_TuplePattern(u_patterns)
