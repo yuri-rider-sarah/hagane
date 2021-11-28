@@ -267,6 +267,25 @@ let. locate_var λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos F
     .Some(i) i
     .None error(UnboundVariable(name) file_pos)
 
+let. type_from_name_opt λ. ∈.(name List(Int)) ∈.(context I_Context):
+    let. mut, type None
+    let. I_Context(_ types) context
+    for‡ types λ. tn:
+        let. TypeName(tni) tn
+        let. *.(name′ _) get(named_types tni)
+        case. name′
+        .Some(name′)
+            if. =list(name′ name =)
+                set. type Some(tn)
+            else, *.()
+        .None *.()
+    type
+
+let. type_from_name λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos FilePos):
+    case. type_from_name_opt(name context)
+    .Some(t) t
+    .None error(UnboundType(name) file_pos)
+
 let. i_add_let_binding λ. ∈.(context I_Context) ∈.(var VarBinding) ∈.(file_pos FilePos):
     let. VarBinding(name _ _ _) var
     case. locate_var_opt(name context)
@@ -275,7 +294,15 @@ let. i_add_let_binding λ. ∈.(context I_Context) ∈.(var VarBinding) ∈.(fil
         I_Context(push(vars var) types)
     .Some(_) error(DuplicateVar(name) file_pos)
 
-let. i_add_type_binding λ. ∈.(context I_Context) ∈.(type TypeName):
+let. i_add_type_binding λ. ∈.(context I_Context) ∈.(type TypeName) ∈.(file_pos FilePos):
+    let. TypeName(tni) type
+    let. *.(name_opt _) get(named_types tni)
+    case. name_opt
+    .Some(name)
+        case. type_from_name_opt(name context)
+        .Some(_) error(DuplicateType(name) file_pos)
+        .None *¡
+    .None *¡
     let. I_Context(vars types) context
     I_Context(vars push(types type))
 
@@ -305,22 +332,6 @@ let. variable_type λ. ∈.(vi Int) ∈.(context I_Context):
     let. I_Context(vars _) context
     let. VarBinding(_ type_params monotype _) get(vars vi)
     *.(type_params monotype)
-
-let. type_from_name λ. ∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos FilePos):
-    let. mut, type None
-    let. I_Context(_ types) context
-    for‡ types λ. tn:
-        let. TypeName(tni) tn
-        let. *.(name′ _) get(named_types tni)
-        case. name′
-        .Some(name′)
-            if. =list(name′ name =)
-                set. type Some(tn)
-            else, *.()
-        .None *.()
-    case. type
-    .Some(t) t
-    .None error(UnboundType(name) file_pos)
 
 let. mut, substitute_type_names λ. ∈.(subs List(*.(TypeName TypeVar))) ∈.(tv TypeVar): tv
 set. substitute_type_names λ. ∈.(subs List(*.(TypeName TypeVar))) ∈.(tv TypeVar):
@@ -464,7 +475,7 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
         case. statement
         .U_Statement(U_TypeStatement(name type_params _) _)
             let. tn new_type_name(Some(name) len(type_params))
-            set. context i_add_type_binding(context tn)
+            set. context i_add_type_binding(context tn file_pos)
             list.(tn)
         ._ list.()
     let. mut, next_type_name 0
@@ -497,7 +508,7 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
             let. mut, context′ context
             let. type_params map‡ type_param_names λ. name:
                 let. tn new_type_name(Some(name) 0)
-                set. context′ i_add_type_binding(context′ tn)
+                set. context′ i_add_type_binding(context′ tn file_pos)
                 tn
             let. i_expr u_expr→i_expr(u_expr context′)
             let. unused_type_params \(type_params type_referenced_type_names(i_expr_type(i_expr)) =type_name)
@@ -519,7 +530,7 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
             let. mut, context′ context
             let. type_params map‡ type_param_names λ. name:
                 let. tn new_type_name(Some(name) 0)
-                set. context′ i_add_type_binding(context tn)
+                set. context′ i_add_type_binding(context tn file_pos)
                 tn
             let. type_name get(type_names next_type_name)
             set. next_type_name +(next_type_name 1)
