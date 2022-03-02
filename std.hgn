@@ -1,3 +1,5 @@
+let. ∀, T: id λ. ∈.(x T): x
+
 let. ¬ λ. ∈.(x Bool):
     if. x ⊥ ⊤
 
@@ -48,6 +50,9 @@ let. ∀, T U: map_opt λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Option(U))):
         .Some(y) set. ys push(ys y)
         .None *.()
     ys
+
+let. ι λ. ∈.(n Int):
+    map_ι(n id)
 
 let. ∀, T: ι* λ. ∈.(xs List(T)):
     map_ι‡ len(xs) λ. i:
@@ -170,3 +175,32 @@ let. int→string λ. ∈.(n Int):
         set. s ++(list.(+(#0 %(n 10))) s)
         set. n /(n 10)
     s
+
+let. ∀, T: repeat λ. ∈.(n Int) ∈.(x T):
+    let. mut, a list.()
+    for_ι(n λ.(_: set.(a push(a x))))
+    a
+
+let. ∀, T: is_permutation λ. ∈.(a1 List(T)) ∈.(a2 List(T)) ∈.(=T ⇒.(T T: Bool)):
+    if. =(len(a1) len(a2))
+        let. mut, found repeat(len(a2) ⊥)
+        let. mut, result ⊤
+        for‡ a1 λ. x1:
+            let. mut, found2 ⊥
+            for‡ ι*(a2) λ. *.(i2 x2):
+                if. ∧.(¬(found2) ¬(get(found i2)) =T(x1 x2))
+                    set. found put(found i2 ⊤)
+                    set. found2 ⊤
+                else, *¡
+            if. ¬(found2)
+                set. result ⊥
+            else, *¡
+        result
+    else,
+        ⊥
+
+let. min λ. ∈.(a Int) ∈.(b Int):
+    if. ≤(a b) a b
+
+let. max λ. ∈.(a Int) ∈.(b Int):
+    if. ≥(a b) a b

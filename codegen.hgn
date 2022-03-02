@@ -26,6 +26,8 @@ extern. codegen_pointer_bitcast ⇒.(Int Int : Int)
 extern. codegen_extract_capture ⇒.(Int Int : Int)
 extern. codegen_ret ⇒.(Int : *.())
 extern. codegen_func_val ⇒.(Int Int Int : Int)
+extern. codegen_null ⇒.(: Int)
+extern. codegen_set_capture ⇒.(Int Int Int Int: *.())
 extern. codegen_create_tagless_ctor ⇒.(Int : Int)
 extern. codegen_create_tagged_ctor ⇒.(Int Int : Int)
 extern. bind_pattern_end ⇒.(Int Int : *.())
@@ -217,6 +219,7 @@ let. free_vars λ. ∈.(expr T_Expr) ∈.(length Int):
                 .T_Let(_ expr) rec(expr)
                 .T_Let∀(_ expr) rec(expr)
                 .T_LetMut(expr) rec(expr)
+                .T_Fun(_ defs) for(defs λ.(*.(_ expr_): rec(expr_)))
                 .T_TypeStatement(_ _) *¡
                 .T_Extern(_ _) *¡
                 .T_Set(vi subexpr)
@@ -237,6 +240,74 @@ let. free_vars λ. ∈.(expr T_Expr) ∈.(length Int):
 let. mut, codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context): 0
 let. mut, codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Context): 0
 let. mut, codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context): *.(list.() list.())
+
+let. codegen_outer_captures λ. ∈.(vars List(C_Variable)) ∈.(is_captured List(Bool)):
+    map_opt‡ ι*(vars) λ. i_var:
+        let. *.(i var) i_var
+        if. get(is_captured i)
+            let. cap case. var
+                .C_ConstVar(val)
+                    codegen_rc_incr(val)
+                    val
+                .C_MutVar(ptr)
+                    codegen_cell_rc_incr(ptr)
+                    ptr
+                .C_Ctor(ctor _)
+                    codegen_rc_incr(ctor)
+                    ctor
+                .C_Unused internal_error("Variable incorrectly marked as unused")
+                .C_DCtor(_) internal_error("Variable incorrectly marked as unused")
+            Some(cap)
+        else, None
+
+let. codegen_function λ.
+    ∈.(params List(T_Pattern))
+    ∈.(body T_Expr)
+    ∈.(context C_Context)
+    ∈.(is_captured List(Bool))
+    ∈.(outer_captures Int)
+    :
+    let. C_Context(vars types) context
+    let. parent_block get_insert_block()
+    let. captures_type get_captures_type(len(params) outer_captures)
+    let. func begin_new_function(len(params))
+    let. inner_captures_box codegen_get_captures()
+    let. inner_captures codegen_pointer_bitcast(inner_captures_box captures_type)
+    let. mut, cap_struct_i 0
+    let. vars′ ++‡
+        map‡ ι*(vars) λ. *.(i var):
+            if. get(is_captured i)
+                let. cap codegen_extract_capture(inner_captures cap_struct_i)
+                set. cap_struct_i +(cap_struct_i 1)
+                let. var′ case. var
+                    .C_ConstVar(_) C_ConstVar(cap)
+                    .C_MutVar(_) C_MutVar(cap)
+                    .C_Ctor(_ tag) C_Ctor(cap tag)
+                    .C_Unused internal_error("Variable incorrectly marked as unused")
+                    .C_DCtor(tag) C_DCtor(tag)
+                codegen_var_rc_incr(var′)
+                var′
+            else,
+                let. var′ case. var
+                    .C_Ctor(_ tag) C_DCtor(tag)
+                    .C_DCtor(tag) C_DCtor(tag)
+                    ._ C_Unused
+                var′
+        concat‡ map_ι‡ len(params) λ. i:
+            let. arg codegen_get_arg(i)
+            let. *.(bound_vars pattern_ends) codegen_pattern_test(arg get(params i) context)
+            if. ≠(len(pattern_ends) 0) internal_error("pattern_ends not empty")
+            else, *.()
+            for(bound_vars codegen_var_rc_incr)
+            codegen_rc_decr(arg)
+            bound_vars
+    let. context′ C_Context(vars′ types)
+    codegen_rc_decr(inner_captures_box)
+    let. ret_val codegen_expr(body context′)
+    for(vars′ codegen_var_rc_decr)
+    codegen_ret(ret_val)
+    set_insert_block(parent_block)
+    *.(codegen_func_val(func outer_captures captures_type) captures_type)
 
 set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
     let. T_Expr(expr_data expr_type file_pos) expr
@@ -343,66 +414,11 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
         codegen_tuple(list→vector(list.()))
     .T_Do(statements) codegen_statements(statements context)
     .T_Lambda(params body)
-        let. parent_block get_insert_block()
         let. C_Context(vars types) context
         let. is_captured free_vars(body len(vars))
-        let. outer_captures list→vector‡ map_opt‡ ι*(vars) λ. i_var:
-            let. *.(i var) i_var
-            if. get(is_captured i)
-                let. cap case. var
-                    .C_ConstVar(val)
-                        codegen_rc_incr(val)
-                        val
-                    .C_MutVar(ptr)
-                        codegen_cell_rc_incr(ptr)
-                        ptr
-                    .C_Ctor(ctor _)
-                        codegen_rc_incr(ctor)
-                        ctor
-                    .C_Unused internal_error("Variable incorrectly marked as unused")
-                    .C_DCtor(_) internal_error("Variable incorrectly marked as unused")
-                Some(cap)
-            else, None
-        let. captures_type get_captures_type(len(params) outer_captures)
-        let. func begin_new_function(len(params))
-        let. inner_captures_box codegen_get_captures()
-        let. inner_captures codegen_pointer_bitcast(inner_captures_box captures_type)
-        let. mut, cap_struct_i 0
-        let. vars′ ++‡
-            map‡ ι*(vars) λ. i_var:
-                let. *.(i var) i_var
-                if. get(is_captured i)
-                    let. cap codegen_extract_capture(inner_captures cap_struct_i)
-                    set. cap_struct_i +(cap_struct_i 1)
-                    let. var′ case. var
-                        .C_ConstVar(_) C_ConstVar(cap)
-                        .C_MutVar(_) C_MutVar(cap)
-                        .C_Ctor(_ tag) C_Ctor(cap tag)
-                        .C_Unused internal_error("Variable incorrectly marked as unused")
-                        .C_DCtor(tag) C_DCtor(tag)
-                    codegen_var_rc_incr(var′)
-                    var′
-                else,
-                    let. var′ case. var
-                        .C_Ctor(_ tag) C_DCtor(tag)
-                        .C_DCtor(tag) C_DCtor(tag)
-                        ._ C_Unused
-                    var′
-            concat‡ map_ι‡ len(params) λ. i:
-                let. arg codegen_get_arg(i)
-                let. *.(bound_vars pattern_ends) codegen_pattern_test(arg get(params i) context)
-                if. ≠(len(pattern_ends) 0) internal_error("pattern_ends not empty")
-                else, *.()
-                for(bound_vars codegen_var_rc_incr)
-                codegen_rc_decr(arg)
-                bound_vars
-        let. context′ C_Context(vars′ types)
-        codegen_rc_decr(inner_captures_box)
-        let. ret_val codegen_expr(body context′)
-        for(vars′ codegen_var_rc_decr)
-        codegen_ret(ret_val)
-        set_insert_block(parent_block)
-        codegen_func_val(func outer_captures captures_type)
+        let. outer_captures list→vector(codegen_outer_captures(vars is_captured))
+        let. *.(func _) codegen_function(params body context is_captured outer_captures)
+        func
     .T_Case(expr cases)
         let. T_Expr(_ expr_type expr_file_pos) expr
         if. ¬(is_match_exhaustive(map(cases λ.(case:
@@ -491,6 +507,25 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
             set. context c_add_let_binding(context C_ConstVar(codegen_expr(expr context)))
         .T_LetMut(expr)
             set. context c_add_let_binding(context C_MutVar(codegen_create_mut_var(codegen_expr(expr context))))
+        .T_Fun(type_params defs)
+            let. parent_block get_insert_block()
+            let. C_Context(vars types) context
+            let. captures_len +(len(vars) len(defs))
+            let. mut, is_captured repeat(captures_len ⊥)
+            for‡ defs λ. *.(_ body): set. is_captured case. zip(is_captured free_vars(body captures_len))
+                .Some(abs) map(abs λ.(*.(a b): ∨.(a b)))
+                .None internal_error("free_vars returned different lengths")
+            let. ext_outer_captures codegen_outer_captures(vars is_captured)
+            let. outer_captures list→vector(++(ext_outer_captures map(defs λ.(_: codegen_null()))))
+            let. mut, context′ context
+            for‡ defs λ. _: set. context′ c_add_let_binding(context′ C_ConstVar(0)) ※ value is irrelevant since it will be replaced inside function
+            let. funs map‡ defs λ. *.(params body):
+                codegen_function(params body context′ is_captured outer_captures)
+            for‡ funs λ. *.(fun1 type1):
+                for‡ ι*(funs) λ. *.(i *.(fun2 _)):
+                    codegen_rc_incr(fun2)
+                    codegen_set_capture(fun1 type1 +(len(ext_outer_captures) i) fun2)
+            for‡ funs λ. *.(fun _): set. context c_add_let_binding(context C_ConstVar(fun))
         .T_TypeStatement(num_params variants)
             if. =(len(variants) 1)
                 let. params get(variants 0)

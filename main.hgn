@@ -36,7 +36,7 @@ else, *.()
 let. files map‡ filenames λ. filename:
     *.(filename vector→list(utf8_decode(file_contents(list→vector(filename)))))
 let. mut, lexer lexer(files)
-let. mut, u_statements list.()
+let. mut, r_exprs list.()
 while.
     case. read_token(lexer)
     .*.(_ Eof _ _ _) ⊥
@@ -44,8 +44,8 @@ while.
 do,
     let. *.(lexer′ r_expr) read_expr(lexer)
     set. lexer lexer′
-    let. u_statement r_expr→u_statement(r_expr)
-    set. u_statements push(u_statements u_statement)
+    set. r_exprs push(r_exprs r_expr)
+let. u_statements r_exprs→u_statements(r_exprs)
 let. i_statements u_statements→i_statements(u_statements empty_i_context new_type_var() FilePos(get(argv 0) 1 1))
 let. t_statements i_statements→t_statements(i_statements empty_t_context)
 llvm_init(opt_level)

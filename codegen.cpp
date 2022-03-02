@@ -448,6 +448,15 @@ extern "C" Value *codegen_func_val(Function *func, vector<Value *> *captures, Ty
     return cg_bitcast(val, box_type);
 }
 
+extern "C" Value *codegen_null() {
+    return ConstantPointerNull::get((PointerType *)box_type);
+}
+
+extern "C" void codegen_set_capture(Value *fun, Type *type, u64 i, Value *val) {
+    fun = cg_bitcast(fun, pointer_type(type), "SCBITCAST");
+    cg_store(val, cg_sgep(fun, 1 + i));
+}
+
 static Value *codegen_create_ctor_(u64 num_params, i64 tag) {
     if (num_params > 0) {
         FunctionType *ctor_type = get_function_type(num_params);

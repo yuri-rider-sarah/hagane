@@ -3,6 +3,7 @@ type. T_StatementData
     T_Let(T_Pattern T_Expr)
     T_Let∀(Int T_Expr)
     T_LetMut(T_Expr)
+    T_Fun(Int List(*.(List(T_Pattern) T_Expr)))
     T_TypeStatement(Int List(List(T_Type)))
     T_Extern(List(Int) T_Type)
     T_Set(Int T_Expr)
@@ -117,6 +118,12 @@ set. i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(c
                 let. t_variants map‡ i_variants λ. i_param_types:
                     map(i_param_types λ.(i_type: type_var→t_type(i_type context′ file_pos)))
                 T_TypeStatement(len(type_params) t_variants)
+            .I_Fun(type_params i_defs)
+                let. mut, context′ context
+                for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type))
+                let. t_defs map‡ i_defs λ. *.(i_params i_body):
+                    *.(map(i_params λ.(p: i_pattern→t_pattern(p context′))) i_expr→t_expr(i_body context′))
+                T_Fun(len(type_params) t_defs)
             .I_Extern(name type) T_Extern(name type_var→t_type(type context file_pos))
             .I_Set(vi i_expr) T_Set(vi i_expr→t_expr(i_expr context))
         T_Statement(t_statement_data file_pos)
