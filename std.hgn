@@ -204,3 +204,16 @@ let. min λ. ∈.(a Int) ∈.(b Int):
 
 let. max λ. ∈.(a Int) ∈.(b Int):
     if. ≥(a b) a b
+
+let. sort λ. ∈.(a List(Int)):
+    let. mut, a a
+    let. mut, i 0
+    while. <(i len(a))
+        let. mut, j i
+        while. ∧.(>(j 0) >(get(a -(j 1)) get(a j)))
+            let. t get(a j)
+            set. a put(a j get(a -(j 1)))
+            set. a put(a -(j 1) t)
+            set. j -(j 1)
+        set. i +(i 1)
+    a

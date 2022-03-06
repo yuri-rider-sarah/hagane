@@ -544,7 +544,7 @@ let. get_sccs λ. ∈.(graph List(List(Int))):
         if. ¬(get(visited i))
         then, rec(i)
         else, *.()
-    sccs
+    map(sccs sort)
 
 set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(context I_Context) ∈.(this_type TypeVar) ∈.(file_pos FilePos):
     let. mut, context context
