@@ -318,13 +318,15 @@ set. r_exprs→u_statements λ. ∈.(r_exprs List(R_Expr)):
                 let. mut, defs list.(parse_fun_clauses(clauses file_pos))
                 let. mut, read_fun_loop λ.: *¡
                 set. read_fun_loop λ.:
-                    let. R_Expr(r_expr_data file_pos) get(r_exprs i)
-                    case. r_expr_data
-                    .R_Special("fun" clauses)
-                        set. i +(i 1)
-                        set. defs push(defs parse_fun_clauses(clauses file_pos))
-                        read_fun_loop()
-                    ._
+                    if. <(i len(r_exprs))
+                        let. R_Expr(r_expr_data file_pos) get(r_exprs i)
+                        case. r_expr_data
+                        .R_Special("fun" clauses)
+                            set. i +(i 1)
+                            set. defs push(defs parse_fun_clauses(clauses file_pos))
+                            read_fun_loop()
+                        ._
+                    else,
                 read_fun_loop()
                 U_Fun(defs)
             ."type" case. group_clauses(clauses)
