@@ -16,7 +16,7 @@
 ※ 1
 ※ 0
 ※ 1
-let. print_bool λ. b: print_int(if.(b 1 0))
+fun. print_bool(b) print_int(if.(b 1 0))
 
 print_bool(∧.(>(1 0) =(1 0) <(1 0)))
 print_bool(∨.(>(1 0) =(1 0) <(1 0)))

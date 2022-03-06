@@ -1,5 +1,5 @@
 ※ 4
-let. f λ. a b c d e:
+fun. f(a b c d e)
     d
 
 print_int(f(1 2 3 4 5))

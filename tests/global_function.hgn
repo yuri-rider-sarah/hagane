@@ -1,8 +1,8 @@
 ※ 9
-let. g λ. x y z:
+fun. g(x y z)
     -(+(*(x y) *(z z)) 2)
 
-let. f λ. x y:
+fun. f(x y)
     g(x y +(x y))
 
 print_int(f(1 2))

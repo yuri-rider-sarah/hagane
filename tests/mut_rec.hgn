@@ -1,0 +1,13 @@
+※ 1
+※ 0
+
+fun. is_even(n)
+    if. =(n 0) 1
+    else, is_odd(-(n 1))
+
+fun. is_odd(n)
+    if. =(n 0) 0
+    else, is_even(-(n 1))
+
+print_int(is_even(10))
+print_int(is_odd(10))

@@ -1,6 +1,5 @@
 ※ 4660046610375530309
-let. mut, fib λ. n: n
-set. fib λ. n:
+fun. fib(n)
     let. mut, a 0
     let. mut, b 1
     let. mut, i 0

@@ -1,7 +1,7 @@
 ※ 20
-let. f λ. x y:
+fun. f(x y)
     let. w +(x y)
-    let. g λ. v z:
+    fun. g(v z)
         +(v +(y +(z w)))
     g(1 5)
 

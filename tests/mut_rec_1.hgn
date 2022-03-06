@@ -1,0 +1,15 @@
+※ 1
+※ 0
+
+fun. is_even(n)
+    if. =(n 0) id(1)
+    else, is_odd(-(n 1))
+
+fun. id(x) x
+
+fun. is_odd(n)
+    if. id(=)(n 0) 0
+    else, is_even(-(n 1))
+
+print_int(is_even(10))
+print_int(is_odd(10))
