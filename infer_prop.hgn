@@ -470,15 +470,15 @@ set. u_expr→i_expr λ. ∈.(expr U_Expr) ∈.(context I_Context):
             I_ListLiteral(map(s λ.(c: I_Expr(I_IntLiteral(c) elem_type file_pos))))
     I_Expr(i_expr_data this_type file_pos)
 
-let. get_call_graph λ. ∈.(defs List(*.(List(Int) List(U_Pattern) U_Expr))):
-    map‡ defs λ. *.(_ _ body):
+let. get_call_graph λ. ∈.(defs List(*.(List(Int) Option(List(List(Int))) List(U_Pattern) U_Expr))):
+    map‡ defs λ. *.(_ _ _ body):
         let. mut, is_referenced list.()
         for_ι(len(defs) λ.(_: set. is_referenced push(is_referenced ⊥)))
         let. mut, rec λ. U_Expr(_ _): *¡
         set. rec λ. U_Expr(expr_data _):
             case. expr_data
             .U_IntLiteral(_) *.()
-            .U_Ident(name) for‡ ι*(defs) λ. *.(i *.(def_name _ _)):
+            .U_Ident(name) for‡ ι*(defs) λ. *.(i *.(def_name _ _ _)):
                 if. =list(name def_name =)
                     set. is_referenced put(is_referenced i ⊤)
                 else, *.()
@@ -495,7 +495,7 @@ let. get_call_graph λ. ∈.(defs List(*.(List(Int) List(U_Pattern) U_Expr))):
                 .U_Let(_ expr) rec(expr)
                 .U_Let∀(_ _ expr) rec(expr)
                 .U_LetMut(_ expr) rec(expr)
-                .U_Fun(defs) for(defs λ.(*.(_ _ e): rec(e)))
+                .U_Fun(defs) for(defs λ.(*.(_ _ _ e): rec(e)))
                 .U_TypeStatement(_ _ _) *.()
                 .U_Extern(_ _) *.()
                 .U_Set(_ expr) rec(expr)
@@ -610,33 +610,75 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
             map‡ components λ. component:
                 let. mut, context′ context
                 for‡ component λ. i:
-                    let. *.(name _ _) get(u_defs i)
+                    let. *.(name _ _ _) get(u_defs i)
                     set. context′ i_add_let_binding(context′ VarBinding(name list.() get(fun_types i) ConstVB) file_pos)
-                let. i_defs map‡ component λ. i:
-                    let. *.(_ u_params u_body) get(u_defs i)
-                    let. *.(i_params bindings) u_patterns→i_patterns(u_params context′)
-                    let. mut, context″ context′
-                    for‡ bindings λ. *.(binding file_pos):
-                        set. context″ i_add_let_binding(context″ binding file_pos)
-                    let. i_body u_expr→i_expr(u_body context″)
-                    set_type(get(fun_types i) I_Function(map(i_params i_pattern_type) i_expr_type(i_body)) file_pos)
-                    *.(i_params i_body)
-                let. fun_type_params map(component λ.(i: \(type_referenced_types(get(fun_types i)) context_referenced_types(context) =type_var)))
-                let. type_params get(fun_type_params 0)
-                for‡ ι*(fun_type_params) λ. *.(i2 type_params′):
-                    if. ¬(is_permutation(type_params type_params′ =type_var))
-                        let. *.(name1 _ _) get(u_defs get(component 0))
-                        let. *.(name2 _ _) get(u_defs get(component i2))
+                let. *.(_ type_param_names _ _) get(u_defs get(component 0))
+                for‡ component λ. i:
+                    let. *.(_ type_param_names′ _ _) get(u_defs i)
+                    let. equal case. *.(type_param_names type_param_names′)
+                        .*.(None None) ⊤
+                        .*.(Some(names) Some(names′)) =list(names names′ =list_int)
+                        ._ ⊥
+                    if. ¬(equal)
+                        let. *.(name1 _ _ _) get(u_defs get(component 0))
+                        let. *.(name2 _ _ _) get(u_defs i)
                         error(MutRecPolyDifferentType(name1 name2) file_pos)
                     else, *¡
-                let. type_names map‡ type_params λ. tv:
-                    let. tn new_type_name(None 0)
-                    set_type(tv I_Named(tn list.()) file_pos)
-                    tn
-                for‡ component λ. i:
-                    let. *.(name _ _) get(u_defs i)
-                    set. context i_add_let_binding(context VarBinding(name type_names get(fun_types i) ConstVB) file_pos)
-                I_Fun(type_names i_defs)
+                case. type_param_names
+                .Some(type_param_names)
+                    let. type_params map‡ type_param_names λ. name:
+                        let. tn new_type_name(Some(name) 0)
+                        set. context′ i_add_type_binding(context′ tn file_pos)
+                        tn
+                    let. i_defs map‡ component λ. i:
+                        let. *.(_ _ u_params u_body) get(u_defs i)
+                        let. *.(i_params bindings) u_patterns→i_patterns(u_params context′)
+                        let. mut, context″ context′
+                        for‡ bindings λ. *.(binding file_pos):
+                            set. context″ i_add_let_binding(context″ binding file_pos)
+                        let. i_body u_expr→i_expr(u_body context″)
+                        set_type(get(fun_types i) I_Function(map(i_params i_pattern_type) i_expr_type(i_body)) file_pos)
+                        *.(i_params i_body)
+                    for‡ component λ. i:
+                        let. unused_type_params \(type_params type_referenced_type_names(get(fun_types i)) =type_name)
+                        if. ≠(len(unused_type_params) 0)
+                            let. TypeName(tni) get(unused_type_params 0)
+                            let. *.(unused_name _) get(named_types tni)
+                            let. unused_name case. unused_name
+                                .Some(name) name
+                                .None internal_error("unused_name is None")
+                            error(UnusedTypeParam(unused_name) file_pos)
+                        else, *.()
+                    for‡ component λ. i:
+                        let. *.(name _ _ _) get(u_defs i)
+                        set. context i_add_let_binding(context VarBinding(name type_params get(fun_types i) ConstVB) file_pos)
+                    I_Fun(type_params i_defs)
+                .None
+                    let. i_defs map‡ component λ. i:
+                        let. *.(_ _ u_params u_body) get(u_defs i)
+                        let. *.(i_params bindings) u_patterns→i_patterns(u_params context′)
+                        let. mut, context″ context′
+                        for‡ bindings λ. *.(binding file_pos):
+                            set. context″ i_add_let_binding(context″ binding file_pos)
+                        let. i_body u_expr→i_expr(u_body context″)
+                        set_type(get(fun_types i) I_Function(map(i_params i_pattern_type) i_expr_type(i_body)) file_pos)
+                        *.(i_params i_body)
+                    let. fun_type_params map(component λ.(i: \(type_referenced_types(get(fun_types i)) context_referenced_types(context) =type_var)))
+                    let. type_params get(fun_type_params 0)
+                    for‡ ι*(fun_type_params) λ. *.(i2 type_params′):
+                        if. ¬(is_permutation(type_params type_params′ =type_var))
+                            let. *.(name1 _ _ _) get(u_defs get(component 0))
+                            let. *.(name2 _ _ _) get(u_defs get(component i2))
+                            error(MutRecPolyDifferentType(name1 name2) file_pos)
+                        else, *¡
+                    let. type_names map‡ type_params λ. tv:
+                        let. tn new_type_name(None 0)
+                        set_type(tv I_Named(tn list.()) file_pos)
+                        tn
+                    for‡ component λ. i:
+                        let. *.(name _ _ _) get(u_defs i)
+                        set. context i_add_let_binding(context VarBinding(name type_names get(fun_types i) ConstVB) file_pos)
+                    I_Fun(type_names i_defs)
         .U_TypeStatement(name type_param_names u_variants)
             let. mut, context′ context
             let. type_params map‡ type_param_names λ. name:

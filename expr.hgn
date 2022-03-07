@@ -3,7 +3,7 @@ type. U_StatementData
     U_Let(U_Pattern U_Expr)
     U_Let∀(List(List(Int)) List(Int) U_Expr)
     U_LetMut(List(Int) U_Expr)
-    U_Fun(List(*.(List(Int) List(U_Pattern) U_Expr)))
+    U_Fun(List(*.(List(Int) Option(List(List(Int))) List(U_Pattern) U_Expr)))
     U_TypeStatement(List(Int) List(List(Int)) List(*.(List(Int) List(U_Type))))
     U_Extern(List(Int) U_Type)
     U_Set(List(Int) U_Expr)
@@ -282,10 +282,25 @@ let. parse_fun_clauses λ. ∈.(clauses List(Clause)) ∈.(file_pos FilePos):
         let. *.(call body) split_off(call+body)
         case. call
         .R_Expr(R_Apply(R_Expr(R_Ident(name) _) r_params) _)
-            *.(name map(r_params λ. param: case. param
-                .ExprClause(expr) r_expr→u_pattern(expr)
-                ._ error(InvalidExpr(None) file_pos))
-            block→u_expr(body file_pos))
+            *.
+                name
+                None
+                map‡ r_params λ. param: case. param
+                    .ExprClause(expr) r_expr→u_pattern(expr)
+                    ._ error(InvalidExpr(None) file_pos)
+                block→u_expr(body file_pos)
+        ._ invalid_expr()
+    .ClauseGrouping(list.() list.(ClauseGroup(NamedSep("∀") type_params) ClauseGroup(ColonSep call+body)))
+        let. *.(call body) split_off(call+body)
+        case. call
+        .R_Expr(R_Apply(R_Expr(R_Ident(name) _) r_params) _)
+            *.
+                name
+                Some(map(type_params λ.(e: r_expr→string(e "fun" file_pos))))
+                map‡ r_params λ. param: case. param
+                    .ExprClause(expr) r_expr→u_pattern(expr)
+                    ._ error(InvalidExpr(None) file_pos)
+                block→u_expr(body file_pos)
         ._ invalid_expr()
     ._ invalid_expr()
 

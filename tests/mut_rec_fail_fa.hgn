@@ -1,0 +1,5 @@
+※-cfail
+
+fun. ∀, : f() g(unreachable())
+
+fun. ∀, T: g(∈.(x T)) f()
