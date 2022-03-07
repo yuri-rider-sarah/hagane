@@ -1,7 +1,6 @@
 type. U_StatementData
     U_ExprStatement(U_Expr)
     U_Let(U_Pattern U_Expr)
-    U_Let∀(List(List(Int)) List(Int) U_Expr)
     U_LetMut(List(Int) U_Expr)
     U_Fun(List(*.(List(Int) Option(List(List(Int))) List(U_Pattern) U_Expr)))
     U_TypeStatement(List(Int) List(List(Int)) List(*.(List(Int) List(U_Type))))
@@ -322,9 +321,6 @@ set. r_exprs→u_statements λ. ∈.(r_exprs List(R_Expr)):
                 .ClauseGrouping(pattern+body list.())
                     let. *.(pattern body) split_off(pattern+body)
                     U_Let(r_expr→u_pattern(pattern) block→u_expr(body))
-                .ClauseGrouping(list.() list.(ClauseGroup(NamedSep("∀") type_params) ClauseGroup(ColonSep name+body)))
-                    let. *.(name body) split_off(name+body)
-                    U_Let∀(map(type_params r_expr→string) r_expr→string(name) block→u_expr(body))
                 .ClauseGrouping(list.() list.(ClauseGroup(NamedSep("mut") name+body)))
                     let. *.(name body) split_off(name+body)
                     U_LetMut(r_expr→string(name) block→u_expr(body))

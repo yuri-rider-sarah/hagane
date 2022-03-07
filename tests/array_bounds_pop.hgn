@@ -1,2 +1,2 @@
 ※-fail
-let. a pop(empty)
+let. a pop(∈.(empty List(Int)))

@@ -1,7 +1,6 @@
 type. T_StatementData
     T_ExprStatement(T_Expr)
     T_Let(T_Pattern T_Expr)
-    T_Let∀(Int T_Expr)
     T_LetMut(T_Expr)
     T_Fun(Int List(*.(List(T_Pattern) T_Expr)))
     T_TypeStatement(Int List(List(T_Type)))
@@ -107,10 +106,6 @@ set. i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(c
         let. t_statement_data case. i_statement_data
             .I_ExprStatement(i_expr) T_ExprStatement(i_expr→t_expr(i_expr context))
             .I_Let(i_pattern i_expr) T_Let(i_pattern→t_pattern(i_pattern context) i_expr→t_expr(i_expr context))
-            .I_Let∀(type_params i_expr)
-                let. mut, context′ context
-                for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type))
-                T_Let∀(len(type_params) i_expr→t_expr(i_expr context′))
             .I_LetMut(i_expr) T_LetMut(i_expr→t_expr(i_expr context))
             .I_TypeStatement(type type_params i_variants)
                 let. mut, context′ context

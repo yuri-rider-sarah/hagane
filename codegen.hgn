@@ -217,7 +217,6 @@ let. free_vars λ. ∈.(expr T_Expr) ∈.(length Int):
                 case. statement_data
                 .T_ExprStatement(expr) rec(expr)
                 .T_Let(_ expr) rec(expr)
-                .T_Let∀(_ expr) rec(expr)
                 .T_LetMut(expr) rec(expr)
                 .T_Fun(_ defs) for(defs λ.(*.(_ expr_): rec(expr_)))
                 .T_TypeStatement(_ _) *¡
@@ -501,10 +500,6 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
                 codegen_var_rc_incr(var)
                 set. context c_add_let_binding(context var)
             codegen_rc_decr(val)
-        .T_Let∀(type_params expr)
-            let. mut, context′ context
-            for_ι(type_params λ.(i: set.(context′ c_add_type_binding(context′ list.() list.(list.())))))
-            set. context c_add_let_binding(context C_ConstVar(codegen_expr(expr context)))
         .T_LetMut(expr)
             set. context c_add_let_binding(context C_MutVar(codegen_create_mut_var(codegen_expr(expr context))))
         .T_Fun(type_params defs)

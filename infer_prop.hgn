@@ -1,7 +1,6 @@
 type. I_StatementData
     I_ExprStatement(I_Expr)
     I_Let(I_Pattern I_Expr)
-    I_Let∀(List(TypeName) I_Expr)
     I_LetMut(I_Expr)
     I_Fun(List(TypeName) List(*.(List(I_Pattern) I_Expr)))
     I_TypeStatement(TypeName List(TypeName) List(List(TypeVar)))
@@ -493,7 +492,6 @@ let. get_call_graph λ. ∈.(defs List(*.(List(Int) Option(List(List(Int))) List
                 case. statement_data
                 .U_ExprStatement(expr) rec(expr)
                 .U_Let(_ expr) rec(expr)
-                .U_Let∀(_ _ expr) rec(expr)
                 .U_LetMut(_ expr) rec(expr)
                 .U_Fun(defs) for(defs λ.(*.(_ _ _ e): rec(e)))
                 .U_TypeStatement(_ _ _) *.()
@@ -566,39 +564,11 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
             list.(I_ExprStatement(i_expr))
         .U_Let(u_pattern u_expr)
             let. i_expr u_expr→i_expr(u_expr context)
-            case. u_pattern
-            .U_Pattern(U_IdentPattern(name) _)
-                let. type_params \(type_referenced_types(i_expr_type(i_expr)) context_referenced_types(context) =type_var)
-                let. type_names map‡ type_params λ. tv:
-                    let. tn new_type_name(None 0)
-                    set_type(tv I_Named(tn list.()) file_pos)
-                    tn
-                set. context i_add_let_binding(context VarBinding(name type_names i_expr_type(i_expr) ConstVB) file_pos)
-                list.(I_Let∀(type_names i_expr))
-            ._
-                let. *.(i_pattern bindings) u_pattern→i_pattern(u_pattern context)
-                unify_type(i_expr_type(i_expr) i_pattern_type(i_pattern) i_expr_file_pos(i_expr))
-                for‡ bindings λ. *.(binding file_pos):
-                    set. context i_add_let_binding(context binding file_pos)
-                list.(I_Let(i_pattern i_expr))
-        .U_Let∀(type_param_names name u_expr)
-            let. mut, context′ context
-            let. type_params map‡ type_param_names λ. name:
-                let. tn new_type_name(Some(name) 0)
-                set. context′ i_add_type_binding(context′ tn file_pos)
-                tn
-            let. i_expr u_expr→i_expr(u_expr context′)
-            let. unused_type_params \(type_params type_referenced_type_names(i_expr_type(i_expr)) =type_name)
-            if. ≠(len(unused_type_params) 0)
-                let. TypeName(tni) get(unused_type_params 0)
-                let. *.(unused_name _) get(named_types tni)
-                let. unused_name case. unused_name
-                    .Some(name) name
-                    .None internal_error("unused_name is None")
-                error(UnusedTypeParam(unused_name) file_pos)
-            else, *.()
-            set. context i_add_let_binding(context VarBinding(name type_params i_expr_type(i_expr) ConstVB) file_pos)
-            list.(I_Let∀(type_params i_expr))
+            let. *.(i_pattern bindings) u_pattern→i_pattern(u_pattern context)
+            unify_type(i_expr_type(i_expr) i_pattern_type(i_pattern) i_expr_file_pos(i_expr))
+            for‡ bindings λ. *.(binding file_pos):
+                set. context i_add_let_binding(context binding file_pos)
+            list.(I_Let(i_pattern i_expr))
         .U_LetMut(name u_expr)
             let. i_expr u_expr→i_expr(u_expr context)
             set. context i_add_let_binding(context VarBinding(name list.() i_expr_type(i_expr) MutVB) file_pos)

@@ -5,27 +5,27 @@
 ※ 1
 ※ 0
 
-let. ∀, T U: map λ. ∈.(a List(T)) ∈.(f ⇒.(T : U)):
+fun. ∀, T U: map(∈.(a List(T)) ∈.(f ⇒.(T : U)))
     let. mut, a′ empty
     while. <(len(a′) len(a))
         set. a′ push(a′ f(get(a len(a′))))
     a′
 
-let. ∀, T: foreach λ. ∈.(a List(T)) ∈.(f ⇒.(T : *.())):
+fun. ∀, T: foreach(∈.(a List(T)) ∈.(f ⇒.(T : *.())))
     let. mut, i 0
     while. <(i len(a))
         f(get(a i))
         set. i +(i 1)
     *.()
 
-let. ∀, T U V: ∘ λ. ∈.(f ⇒.(U : V)) ∈.(g ⇒.(T : U)):
+fun. ∀, T U V: ∘(∈.(f ⇒.(U : V)) ∈.(g ⇒.(T : U)))
     λ.(∈.(x T): f(g(x)))
 
-let. succ λ. ∈.(n Int): +(n 1)
+fun. succ(∈.(n Int)) +(n 1)
 
-let. square λ. ∈.(n Int): *(n n)
+fun. square(∈.(n Int)) *(n n)
 
-let. bool→int λ. ∈.(b Bool):
+fun. bool→int(∈.(b Bool))
     if.(b then, 1 else, 0)
 
 let. mut, a empty
