@@ -3,12 +3,6 @@ let. ∀, T: id λ. ∈.(x T): x
 let. ¬ λ. ∈.(x Bool):
     if. x ⊥ ⊤
 
-let. ∧ λ. ∈.(x Bool) ∈.(y Bool):
-    if. x y ⊥
-
-let. ∨ λ. ∈.(x Bool) ∈.(y Bool):
-    if. x ⊤ y
-
 type. ∀, T: Option
     Some(T)
     None

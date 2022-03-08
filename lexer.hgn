@@ -40,7 +40,7 @@ let. read_char λ. ∈.(chars CharReader):
         let. c get(cs char_i)
         let. *.(file_i′ char_i′ line′ col′)
             if. <(+(char_i 1) len(cs))
-                let. *.(line′ col′) if. ∧(∈(c newline_chars =) ∨(≠(c 13) ≠(get(cs +(char_i 1)) #\n))) ※ don't count CR as end of line if followed by LF
+                let. *.(line′ col′) if. ∧.(∈(c newline_chars =) ∨.(≠(c 13) ≠(get(cs +(char_i 1)) #\n))) ※ don't count CR as end of line if followed by LF
                     then, *.(+(line 1) 1)
                     else, *.(line +(col 1))
                 *.(file_i +(char_i 1) line′ col′)
@@ -96,7 +96,7 @@ set. read_int_literal λ. ∈.(lexer Lexer) ∈.(n Int):
     let. *.(lexer′ c file_pos) read_char(lexer)
     case. c
     .Some(c)
-        if. ∧(≤(#0 c) ≤(c #9))
+        if. ∧.(≤(#0 c) ≤(c #9))
             set. lexer lexer′
             read_int_literal(lexer +(*(n 10) -(c #0)))
         if, =(c #~)
@@ -125,7 +125,7 @@ let. check_after_ident λ. ∈.(lexer Lexer):
     let. *.(_ c file_pos) read_char(lexer)
     case. c
     .Some(c)
-        if. ∨(is_white_space(c) ∈(c after_ident_chars =))
+        if. ∨.(is_white_space(c) ∈(c after_ident_chars =))
             *¡
         else, error(UnexpectedChar(Some(c)) file_pos)
     .None
@@ -155,7 +155,7 @@ let. read_token_char λ. ∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_
         check_after_ident(lexer)
         return(CharLiteral(c))
     .Some(c)
-        if. ∧(≤(#0 c) ≤(c #9))
+        if. ∧.(≤(#0 c) ≤(c #9))
             let. *.(lexer′ n) read_int_literal(lexer -(c #0))
             set. lexer lexer′
             check_after_ident(lexer)
