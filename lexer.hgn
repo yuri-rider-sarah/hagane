@@ -126,10 +126,10 @@ let. check_after_ident λ. ∈.(lexer Lexer):
     case. c
     .Some(c)
         if. ∨(is_white_space(c) ∈(c after_ident_chars =))
-            *.()
+            *¡
         else, error(UnexpectedChar(Some(c)) file_pos)
     .None
-        *.()
+        *¡
 
 let. read_token_char λ. ∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_depth Int):
     let. mut, lexer lexer
@@ -144,7 +144,7 @@ let. read_token_char λ. ∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_
     .Some(#‡) return(CallToken)
     .Some(#†) return(CallOneToken)
     .Some(#")
-        let. *.(lexer′ str) read_string_literal_contents(lexer list.())
+        let. *.(lexer′ str) read_string_literal_contents(lexer list¡)
         set. lexer lexer′
         check_after_ident(lexer)
         return(StringLiteral(str))
@@ -202,7 +202,7 @@ set. skip_comment λ. ∈.(lexer Lexer):
             skip_comment(lexer)
     .*.(_ None _) lexer
 
-let. mut, read_token′ λ. ∈.(lexer Lexer) ∈.(this_indent Option(Int)): *.(lexer Eof ⊥ 0 FilePos(list.() 0 0))
+let. mut, read_token′ λ. ∈.(lexer Lexer) ∈.(this_indent Option(Int)): *.(lexer Eof ⊥ 0 FilePos(list¡ 0 0))
 set. read_token′ λ. ∈.(lexer Lexer) ∈.(this_indent Option(Int)):
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)

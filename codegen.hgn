@@ -1,36 +1,36 @@
 extern. get_insert_block ⇒.(: Int)
-extern. set_insert_block ⇒.(Int : *.())
+extern. set_insert_block ⇒.(Int : *¡)
 extern. create_block ⇒.(: Int)
 extern. begin_new_function ⇒.(Int : Int)
-extern. codegen_rc_incr ⇒.(Int : *.())
-extern. codegen_rc_decr ⇒.(Int : *.())
+extern. codegen_rc_incr ⇒.(Int : *¡)
+extern. codegen_rc_decr ⇒.(Int : *¡)
 extern. codegen_const_bool ⇒.(Int : Int)
 extern. codegen_const_int ⇒.(Int : Int)
 extern. codegen_tuple ⇒.(Int : Int)
 extern. codegen_list ⇒.(Int : Int)
-extern. codegen_cell_rc_incr ⇒.(Int : *.())
-extern. codegen_cell_rc_decr ⇒.(Int : *.())
+extern. codegen_cell_rc_incr ⇒.(Int : *¡)
+extern. codegen_cell_rc_decr ⇒.(Int : *¡)
 extern. codegen_create_mut_var ⇒.(Int : Int)
 extern. codegen_load_mut_var ⇒.(Int : Int)
-extern. codegen_store_mut_var ⇒.(Int Int : *.())
-extern. codegen_unreachable ⇒.(: *.())
-extern. codegen_br ⇒.(Int : *.())
-extern. codegen_cond_br ⇒.(Int Int Int : *.())
+extern. codegen_store_mut_var ⇒.(Int Int : *¡)
+extern. codegen_unreachable ⇒.(: *¡)
+extern. codegen_br ⇒.(Int : *¡)
+extern. codegen_cond_br ⇒.(Int Int Int : *¡)
 extern. codegen_phi ⇒.(Int : Int)
-extern. phi_add_incoming ⇒.(Int Int Int : *.())
+extern. phi_add_incoming ⇒.(Int Int Int : *¡)
 extern. codegen_apply ⇒.(Int Int : Int)
 extern. codegen_get_arg ⇒.(Int : Int)
 extern. get_captures_type ⇒.(Int Int : Int)
 extern. codegen_get_captures ⇒.(: Int)
 extern. codegen_pointer_bitcast ⇒.(Int Int : Int)
 extern. codegen_extract_capture ⇒.(Int Int : Int)
-extern. codegen_ret ⇒.(Int : *.())
+extern. codegen_ret ⇒.(Int : *¡)
 extern. codegen_func_val ⇒.(Int Int Int : Int)
 extern. codegen_null ⇒.(: Int)
-extern. codegen_set_capture ⇒.(Int Int Int Int: *.())
+extern. codegen_set_capture ⇒.(Int Int Int Int: *¡)
 extern. codegen_create_tagless_ctor ⇒.(Int : Int)
 extern. codegen_create_tagged_ctor ⇒.(Int Int : Int)
-extern. bind_pattern_end ⇒.(Int Int : *.())
+extern. bind_pattern_end ⇒.(Int Int : *¡)
 extern. codegen_int_pattern_test ⇒.(Int Int : Int)
 extern. codegen_tuple_cast ⇒.(Int Int : Int)
 extern. codegen_tagged_cast ⇒.(Int Int : Int)
@@ -67,16 +67,16 @@ let. codegen_var_rc_decr λ. ∈.(var C_Variable):
     .C_ConstVar(val) codegen_rc_decr(val)
     .C_MutVar(var) codegen_cell_rc_decr(var)
     .C_Ctor(val _) codegen_rc_decr(val)
-    .C_Unused *.()
-    .C_DCtor(_) *.()
+    .C_Unused *¡
+    .C_DCtor(_) *¡
 
 let. codegen_var_rc_incr λ. ∈.(var C_Variable):
     case. var
     .C_ConstVar(val) codegen_rc_incr(val)
     .C_MutVar(var) codegen_cell_rc_incr(var)
     .C_Ctor(val _) codegen_rc_incr(val)
-    .C_Unused *.()
-    .C_DCtor(_) *.()
+    .C_Unused *¡
+    .C_DCtor(_) *¡
 
 type. C_Context C_Context‡
     List(C_Variable)                       ※ vars
@@ -137,7 +137,7 @@ set. c_substitute_in_type λ. ∈.(type T_Type) ∈.(subs List(*.(Int T_Type))):
             let. *.(stn st) sub
             if. =(stn tn)
             then, set. t′ Some(st)
-            else, *.()
+            else, *¡
         case. t′
         .Some(t′) t′
         .None T_Named(tn map(type_args λ.(t: c_substitute_in_type(t subs))))
@@ -195,7 +195,7 @@ set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(type
         )
 
 let. free_vars λ. ∈.(expr T_Expr) ∈.(length Int):
-    let. mut, table list.()
+    let. mut, table list¡
     for_ι(length λ.(_: set. table push(table ⊥)))
     let. mut, rec λ. ∈.(expr T_Expr): *¡
     set. rec λ. ∈.(expr T_Expr):
@@ -237,7 +237,7 @@ let. free_vars λ. ∈.(expr T_Expr) ∈.(length Int):
 
 let. mut, codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context): 0
 let. mut, codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Context): 0
-let. mut, codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context): *.(list.() list.())
+let. mut, codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context): *.(list¡ list¡)
 
 let. codegen_outer_captures λ. ∈.(vars List(C_Variable)) ∈.(is_captured List(Bool)):
     map_opt‡ ι*(vars) λ. i_var:
@@ -295,7 +295,7 @@ let. codegen_function λ.
             let. arg codegen_get_arg(i)
             let. *.(bound_vars pattern_ends) codegen_pattern_test(arg get(params i) context)
             if. ≠(len(pattern_ends) 0) internal_error("pattern_ends not empty")
-            else, *.()
+            else, *¡
             for(bound_vars codegen_var_rc_incr)
             codegen_rc_decr(arg)
             bound_vars
@@ -409,7 +409,7 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
         set_insert_block(cond_val_block)
         codegen_cond_br(cond_val body_block merge_block)
         set_insert_block(merge_block)
-        codegen_tuple(list→vector(list.()))
+        codegen_tuple(list→vector(list¡))
     .T_Do(statements) codegen_statements(statements context)
     .T_Lambda(params body)
         let. C_Context(vars types) context
@@ -424,7 +424,7 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
             list.(pattern)
         )) list.(expr_type) context))
         then, error(InexhaustivePatterns expr_file_pos)
-        else, *.()
+        else, *¡
         let. C_Context(old_context_vars _) context
         let. old_context_len len(old_context_vars)
         let. matched_val codegen_expr(expr context)
@@ -468,14 +468,14 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
     for‡ statements λ. statement:
         case. statement
         .T_Statement(T_TypeStatement(num_type_params variants) _) set. type_index_base +(type_index_base 1)
-        ._ *.()
+        ._ *¡
     for‡ statements λ. statement:
         case. statement
         .T_Statement(T_TypeStatement(num_type_params variants) _)
             set. context c_add_type_binding‡ context
                 map_ι(num_type_params λ.(i: +(type_index_base i)))
                 variants
-        ._ *.()
+        ._ *¡
     let. mut, block_val None
     for‡ statements λ. statement:
         let. T_Statement(statement_data file_pos) statement
@@ -483,18 +483,18 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
         .T_ExprStatement(expr)
             case. block_val
             .Some(val) codegen_rc_decr(val)
-            .None *.()
+            .None *¡
             set. block_val Some(codegen_expr(expr context))
         .T_Let(pattern expr)
             let. T_Expr(_ expr_type _) expr
             if. ¬(is_match_exhaustive(list.(list.(pattern)) list.(expr_type) context))
             then, error(InexhaustivePatterns file_pos)
-            else, *.()
+            else, *¡
             let. val codegen_expr(expr context)
             let. *.(bound_vars pattern_ends) codegen_pattern_test(val pattern context)
             if. ≠(len(pattern_ends) 0)
                 internal_error("pattern_ends not empty")
-            else, *.()
+            else, *¡
             for‡ bound_vars λ. var:
                 codegen_var_rc_incr(var)
                 set. context c_add_let_binding(context var)
@@ -537,16 +537,16 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
                     .T_Named(i _)
                         if. ≠(i int_type_index)
                             error(InvalidExternType(name) file_pos)
-                        else, *.()
+                        else, *¡
                     ._
                         error(InvalidExternType(name) file_pos)
                 let. ret_int case. ret
                     .T_Named(i _)
                         if. ≠(i int_type_index)
                             error(InvalidExternType(name) file_pos)
-                        else, *.()
+                        else, *¡
                         ⊤
-                    .T_TupleType(list.()) ⊥
+                    .T_TupleType(list¡) ⊥
                     ._ error(InvalidExternType(name) file_pos)
                 set. context c_add_let_binding‡ context
                     C_ConstVar(codegen_extern(utf8_encode(list→vector(name)) len(params) if.(ret_int 1 0)))
@@ -567,14 +567,14 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
         codegen_var_rc_decr(var)
     case. block_val
     .Some(block_val) block_val
-    .None codegen_tuple(list→vector(list.()))
+    .None codegen_tuple(list→vector(list¡))
 
 set. codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context):
     let. T_Pattern(pattern_data _ file_pos) pattern
     case. pattern_data
-    .T_IntLiteralPattern(n) *.(list.() list.(codegen_int_pattern_test(val n)))
-    .T_IdentPattern *.(list.(C_ConstVar(val)) list.())
-    .T_WildcardPattern *.(list.() list.())
+    .T_IntLiteralPattern(n) *.(list¡ list.(codegen_int_pattern_test(val n)))
+    .T_IdentPattern *.(list.(C_ConstVar(val)) list¡)
+    .T_WildcardPattern *.(list¡ list¡)
     .T_TuplePattern(patterns)
         let. tuple codegen_tuple_cast(val len(patterns))
         let. *.(bindings_ ends_) unzip‡ map_ι‡ len(patterns) λ. i:

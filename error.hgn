@@ -1,4 +1,4 @@
-extern. vector_string_error ⇒.(Int Int : *.())
+extern. vector_string_error ⇒.(Int Int : *¡)
 
 type. FilePos FilePos(List(Int) Int Int)
 
@@ -8,11 +8,11 @@ type. PartialType
     P_TupleType(List(PartialType))
     P_Function(List(PartialType) PartialType)
 
-let. mut, partial_type→string λ. ∈.(type PartialType): list.()
+let. mut, partial_type→string λ. ∈.(type PartialType): list¡
 set. partial_type→string λ. ∈.(type PartialType):
     case. type
     .P_Var(n) ++("?" int→string(n))
-    .P_Applied(name list.()) name
+    .P_Applied(name list¡) name
     .P_Applied(name types) concat‡ list.
         name "(" intercalate(map(types partial_type→string) " ") ")"
     .P_TupleType(types) concat‡ list.
