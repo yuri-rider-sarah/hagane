@@ -546,13 +546,18 @@ let. get_sccs λ. ∈.(graph List(List(Int))):
 
 set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(context I_Context) ∈.(this_type TypeVar) ∈.(file_pos FilePos):
     let. mut, context context
+    let. mut, num_expr_statements 0
     let. type_names concat‡ map‡ statements λ. statement:
         case. statement
+        .U_Statement(U_ExprStatement(_) _)
+            set. num_expr_statements +(num_expr_statements 1)
+            list.()
         .U_Statement(U_TypeStatement(name type_params _) _)
             let. tn new_type_name(Some(name) len(type_params))
             set. context i_add_type_binding(context tn file_pos)
             list.(tn)
         ._ list.()
+    let. mut, next_expr_statement 0
     let. mut, next_type_name 0
     let. mut, last_expr_type I_TupleType(list.())
     let. i_statements concat‡ map‡ statements λ. statement:
@@ -560,7 +565,11 @@ set. u_statements→i_statements λ. ∈.(statements List(U_Statement)) ∈.(con
         let. i_statements_data case.(u_statement_data
         .U_ExprStatement(u_expr)
             let. i_expr u_expr→i_expr(u_expr context)
-            set. last_expr_type I_Equal(i_expr_type(i_expr))
+            set. next_expr_statement +(next_expr_statement 1)
+            if. =(next_expr_statement num_expr_statements)
+                set. last_expr_type I_Equal(i_expr_type(i_expr))
+            else,
+                set_type(i_expr_type(i_expr) I_TupleType(list.()) file_pos)
             list.(I_ExprStatement(i_expr))
         .U_Let(u_pattern u_expr)
             let. i_expr u_expr→i_expr(u_expr context)
