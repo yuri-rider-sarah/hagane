@@ -6,7 +6,7 @@
 ※ 0
 
 fun. ∀, T U: map(∈.(a List(T)) ∈.(f ⇒.(T : U)))
-    let. mut, a′ empty
+    let. mut, a′ list¡
     while. <(len(a′) len(a))
         set. a′ push(a′ f(get(a len(a′))))
     a′
@@ -28,7 +28,7 @@ fun. square(∈.(n Int)) *(n n)
 fun. bool→int(∈.(b Bool))
     if.(b then, 1 else, 0)
 
-let. mut, a empty
+let. mut, a list¡
 set. a push(a 1)
 set. a push(a 2)
 set. a push(a 3)

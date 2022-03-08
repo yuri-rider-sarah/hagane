@@ -4,7 +4,7 @@
 ※ 16
 ※ 2
 ※ 2
-let. mut, a empty
+let. mut, a list¡
 set. a push(a 1)
 set. a push(a 4)
 set. a push(a 9)

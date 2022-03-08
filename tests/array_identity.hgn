@@ -1,5 +1,5 @@
 ※ 3
-let. mut, a empty
+let. mut, a list¡
 set. a push(a 1)
 set. a push(a 2)
 set. a push(a 3)

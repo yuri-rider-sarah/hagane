@@ -236,7 +236,6 @@ let. empty_i_context I_Context‡
         VarBinding("≤" list.() cmp_tv ConstVB)
         VarBinding(">" list.() cmp_tv ConstVB)
         VarBinding("≥" list.() cmp_tv ConstVB)
-        VarBinding("empty" list.(t_type) list_tv ConstVB)
         VarBinding("len" list.(t_type) new_type_var_with_type(I_Function(list.(list_tv) int_tv)) ConstVB)
         VarBinding("get" list.(t_type) new_type_var_with_type(I_Function(list.(list_tv int_tv) t_tv)) ConstVB)
         VarBinding("put" list.(t_type) new_type_var_with_type(I_Function(list.(list_tv int_tv t_tv) list_tv)) ConstVB)

@@ -8,12 +8,12 @@
 ※ 15
 ※ 18
 
-let. mut, a empty
+let. mut, a list¡
 
 do.
     let. mut, i 0
     while. <(i 3)
-        set. a push(a empty)
+        set. a push(a list¡)
         let. mut, j 0
         while. <(j 3)
             set. a put(a i push(get(a i) *(+(i 1) +(j 4))))

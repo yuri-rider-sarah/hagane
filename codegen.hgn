@@ -113,7 +113,6 @@ let. get_empty_c_context λ.:
             C_ConstVar(codegen_cmp_primitive(3))
             C_ConstVar(codegen_cmp_primitive(4))
             C_ConstVar(codegen_cmp_primitive(5))
-            C_ConstVar(codegen_list(list→vector(list.())))
             C_ConstVar(codegen_len_primitive())
             C_ConstVar(codegen_get_primitive())
             C_ConstVar(codegen_put_primitive())
