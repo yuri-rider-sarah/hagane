@@ -1,8 +1,8 @@
 ※ 20
 fun. f(x y)
     let. w +(x y)
-    fun. g(v z)
-        +(v +(y +(z w)))
+    fun. g(x z)
+        +(x +(y +(z w)))
     g(1 5)
 
 print_int(f(2 6))

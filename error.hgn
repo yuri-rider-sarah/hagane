@@ -31,8 +31,6 @@ type. Error
     IncorrectTypeArity(Int Int)
     ConflictingType(PartialType PartialType)
     CyclicalType
-    DuplicateVar(List(Int))
-    DuplicateType(List(Int))
     AssignToConst(List(Int))
     NotACtor(List(Int))
     InexhaustivePatterns
@@ -64,8 +62,6 @@ let. error_string λ. ∈.(err Error):
     .IncorrectTypeArity(n1 n2) concat(list.("Incorrect number of type arguments: expected " int→string(n1) ", got " int→string(n2)))
     .ConflictingType(t1 t2) concat(list.("Conflicting type: expected " partial_type→string(t1) ", got " partial_type→string(t2)))
     .CyclicalType "Cyclical type"
-    .DuplicateVar(name) ++("Duplicate variable " name)
-    .DuplicateType(name) ++("Duplicate type " name)
     .AssignToConst(name) ++("Assignment to constant variable " name)
     .NotACtor(name) ++(name " is not a constructor")
     .InexhaustivePatterns "Inexhaustive patterns"

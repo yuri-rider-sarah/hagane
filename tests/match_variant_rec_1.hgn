@@ -1,6 +1,6 @@
 ※ 80
-type. ∀, T: LList
-    Cons(T LList(T))
+type. ∀, T: List
+    Cons(T List(T))
     Nil
 
 case. Cons(10 Cons(90 Cons(13 Nil)))

@@ -1,0 +1,10 @@
+※ 1
+
+type. ∀, T: Option
+    Some(T)
+    None
+
+let. v Some(1)
+case. v
+.Some(v) print_int(v)
+.None

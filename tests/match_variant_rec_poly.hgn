@@ -1,8 +1,8 @@
 ※ 1
 ※ 2
 ※ 3
-type. ∀, T: LList
-    Cons(T LList(T))
+type. ∀, T: List
+    Cons(T List(T))
     Nil
 
 let. mut, l Cons(1 Cons(2 Cons(3 Nil)))
