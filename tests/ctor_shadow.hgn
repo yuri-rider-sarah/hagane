@@ -1,0 +1,9 @@
+※-cfail
+
+type. ∀, T: Option
+    Some(T)
+    None
+
+case. Some(2)
+.None *¡
+.Some *¡

@@ -720,6 +720,8 @@ set. u_pattern→i_pattern λ. ∈.(u_pattern U_Pattern) ∈.(context I_Context)
                     let. *.(ctor_type type_args) instantiate_params(type_params type)
                     unify_type(ctor_type this_type file_pos)
                     *.(I_VariantPattern(vi list¡ type_args) list¡)
+                if, variable_is_ctor(vi context)
+                    error(IsCtor(name) file_pos)
                 else, *.(I_IdentPattern list.(VarBinding(name list¡ this_type ConstVB)))
             .None
                 *.(I_IdentPattern list.(VarBinding(name list¡ this_type ConstVB)))
