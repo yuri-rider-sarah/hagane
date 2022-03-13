@@ -9,24 +9,18 @@ type. R_ExprData
 
 type. R_Expr R_Expr(R_ExprData FilePos)
 
-let. dummy_r_expr R_Expr(R_Wildcard FilePos(list¡ 0 0))
-
 type. Clause
     ExprClause(R_Expr)
     SecKeywordClause(List(Int))
     ColonClause
     Label(R_Expr)
 
-let. mut, read_noncall_expr λ. ∈.(lexer Lexer): *.(lexer dummy_r_expr)
-let. mut, read_expr λ. ∈.(lexer Lexer): *.(lexer dummy_r_expr)
-let. mut, read_expr_calls λ. ∈.(lexer Lexer) ∈.(expr R_Expr) ∈.(at_line_start Bool) ∈.(indent_depth Int): *.(lexer expr)
-let. mut, read_clause λ. ∈.(lexer Lexer): *.(lexer ColonClause)
-let. mut, read_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int) ∈.(clauses List(Clause)) ∈.(se_type SpecialExprType): *.(lexer list¡)
-let. mut, read_paren_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer list¡)
-let. mut, read_block_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer list¡)
-let. mut, read_inner_clauses_r λ. ∈.(lexer Lexer) ∈.(indent_depth Int): *.(lexer list¡)
+type. SpecialExprType
+    ParenSE
+    BlockSE
+    InnerSE
 
-set. read_noncall_expr λ. ∈.(lexer Lexer):
+fun. read_noncall_expr(∈.(lexer Lexer))
     let. mut, lexer lexer
     let. *.(lexer′ token at_line_start indent_depth file_pos) read_token(lexer)
     set. lexer lexer′
@@ -54,14 +48,14 @@ set. read_noncall_expr λ. ∈.(lexer Lexer):
         *.(lexer R_Expr(R_Special(kw list¡) file_pos))
     ._ error(UnexpectedToken(token) file_pos)
 
-set. read_expr λ. ∈.(lexer Lexer):
+fun. read_expr(∈.(lexer Lexer))
     let. mut, lexer lexer
     let. *.(_ _ at_line_start indent_depth _) read_token(lexer)
     let. *.(lexer′ expr) read_noncall_expr(lexer)
     set. lexer lexer′
     read_expr_calls(lexer expr at_line_start indent_depth)
 
-set. read_expr_calls λ. ∈.(lexer Lexer) ∈.(expr R_Expr) ∈.(at_line_start Bool) ∈.(indent_depth Int):
+fun. read_expr_calls(∈.(lexer Lexer) ∈.(expr R_Expr) ∈.(at_line_start Bool) ∈.(indent_depth Int))
     let. mut, lexer lexer
     let. R_Expr(_ file_pos) expr
     case. read_token(lexer)
@@ -85,12 +79,7 @@ set. read_expr_calls λ. ∈.(lexer Lexer) ∈.(expr R_Expr) ∈.(at_line_start 
     ._
         *.(lexer expr)
 
-type. SpecialExprType
-    ParenSE
-    BlockSE
-    InnerSE
-
-set. read_clause λ. ∈.(lexer Lexer):
+fun. read_clause(∈.(lexer Lexer))
     let. mut, lexer lexer
     let. *.(lexer′ token _ _ _) read_token(lexer)
     case. token
@@ -110,7 +99,7 @@ set. read_clause λ. ∈.(lexer Lexer):
         set. lexer lexer′
         *.(lexer ExprClause(expr))
 
-set. read_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int) ∈.(clauses List(Clause)) ∈.(se_type SpecialExprType):
+fun. read_clauses_r(∈.(lexer Lexer) ∈.(kw_indent_depth Int) ∈.(clauses List(Clause)) ∈.(se_type SpecialExprType))
     let. mut, lexer lexer
     let. *.(lexer′ token at_line_start clause_indent_depth token_file_pos) read_token(lexer)
     let. separator_continue ∨. ¬(at_line_start) case. se_type
@@ -161,11 +150,11 @@ set. read_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int) ∈.(clauses
         else,
             *.(lexer clauses)
 
-set. read_paren_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int):
+fun. read_paren_clauses_r(∈.(lexer Lexer) ∈.(kw_indent_depth Int))
     read_clauses_r(lexer kw_indent_depth list¡ ParenSE)
 
-set. read_block_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int):
+fun. read_block_clauses_r(∈.(lexer Lexer) ∈.(kw_indent_depth Int))
     read_clauses_r(lexer kw_indent_depth list¡ BlockSE)
 
-set. read_inner_clauses_r λ. ∈.(lexer Lexer) ∈.(kw_indent_depth Int):
+fun. read_inner_clauses_r(∈.(lexer Lexer) ∈.(kw_indent_depth Int))
     read_clauses_r(lexer kw_indent_depth list¡ InnerSE)

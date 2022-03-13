@@ -3,12 +3,12 @@ extern. vector_push ⇒.(Int Int : *¡)
 extern. vector_len ⇒.(Int : Int)
 extern. vector_get ⇒.(Int Int : Int)
 
-let. list→vector λ. ∈.(a List(Int)):
+fun. list→vector(∈.(a List(Int)))
     let. v vector_new()
     for‡ a λ. x: vector_push(v x)
     v
 
-let. vector→list λ. ∈.(v Int):
+fun. vector→list(∈.(v Int))
     let. mut, a list¡
     for_ι(vector_len(v) λ.(i: set.(a push(a vector_get(v i)))))
     a
@@ -16,6 +16,6 @@ let. vector→list λ. ∈.(v Int):
 extern. utf8_decode ⇒.(Int : Int)
 extern. utf8_encode ⇒.(Int : Int)
 
-let. print_string λ. ∈.(s List(Int)):
+fun. print_string(∈.(s List(Int)))
     for(vector→list(utf8_encode(list→vector(s))) print_byte)
     print_byte(#\n)

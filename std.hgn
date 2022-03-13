@@ -1,43 +1,43 @@
-let. ∀, T: id λ. ∈.(x T): x
+fun. ∀, T: id(∈.(x T)) x
 
-let. ¬ λ. ∈.(x Bool):
+fun. ¬(∈.(x Bool))
     if. x ⊥ ⊤
 
 type. ∀, T: Option
     Some(T)
     None
 
-let. ∀, T: default λ. ∈.(v T) ∈.(x Option(T)):
+fun. ∀, T: default(∈.(v T) ∈.(x Option(T)))
     case. x
     .Some(x) x
     .None v
 
-let. for_ι λ. ∈.(n Int) ∈.(f ⇒.(Int : *¡)):
+fun. for_ι(∈.(n Int) ∈.(f ⇒.(Int : *¡)))
     let. mut, i 0
     while. <(i n)
         f(i)
         set. i +(i 1)
 
-let. ∀, T: for λ. ∈.(xs List(T)) ∈.(f ⇒.(T : *¡)):
+fun. ∀, T: for(∈.(xs List(T)) ∈.(f ⇒.(T : *¡)))
     for_ι(len(xs) λ.(i: f(get(xs i))))
 
-let. ∀, T U: for2 λ. ∈.(xs List(T)) ∈.(ys List(U)) ∈.(f ⇒.(T U : *¡)):
+fun. ∀, T U: for2(∈.(xs List(T)) ∈.(ys List(U)) ∈.(f ⇒.(T U : *¡)))
     if. =(len(xs) len(ys))
         for_ι(len(xs) λ.(i: f(get(xs i) get(ys i))))
         Some(*¡)
     else, None
 
-let. ∀, T U: map λ. ∈.(xs List(T)) ∈.(f ⇒.(T : U)):
+fun. ∀, T U: map(∈.(xs List(T)) ∈.(f ⇒.(T : U)))
     let. mut, ys list¡
     for‡ xs λ. x: set.(ys push(ys f(x)))
     ys
 
-let. ∀, T: map_ι λ. ∈.(n Int) ∈.(f ⇒.(Int : T)):
+fun. ∀, T: map_ι(∈.(n Int) ∈.(f ⇒.(Int : T)))
     let. mut, ys list¡
     for_ι(n λ.(i: set.(ys push(ys f(i)))))
     ys
 
-let. ∀, T U: map_opt λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Option(U))):
+fun. ∀, T U: map_opt(∈.(xs List(T)) ∈.(f ⇒.(T : Option(U))))
     let. mut, ys list¡
     for‡ xs λ. x:
         case. f(x)
@@ -45,37 +45,37 @@ let. ∀, T U: map_opt λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Option(U))):
         .None *¡
     ys
 
-let. ι λ. ∈.(n Int):
+fun. ι(∈.(n Int))
     map_ι(n id)
 
-let. ∀, T: ι* λ. ∈.(xs List(T)):
+fun. ∀, T: ι*(∈.(xs List(T)))
     map_ι‡ len(xs) λ. i:
         *.(i get(xs i))
 
-let. ∀, T: ∀ λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
+fun. ∀, T: ∀(∈.(xs List(T)) ∈.(f ⇒.(T : Bool)))
     let. mut, r ⊤
     for‡ xs λ. x:
         if. f(x) then, *¡ else, set.(r ⊥)
     r
 
-let. ∀, T: ∃ λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
+fun. ∀, T: ∃(∈.(xs List(T)) ∈.(f ⇒.(T : Bool)))
     let. mut, r ⊥
     for‡ xs λ. x:
         if. f(x) then, set.(r ⊤) else, *¡
     r
 
-let. ∀, T: count λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
+fun. ∀, T: count(∈.(xs List(T)) ∈.(f ⇒.(T : Bool)))
     let. mut, r 0
     for‡ xs λ. x:
         if. f(x) then, set.(r +(r 1)) else, *¡
     r
 
-let. ∀, T: last λ. ∈.(xs List(T)):
+fun. ∀, T: last(∈.(xs List(T)))
     if. >(len(xs) 0)
     then, Some(get(xs -(len(xs) 1)))
     else, None
 
-let. ∀, T: drop λ. ∈.(xs List(T)) ∈.(n Int):
+fun. ∀, T: drop(∈.(xs List(T)) ∈.(n Int))
     let. mut, r list¡
     let. mut, i n
     while. <(i len(xs))
@@ -83,7 +83,7 @@ let. ∀, T: drop λ. ∈.(xs List(T)) ∈.(n Int):
         set. i +(i 1)
     r
 
-let. ∀, T: ∈ λ. ∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
+fun. ∀, T: ∈(∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
     let. mut, r ⊥
     for‡ ys λ. y:
         if. =T(y x)
@@ -91,10 +91,10 @@ let. ∀, T: ∈ λ. ∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
         else, *¡
     r
 
-let. ∀, T: ∉ λ. ∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
+fun. ∀, T: ∉(∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
     ¬(∈(x ys =T))
 
-let. ∀, T: dedup λ. ∈.(xs List(T)) ∈.(=T ⇒.(T T : Bool)):
+fun. ∀, T: dedup(∈.(xs List(T)) ∈.(=T ⇒.(T T : Bool)))
     let. mut, r list¡
     for‡ xs λ. x:
         if. ∉(x r =T)
@@ -102,7 +102,7 @@ let. ∀, T: dedup λ. ∈.(xs List(T)) ∈.(=T ⇒.(T T : Bool)):
         else, *¡
     r
 
-let. ∀, T: =list λ. ∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
+fun. ∀, T: =list(∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
     if. =(len(xs) len(ys))
         let. mut, r ⊤
         for_ι‡ len(xs) λ. i:
@@ -112,28 +112,28 @@ let. ∀, T: =list λ. ∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool
         r
     else, ⊥
 
-let. =list_int λ. ∈.(x List(Int)) ∈.(y List(Int)):
+fun. =list_int(∈.(x List(Int)) ∈.(y List(Int)))
     =list(x y =)
 
-let. ∀, T: filter λ. ∈.(xs List(T)) ∈.(f ⇒.(T : Bool)):
+fun. ∀, T: filter(∈.(xs List(T)) ∈.(f ⇒.(T : Bool)))
     let. mut, r list¡
     for‡ xs λ. x: set.(r if.(f(x) push(r x) r))
     r
 
-let. ∀, T: \ λ. ∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)):
+fun. ∀, T: \(∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
     filter(xs λ.(x: ∉(x ys =T)))
 
-let. ∀, T: ++ λ. ∈.(xs List(T)) ∈.(ys List(T)):
+fun. ∀, T: ++(∈.(xs List(T)) ∈.(ys List(T)))
     let. mut, r xs
     for‡ ys λ. y: set.(r push(r y))
     r
 
-let. ∀, T: concat λ. ∈.(xss List(List(T))):
+fun. ∀, T: concat(∈.(xss List(List(T))))
     let. mut, r list¡
     for‡ xss λ. xs: set.(r ++(r xs))
     r
 
-let. ∀, T: intercalate λ. ∈.(xss List(List(T))) ∈.(sep List(T)):
+fun. ∀, T: intercalate(∈.(xss List(List(T))) ∈.(sep List(T)))
     if. =(len(xss) 0)
         list¡
     else,
@@ -141,12 +141,12 @@ let. ∀, T: intercalate λ. ∈.(xss List(List(T))) ∈.(sep List(T)):
         for_ι(-(len(xss) 1) λ.(i: set.(r ++(r ++(sep get(xss +(i 1)))))))
         r
 
-let. ∀, T U: zip λ. ∈.(xs List(T)) ∈.(ys List(U)):
+fun. ∀, T U: zip(∈.(xs List(T)) ∈.(ys List(U)))
     if. =(len(xs) len(ys))
         Some(map_ι(len(xs) λ.(i: *.(get(xs i) get(ys i)))))
     else, None
 
-let. ∀, T U: unzip λ. ∈.(xs List(*.(T U))):
+fun. ∀, T U: unzip(∈.(xs List(*.(T U))))
     let. mut, xs1 list¡
     let. mut, xs2 list¡
     for‡ xs λ. x:
@@ -155,7 +155,7 @@ let. ∀, T U: unzip λ. ∈.(xs List(*.(T U))):
         set. xs2 push(xs2 x2)
     *.(xs1 xs2)
 
-let. int→string λ. ∈.(n Int):
+fun. int→string(∈.(n Int))
     let. mut, n n
     let. mut, s
         if. >(n 0)
@@ -170,12 +170,12 @@ let. int→string λ. ∈.(n Int):
         set. n /(n 10)
     s
 
-let. ∀, T: repeat λ. ∈.(n Int) ∈.(x T):
+fun. ∀, T: repeat(∈.(n Int) ∈.(x T))
     let. mut, a list¡
     for_ι(n λ.(_: set.(a push(a x))))
     a
 
-let. ∀, T: is_permutation λ. ∈.(a1 List(T)) ∈.(a2 List(T)) ∈.(=T ⇒.(T T: Bool)):
+fun. ∀, T: is_permutation(∈.(a1 List(T)) ∈.(a2 List(T)) ∈.(=T ⇒.(T T: Bool)))
     if. =(len(a1) len(a2))
         let. mut, found repeat(len(a2) ⊥)
         let. mut, result ⊤
@@ -193,13 +193,13 @@ let. ∀, T: is_permutation λ. ∈.(a1 List(T)) ∈.(a2 List(T)) ∈.(=T ⇒.(T
     else,
         ⊥
 
-let. min λ. ∈.(a Int) ∈.(b Int):
+fun. min(∈.(a Int) ∈.(b Int))
     if. ≤(a b) a b
 
-let. max λ. ∈.(a Int) ∈.(b Int):
+fun. max(∈.(a Int) ∈.(b Int))
     if. ≥(a b) a b
 
-let. sort λ. ∈.(a List(Int)):
+fun. sort(∈.(a List(Int)))
     let. mut, a a
     let. mut, i 0
     while. <(i len(a))

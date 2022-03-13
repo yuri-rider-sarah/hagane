@@ -40,7 +40,7 @@ type. T_Type
     T_TupleType(List(T_Type))
     T_Function(List(T_Type) T_Type)
 
-let. t_expr_file_pos λ. ∈.(expr T_Expr):
+fun. t_expr_file_pos(∈.(expr T_Expr))
     let. T_Expr(_ _ file_pos) expr
     file_pos
 
@@ -48,11 +48,11 @@ type. T_Context T_Context(List(TypeName))
 
 let. empty_t_context T_Context(builtin_types)
 
-let. t_add_type_binding λ. ∈.(context T_Context) ∈.(type TypeName):
+fun. t_add_type_binding(∈.(context T_Context) ∈.(type TypeName))
     let. T_Context(types) context
     T_Context(push(types type))
 
-let. t_locate_type_in_context λ. ∈.(type TypeName) ∈.(context T_Context) ∈.(file_pos FilePos):
+fun. t_locate_type_in_context(∈.(type TypeName) ∈.(context T_Context) ∈.(file_pos FilePos))
     let. T_Context(types) context
     let. mut, index None
     for_ι‡ len(types) λ. i:
@@ -63,15 +63,10 @@ let. t_locate_type_in_context λ. ∈.(type TypeName) ∈.(context T_Context) �
     .Some(index) index
     .None error(LeakedType(type_name_string(type)) file_pos)
 
-let. mut, i_expr→t_expr λ. ∈.(i_expr I_Expr) ∈.(context T_Context): T_Expr(T_IntLiteral(0) T_Named(0 list¡) FilePos(" " 0 0))
-let. mut, i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(context T_Context): list¡
-let. mut, i_pattern→t_pattern λ. ∈.(i_pattern I_Pattern) ∈.(context T_Context): T_Pattern(T_IntLiteralPattern(0) T_Named(0 list¡) FilePos(" " 0 0))
-let. mut, type_var→t_type λ. ∈.(i_type TypeVar) ∈.(context T_Context) ∈.(file_pos FilePos): T_Named(0 list¡)
-
-let. i_exprs→t_exprs λ. ∈.(i_exprs List(I_Expr)) ∈.(context T_Context):
+fun. i_exprs→t_exprs(∈.(i_exprs List(I_Expr)) ∈.(context T_Context))
     map(i_exprs λ.(e: i_expr→t_expr(e context)))
 
-set. i_expr→t_expr λ. ∈.(i_expr I_Expr) ∈.(context T_Context):
+fun. i_expr→t_expr(∈.(i_expr I_Expr) ∈.(context T_Context))
     let. I_Expr(i_expr_data i_type file_pos) i_expr
     let. t_type type_var→t_type(i_type context file_pos)
     let. t_expr_data case. i_expr_data
@@ -94,7 +89,7 @@ set. i_expr→t_expr λ. ∈.(i_expr I_Expr) ∈.(context T_Context):
         .I_ListLiteral(i_exprs) T_ListLiteral(i_exprs→t_exprs(i_exprs context))
     T_Expr(t_expr_data t_type file_pos)
 
-set. i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(context T_Context):
+fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(context T_Context))
     let. mut, context context
     for‡ i_statements λ. i_statement:
         case. i_statement
@@ -123,10 +118,10 @@ set. i_statements→t_statements λ. ∈.(i_statements List(I_Statement)) ∈.(c
             .I_Set(vi i_expr) T_Set(vi i_expr→t_expr(i_expr context))
         T_Statement(t_statement_data file_pos)
 
-let. i_patterns→t_patterns λ. ∈.(i_patterns List(I_Pattern)) ∈.(context T_Context):
+fun. i_patterns→t_patterns(∈.(i_patterns List(I_Pattern)) ∈.(context T_Context))
     map(i_patterns λ.(p: i_pattern→t_pattern(p context)))
 
-set. i_pattern→t_pattern λ. ∈.(i_pattern I_Pattern) ∈.(context T_Context):
+fun. i_pattern→t_pattern(∈.(i_pattern I_Pattern) ∈.(context T_Context))
     let. I_Pattern(i_pattern_data i_type file_pos) i_pattern
     let. t_pattern_data case. i_pattern_data
         .I_IntLiteralPattern(n) T_IntLiteralPattern(n)
@@ -137,8 +132,7 @@ set. i_pattern→t_pattern λ. ∈.(i_pattern I_Pattern) ∈.(context T_Context)
         .I_ListPattern(i_patterns) T_ListPattern(i_patterns→t_patterns(i_patterns context))
     T_Pattern(t_pattern_data type_var→t_type(i_type context file_pos) file_pos)
 
-let. mut, type_var→t_type′ λ. ∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos): T_Named(0 list¡)
-set. type_var→t_type′ λ. ∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos):
+fun. type_var→t_type′(∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos))
     let. TypeVar(tvi) tv
     case. get(type_variables tvi)
     .I_Any error(err file_pos)
@@ -147,5 +141,5 @@ set. type_var→t_type′ λ. ∈.(tv TypeVar) ∈.(context T_Context) ∈.(err 
     .I_TupleType(tvs) T_TupleType(map(tvs λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
     .I_Function(params ret) T_Function(map(params λ.(param: type_var→t_type′(param context err file_pos))) type_var→t_type′(ret context err file_pos))
 
-set. type_var→t_type λ. ∈.(tv TypeVar) ∈.(context T_Context) ∈.(file_pos FilePos):
+fun. type_var→t_type(∈.(tv TypeVar) ∈.(context T_Context) ∈.(file_pos FilePos))
     type_var→t_type′(tv context AmbiguousType(type_var→partial_type(tv)) file_pos)

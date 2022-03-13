@@ -8,8 +8,7 @@ type. PartialType
     P_TupleType(List(PartialType))
     P_Function(List(PartialType) PartialType)
 
-let. mut, partial_type→string λ. ∈.(type PartialType): list¡
-set. partial_type→string λ. ∈.(type PartialType):
+fun. partial_type→string(∈.(type PartialType))
     case. type
     .P_Var(n) ++("?" int→string(n))
     .P_Applied(name list¡) name
@@ -41,15 +40,15 @@ type. Error
     InvalidExternType(List(Int))
     MutRecPolyDifferentType(List(Int) List(Int))
 
-let. string_error λ. ∈.(str List(Int)) ∈.(internal Int):
+fun. string_error(∈.(str List(Int)) ∈.(internal Int))
     vector_string_error(utf8_encode(list→vector(str)) internal)
     unreachable()
 
-let. file_pos_string λ. ∈.(file_pos FilePos):
+fun. file_pos_string(∈.(file_pos FilePos))
     let. FilePos(file_name line col) file_pos
     concat(list.(file_name ":" int→string(line) ":" int→string(col)))
 
-let. error_string λ. ∈.(err Error):
+fun. error_string(∈.(err Error))
     case. err
     .UnexpectedChar(Some(c)) concat(list.("Unexpected character: " list.(c) " (" int→string(c) ")"))
     .UnexpectedChar(None) "Unexpected end of file"
@@ -73,8 +72,8 @@ let. error_string λ. ∈.(err Error):
     .InvalidExternType(name) ++("Invalid extern type for variable " name)
     .MutRecPolyDifferentType(name1 name2) concat(list.("Mutually recursive functions " name1 " and " name2 " are polymorphic over different types"))
 
-let. error λ. ∈.(err Error) ∈.(file_pos FilePos):
+fun. error(∈.(err Error) ∈.(file_pos FilePos))
     string_error(concat(list.(file_pos_string(file_pos) ": " error_string(err))) 0)
 
-let. internal_error λ. ∈.(err List(Int)):
+fun. internal_error(∈.(err List(Int)))
     string_error(++("Internal compiler error: " err) 1)

@@ -50,7 +50,7 @@ extern. codegen_push_primitive ⇒.(: Int)
 extern. codegen_pop_primitive ⇒.(: Int)
 extern. codegen_unreachable_primitive ⇒.(: Int)
 
-let. begin_new_block λ.:
+fun. begin_new_block()
     let. bb create_block()
     set_insert_block(bb)
     bb
@@ -62,7 +62,7 @@ type. C_Variable
     C_Unused
     C_DCtor(Option(Int))
 
-let. codegen_var_rc_decr λ. ∈.(var C_Variable):
+fun. codegen_var_rc_decr(∈.(var C_Variable))
     case. var
     .C_ConstVar(val) codegen_rc_decr(val)
     .C_MutVar(var) codegen_cell_rc_decr(var)
@@ -70,7 +70,7 @@ let. codegen_var_rc_decr λ. ∈.(var C_Variable):
     .C_Unused *¡
     .C_DCtor(_) *¡
 
-let. codegen_var_rc_incr λ. ∈.(var C_Variable):
+fun. codegen_var_rc_incr(∈.(var C_Variable))
     case. var
     .C_ConstVar(val) codegen_rc_incr(val)
     .C_MutVar(var) codegen_cell_rc_incr(var)
@@ -82,22 +82,22 @@ type. C_Context C_Context‡
     List(C_Variable)                       ※ vars
     List(*.(List(Int) List(List(T_Type)))) ※ types
 
-let. c_add_let_binding λ. ∈.(context C_Context) ∈.(var C_Variable):
+fun. c_add_let_binding(∈.(context C_Context) ∈.(var C_Variable))
     let. C_Context(vars types) context
     C_Context(push(vars var) types)
 
-let. c_add_type_binding λ. ∈.(context C_Context) ∈.(type_params List(Int)) ∈.(variants List(List(T_Type))):
+fun. c_add_type_binding(∈.(context C_Context) ∈.(type_params List(Int)) ∈.(variants List(List(T_Type))))
     let. C_Context(vars types) context
     C_Context(vars push(types *.(type_params variants)))
 
-let. c_lookup_var λ. ∈.(vi Int) ∈.(context C_Context):
+fun. c_lookup_var(∈.(vi Int) ∈.(context C_Context))
     let. C_Context(vars _) context
     get(vars vi)
 
-let. extern_binding λ. ∈.(name List(Int)) ∈.(num_params Int) ∈.(ret_int Int):
+fun. extern_binding(∈.(name List(Int)) ∈.(num_params Int) ∈.(ret_int Int))
     C_ConstVar(codegen_extern(list→vector(name) num_params ret_int))
 
-let. get_empty_c_context λ.:
+fun. get_empty_c_context()
     C_Context‡
         list.
             C_Ctor(codegen_const_bool(1) Some(1))
@@ -128,8 +128,7 @@ let. get_empty_c_context λ.:
             C_ConstVar(codegen_unreachable_primitive())
         list.(*.(list.() list.(list.())) *.(list.() list.(list.() list.())) *.(list.(3) list.(list.())))
 
-let. mut, c_substitute_in_type λ. ∈.(type T_Type) ∈.(subs List(*.(Int T_Type))): type
-set. c_substitute_in_type λ. ∈.(type T_Type) ∈.(subs List(*.(Int T_Type))):
+fun. c_substitute_in_type(∈.(type T_Type) ∈.(subs List(*.(Int T_Type))))
     case. type
     .T_Named(tn type_args)
         let. mut, t′ None
@@ -144,8 +143,7 @@ set. c_substitute_in_type λ. ∈.(type T_Type) ∈.(subs List(*.(Int T_Type))):
     .T_TupleType(subtypes) T_TupleType(map(subtypes λ.(t: c_substitute_in_type(t subs))))
     .T_Function(params ret) T_Function(map(params λ.(t: c_substitute_in_type(t subs))) c_substitute_in_type(ret subs))
 
-let. mut, is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(types List(T_Type)) ∈.(context C_Context): ⊥
-set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(types List(T_Type)) ∈.(context C_Context):
+fun. is_match_exhaustive(∈.(pattern_lists List(List(T_Pattern))) ∈.(types List(T_Type)) ∈.(context C_Context))
     if. =(len(types) 0)
     then, ≠(len(pattern_lists) 0)
     else,
@@ -194,7 +192,7 @@ set. is_match_exhaustive λ. ∈.(pattern_lists List(List(T_Pattern))) ∈.(type
             .T_Function(_ _) ⊥
         )
 
-let. free_vars λ. ∈.(expr T_Expr) ∈.(length Int):
+fun. free_vars(∈.(expr T_Expr) ∈.(length Int))
     let. mut, table list¡
     for_ι(length λ.(_: set. table push(table ⊥)))
     let. mut, rec λ. ∈.(expr T_Expr): *¡
@@ -235,11 +233,7 @@ let. free_vars λ. ∈.(expr T_Expr) ∈.(length Int):
     rec(expr)
     table
 
-let. mut, codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context): 0
-let. mut, codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Context): 0
-let. mut, codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context): *.(list¡ list¡)
-
-let. codegen_outer_captures λ. ∈.(vars List(C_Variable)) ∈.(is_captured List(Bool)):
+fun. codegen_outer_captures(∈.(vars List(C_Variable)) ∈.(is_captured List(Bool)))
     map_opt‡ ι*(vars) λ. i_var:
         let. *.(i var) i_var
         if. get(is_captured i)
@@ -258,13 +252,13 @@ let. codegen_outer_captures λ. ∈.(vars List(C_Variable)) ∈.(is_captured Lis
             Some(cap)
         else, None
 
-let. codegen_function λ.
+fun. codegen_function(
     ∈.(params List(T_Pattern))
     ∈.(body T_Expr)
     ∈.(context C_Context)
     ∈.(is_captured List(Bool))
     ∈.(outer_captures Int)
-    :
+    )
     let. C_Context(vars types) context
     let. parent_block get_insert_block()
     let. captures_type get_captures_type(len(params) outer_captures)
@@ -307,7 +301,7 @@ let. codegen_function λ.
     set_insert_block(parent_block)
     *.(codegen_func_val(func outer_captures captures_type) captures_type)
 
-set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
+fun. codegen_expr(∈.(expr T_Expr) ∈.(context C_Context))
     let. T_Expr(expr_data expr_type file_pos) expr
     case. expr_data
     .T_IntLiteral(n) codegen_const_int(n)
@@ -460,7 +454,7 @@ set. codegen_expr λ. ∈.(expr T_Expr) ∈.(context C_Context):
     .T_ListLiteral(exprs)
         codegen_list(list→vector(map(exprs λ.(e: codegen_expr(e context)))))
 
-set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Context):
+fun. codegen_statements(∈.(statements List(T_Statement)) ∈.(context C_Context))
     let. mut, context context
     let. C_Context(old_context_vars old_context_types) context
     let. old_context_len len(old_context_vars)
@@ -569,7 +563,7 @@ set. codegen_statements λ. ∈.(statements List(T_Statement)) ∈.(context C_Co
     .Some(block_val) block_val
     .None codegen_tuple(list→vector(list¡))
 
-set. codegen_pattern_test λ. ∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context):
+fun. codegen_pattern_test(∈.(val Int) ∈.(pattern T_Pattern) ∈.(context C_Context))
     let. T_Pattern(pattern_data _ file_pos) pattern
     case. pattern_data
     .T_IntLiteralPattern(n) *.(list¡ list.(codegen_int_pattern_test(val n)))

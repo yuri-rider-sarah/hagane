@@ -28,12 +28,12 @@ type. Lexer Lexer‡
     Option(Int)   ※ indent_char
     Int           ※ this_indent_depth
 
-let. lexer λ. ∈.(files List(*.(List(Int) List(Int)))):
+fun. lexer(∈.(files List(*.(List(Int) List(Int)))))
     Lexer(CharReader(files 0 0 1 1) None 0)
 
 let. newline_chars list.(10 11 12 13 133 8232 8233)
 
-let. read_char λ. ∈.(chars CharReader):
+fun. read_char_cr(∈.(chars CharReader))
     let. CharReader(files file_i char_i line col) chars
     if. <(file_i len(files))
         let. *.(file_name cs) get(files file_i)
@@ -49,14 +49,14 @@ let. read_char λ. ∈.(chars CharReader):
         *.(CharReader(files file_i′ char_i′ line′ col′) Some(c) FilePos(file_name line col))
     else, *.(chars None FilePos("-END-" 0 0))
 
-let. read_char λ. ∈.(lexer Lexer):
+fun. read_char(∈.(lexer Lexer))
     let. Lexer(chars indent_char this_indent_depth) lexer
-    let. *.(chars′ c file_pos) read_char(chars)
+    let. *.(chars′ c file_pos) read_char_cr(chars)
     *.(Lexer(chars′ indent_char this_indent_depth) c file_pos)
 
 let. after_ident_chars list.(#( #) #† #‡ #: #※)
 
-let. read_quoted_char λ. ∈.(lexer Lexer):
+fun. read_quoted_char(∈.(lexer Lexer))
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)
     set. lexer lexer′
@@ -76,8 +76,7 @@ let. read_quoted_char λ. ∈.(lexer Lexer):
         *.(lexer c)
     .None error(UnexpectedChar(None) file_pos)
 
-let. mut, read_string_literal_contents λ. ∈.(lexer Lexer) ∈.(s List(Int)): *.(lexer s)
-set. read_string_literal_contents λ. ∈.(lexer Lexer) ∈.(s List(Int)):
+fun. read_string_literal_contents(∈.(lexer Lexer) ∈.(s List(Int)))
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)
     case. c
@@ -90,8 +89,7 @@ set. read_string_literal_contents λ. ∈.(lexer Lexer) ∈.(s List(Int)):
         read_string_literal_contents(lexer push(s c))
     .None error(UnexpectedChar(None) file_pos)
 
-let. mut, read_int_literal λ. ∈.(lexer Lexer) ∈.(n Int): *.(lexer n)
-set. read_int_literal λ. ∈.(lexer Lexer) ∈.(n Int):
+fun. read_int_literal(∈.(lexer Lexer) ∈.(n Int))
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)
     case. c
@@ -107,8 +105,7 @@ set. read_int_literal λ. ∈.(lexer Lexer) ∈.(n Int):
     .None
         *.(lexer n)
 
-let. mut, read_identifier λ. ∈.(lexer Lexer) ∈.(s List(Int)): *.(lexer s)
-set. read_identifier λ. ∈.(lexer Lexer) ∈.(s List(Int)):
+fun. read_identifier(∈.(lexer Lexer) ∈.(s List(Int)))
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)
     case. c
@@ -121,7 +118,7 @@ set. read_identifier λ. ∈.(lexer Lexer) ∈.(s List(Int)):
     .None
         *.(lexer s)
 
-let. check_after_ident λ. ∈.(lexer Lexer):
+fun. check_after_ident(∈.(lexer Lexer))
     let. *.(_ c file_pos) read_char(lexer)
     case. c
     .Some(c)
@@ -131,7 +128,7 @@ let. check_after_ident λ. ∈.(lexer Lexer):
     .None
         *¡
 
-let. read_token_char λ. ∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_depth Int):
+fun. read_token_char(∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_depth Int))
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)
     set. lexer lexer′
@@ -190,8 +187,7 @@ let. read_token_char λ. ∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_
     .None
         return(Eof)
 
-let. mut, skip_comment λ. ∈.(lexer Lexer): lexer
-set. skip_comment λ. ∈.(lexer Lexer):
+fun. skip_comment(∈.(lexer Lexer))
     let. mut, lexer lexer
     case. read_char(lexer)
     .*.(lexer′ Some(c) _)
@@ -202,8 +198,7 @@ set. skip_comment λ. ∈.(lexer Lexer):
             skip_comment(lexer)
     .*.(_ None _) lexer
 
-let. mut, read_token′ λ. ∈.(lexer Lexer) ∈.(this_indent Option(Int)): *.(lexer Eof ⊥ 0 FilePos(list¡ 0 0))
-set. read_token′ λ. ∈.(lexer Lexer) ∈.(this_indent Option(Int)):
+fun. read_token′(∈.(lexer Lexer) ∈.(this_indent Option(Int)))
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)
     let. *.(at_line_start this_indent_depth) case. this_indent
@@ -242,7 +237,7 @@ set. read_token′ λ. ∈.(lexer Lexer) ∈.(this_indent Option(Int)):
     .None
         read_token_char(lexer at_line_start this_indent_depth)
 
-let. read_token λ. ∈.(lexer Lexer):
+fun. read_token(∈.(lexer Lexer))
     let. this_indent case. lexer
         .Lexer(CharReader(_ 0 0 _ _) _ _) Some(0)
         ._ None
