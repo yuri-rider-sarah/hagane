@@ -1,0 +1,171 @@
+type. F_Statement
+    F_ExprStatement(F_Expr)
+    F_Let(F_Pattern F_Expr F_Type)
+    F_LetMut(F_Expr F_Type)
+    F_Fun(List(*.(List(*.(F_Pattern F_Type)) F_Expr F_Type)))
+    F_TypeStatement(Int)
+    F_Extern(List(Int) F_Type FilePos)
+    F_Set(Int F_Expr)
+
+type. F_Expr
+    F_IntLiteral(Int)
+    F_Ident(Int)
+    F_Apply(F_Expr List(F_Expr))
+    F_If(List(*.(F_Expr F_Expr)) F_Expr)
+    F_While(F_Expr F_Expr)
+    F_And(List(F_Expr))
+    F_Or(List(F_Expr))
+    F_Do(List(F_Statement))
+    F_Lambda(List(*.(F_Pattern F_Type)) F_Expr F_Type)
+    F_Case(F_Expr F_Type List(*.(F_Pattern F_Expr)) F_Type)
+    F_ListLiteral(List(F_Expr))
+
+type. F_Pattern
+    F_IntLiteralPattern(Int)
+    F_IdentPattern(F_Type)
+    F_WildcardPattern
+    F_VariantPattern(Int List(F_Pattern))
+    F_ListPattern(List(F_Pattern) F_Type)
+
+type. F_Type
+    F_PrimType(Int)
+    F_DefType(Int)
+    F_Function(List(F_Type) F_Type)
+
+type. F_Context F_Context(List(*.(Int Int)) Int)
+
+let. mut, empty_f_context F_Context(list¡ 0)
+
+fun. f_lookup_var(∈.(context F_Context) ∈.(vi Int) ∈.(mi Int))
+    let. F_Context(vars _) context
+    let. *.(offset stride) get(vars vi)
+    +(offset *(mi stride))
+
+fun. f_add_var_bindings(∈.(context F_Context) ∈.(num_bindings Int) ∈.(num_instances Int))
+    let. F_Context(vars next_offset) context
+    F_Context(++(vars map_ι(num_bindings λ.(i: *.(+(next_offset i) num_bindings)))) +(next_offset *(num_bindings num_instances)))
+
+fun. f_shift_next_binding(∈.(context F_Context) ∈.(shift Int))
+    let. F_Context(vars next_offset) context
+    F_Context(vars +(next_offset shift))
+
+let. mut, f_var_prims list¡
+let. mut, f_type_prims list¡
+let. mut, f_m_type_prim_offset list¡
+let. mut, f_type_defs list¡
+let. mut, f_m_type_def_offset list¡
+
+fun. fill_f_types()
+    let. mut, m_prim_instances list¡
+    for‡ ι*(m_type_prims) λ. *.(id instances):
+        let. instances map(instances λ.(m_type_args: *.(id m_type_args)))
+        set. f_m_type_prim_offset push(f_m_type_prim_offset len(m_prim_instances))
+        set. m_prim_instances ++(m_prim_instances instances)
+    let. mut, m_def_instances map(m_tuple_instances λ.(m_types: list.(m_types)))
+    for‡ m_type_defs λ. M_TypeDef(_ _ instances):
+        let. instances map(instances λ.(*.(_ m_variants): m_variants))
+        set. f_m_type_def_offset push(f_m_type_def_offset len(m_def_instances))
+        set. m_def_instances ++(m_def_instances instances)
+    set. f_type_prims map(m_prim_instances λ.(*.(id m_type_args): *.(id map(m_type_args m_type→f_type))))
+    set. f_type_defs map(m_def_instances λ.(m_variants: map(m_variants λ.(m_variant: map(m_variant m_type→f_type)))))
+    set. empty_f_context F_Context(list¡ len(m_tuple_instances))
+    for‡ ι*(m_var_prims) λ. *.(id instances):
+        for‡ instances λ. *.(m_type_args m_param_types):
+            set. f_var_prims push(f_var_prims *.(id map(m_type_args m_type→f_type) map(m_param_types m_type→f_type)))
+        set. empty_f_context f_add_var_bindings(empty_f_context 1 len(instances))
+
+fun. m_exprs→f_exprs(∈.(m_exprs List(M_Expr)) ∈.(context F_Context))
+    map(m_exprs λ.(e: m_expr→f_expr(e context)))
+
+fun. m_expr→f_expr(∈.(m_expr M_Expr) ∈.(context F_Context))
+    case. m_expr
+    .M_IntLiteral(n) F_IntLiteral(n)
+    .M_Ident(vi mi) F_Ident(f_lookup_var(context vi mi))
+    .M_Tuple(id list¡) F_Ident(id)
+    .M_Tuple(id m_exprs) F_Apply(F_Ident(id) m_exprs→f_exprs(m_exprs context))
+    .M_Apply(m_func m_args) F_Apply(m_expr→f_expr(m_func context) m_exprs→f_exprs(m_args context))
+    .M_If(m_cases m_else) F_If(map(m_cases λ.(*.(m_cond m_body): *.(m_expr→f_expr(m_cond context) m_expr→f_expr(m_body context)))) m_expr→f_expr(m_else context))
+    .M_While(m_cond m_body) F_While(m_expr→f_expr(m_cond context) m_expr→f_expr(m_body context))
+    .M_And(m_exprs) F_And(m_exprs→f_exprs(m_exprs context))
+    .M_Or(m_exprs) F_Or(m_exprs→f_exprs(m_exprs context))
+    .M_Do(m_statements) F_Do(m_statements→f_statements(m_statements context))
+    .M_Lambda(m_params m_body m_ret_type)
+        let. *.(f_params bindings) m_params→f_params(m_params context)
+        let. mut, context′ context
+        set. context′ f_add_var_bindings(context′ bindings 1)
+        F_Lambda(f_params m_expr→f_expr(m_body context′) m_type→f_type(m_ret_type))
+    .M_Case(m_matched m_matched_type m_cases m_type)
+        let. f_cases map‡ m_cases λ. *.(m_pattern m_body):
+            let. *.(f_pattern bindings) m_pattern→f_pattern(m_pattern context)
+            let. mut, context′ context
+            set. context′ f_add_var_bindings(context′ bindings 1)
+            *.(f_pattern m_expr→f_expr(m_body context′))
+        F_Case(m_expr→f_expr(m_matched context) m_type→f_type(m_matched_type) f_cases m_type→f_type(m_type))
+    .M_ListLiteral(m_exprs) F_ListLiteral(m_exprs→f_exprs(m_exprs context))
+
+fun. m_statements→f_statements(∈.(m_statements List(M_Statement)) ∈.(context F_Context))
+    let. mut, context context
+    concat‡ map‡ m_statements λ. m_statement:
+        case. m_statement
+        .M_ExprStatement(m_expr) list.(F_ExprStatement(m_expr→f_expr(m_expr context)))
+        .M_Let(m_pattern m_expr m_type)
+            let. f_expr m_expr→f_expr(m_expr context)
+            let. *.(f_pattern bindings) m_pattern→f_pattern(m_pattern context)
+            set. context f_add_var_bindings(context bindings 1)
+            list.(F_Let(f_pattern f_expr m_type→f_type(m_type)))
+        .M_LetMut(m_expr m_type)
+            set. context f_add_var_bindings(context 1 1)
+            list.(F_LetMut(m_expr→f_expr(m_expr context) m_type→f_type(m_type)))
+        .M_Fun(id)
+            let. M_FunDef(t_defs _ instances) get(m_funs id)
+            let. mut, context1 context
+            set. context f_add_var_bindings(context len(t_defs) len(instances))
+            map‡ instances λ. *.(_ m_defs):
+                let. context2 f_add_var_bindings(context1 len(t_defs) 1)
+                set. context1 f_shift_next_binding(context1 len(t_defs))
+                F_Fun‡ map‡ m_defs λ. *.(m_params m_body m_ret_type):
+                    let. *.(f_params bindings) m_params→f_params(m_params context)
+                    let. context3 f_add_var_bindings(context2 bindings 1)
+                    *.(f_params m_expr→f_expr(m_body context3) m_type→f_type(m_ret_type))
+        .M_TypeStatement(id)
+            let. M_TypeDef(t_variants _ instances) get(m_type_defs id)
+            set. context f_add_var_bindings(context len(t_variants) len(instances))
+            map_ι(len(instances) λ.(mi: F_TypeStatement(+(get(f_m_type_def_offset id) mi))))
+        .M_Extern(name m_type file_pos)
+            set. context f_add_var_bindings(context 1 1)
+            list.(F_Extern(name m_type→f_type(m_type) file_pos))
+        .M_Set(vi m_expr)
+            list.(F_Set(f_lookup_var(context vi 0) m_expr→f_expr(m_expr context)))
+
+fun. m_patterns→f_patterns(∈.(m_patterns List(M_Pattern)) ∈.(context F_Context))
+    let. *.(f_patterns bindings_) unzip(map(m_patterns λ.(p: m_pattern→f_pattern(p context))))
+    *.(f_patterns sum(bindings_))
+
+fun. m_params→f_params(∈.(m_params List(*.(M_Pattern M_Type))) ∈.(context F_Context))
+    let. *.(f_params bindings_) unzip‡ map‡ m_params λ. *.(m_pattern m_type):
+        let. *.(f_pattern bindings) m_pattern→f_pattern(m_pattern context)
+        *.(*.(f_pattern m_type→f_type(m_type)) bindings)
+    let. bindings sum(bindings_)
+    *.(f_params bindings)
+
+fun. m_pattern→f_pattern(∈.(m_pattern M_Pattern) ∈.(context F_Context))
+    case. m_pattern
+    .M_IntLiteralPattern(n) *.(F_IntLiteralPattern(n) 0)
+    .M_IdentPattern(m_type) *.(F_IdentPattern(m_type→f_type(m_type)) 1)
+    .M_WildcardPattern *.(F_WildcardPattern 0)
+    .M_TuplePattern(id m_subpats)
+        let. *.(f_subpats bindings) m_patterns→f_patterns(m_subpats context)
+        *.(F_VariantPattern(id f_subpats) bindings)
+    .M_VariantPattern(vi mi m_subpats)
+        let. *.(f_subpats bindings) m_patterns→f_patterns(m_subpats context)
+        *.(F_VariantPattern(f_lookup_var(context vi mi) f_subpats) bindings)
+    .M_ListPattern(m_subpats m_type)
+        let. *.(f_subpats bindings) m_patterns→f_patterns(m_subpats context)
+        *.(F_ListPattern(f_subpats m_type→f_type(m_type)) bindings)
+
+fun. m_type→f_type(∈.(m_type M_Type))
+    case. m_type
+    .M_PrimType(id mi) F_PrimType(+(get(f_m_type_prim_offset id) mi))
+    .M_DefType(id mi) F_DefType(+(get(f_m_type_def_offset id) mi))
+    .M_TupleType(id) F_DefType(id)
+    .M_Function(m_params m_ret) F_Function(map(m_params m_type→f_type) m_type→f_type(m_ret))

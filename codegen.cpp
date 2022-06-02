@@ -29,18 +29,11 @@ static IRBuilder<> *builder;
 static Module *module_;
 static TargetMachine *target_machine;
 
+static StructType *captures_header_type;
+static FunctionType *captures_dtor_type;
+static FunctionType *boxed_dtor_type;
 static Function *malloc_func;
 static Function *free_func;
-static FunctionType *dtor_type;
-static Function *base_dtor;
-static Function *list_dtor;
-static StructType *box_header_type;
-static Type *box_type;
-static StructType *tagged_header_type;
-static StructType *cell_type;
-static StructType *list_type;
-static Function *box_rc_decr;
-static Function *cell_rc_decr;
 static Function *overflow_error_func;
 static Function *div_by_zero_error_func;
 static Function *bounds_error_func;
@@ -76,6 +69,7 @@ static Value *cg_call(Function *func, ArrayRef<Value *> args) {
 #define cg_phi builder->CreatePHI
 #define cg_ret builder->CreateRet
 #define cg_ret_void builder->CreateRetVoid
+#define cg_insert_value builder->CreateInsertValue
 #define cg_extract_value builder->CreateExtractValue
 #define cg_and builder->CreateAnd
 #define cg_add builder->CreateAdd
@@ -86,6 +80,7 @@ static Value *cg_call(Function *func, ArrayRef<Value *> args) {
 #define cg_icmp_sge builder->CreateICmpSGE
 #define cg_icmp_ult builder->CreateICmpULT
 #define cg_icmp_uge builder->CreateICmpUGE
+#define cg_poison PoisonValue::get
 
 static Value *cg_gep(Value *val, vector<Value *> idx_) {
     vector<Value *> idx = {cg_i64(0)};
@@ -94,7 +89,7 @@ static Value *cg_gep(Value *val, vector<Value *> idx_) {
     return builder->CreateInBoundsGEP(val, idx);
 }
 
-static BasicBlock *create_basic_block(Function *func) {
+extern "C" BasicBlock *create_basic_block(Function *func) {
     return BasicBlock::Create(*context, "", func);
 }
 
@@ -110,81 +105,92 @@ extern "C" void set_insert_block(BasicBlock *bb) {
     builder->SetInsertPoint(bb);
 }
 
-static Function *codegen_box_rc_decr_func() {
-    Function *func = create_function(FunctionType::get(Type::getVoidTy(*context), {box_type}, false));
-    BasicBlock *entry_block = create_basic_block(func);
-    BasicBlock *free_block = create_basic_block(func);
-    BasicBlock *decr_block = create_basic_block(func);
-    Value *val = func->getArg(0);
-
-    set_insert_block(entry_block);
-    Value *rc_ptr = cg_sgep(val, 0);
-    Value *rc = cg_load(rc_ptr);
-    cg_cond_br(cg_icmp_eq(rc, cg_i64(0)), free_block, decr_block);
-
-    set_insert_block(free_block);
-    cg_call(dtor_type, cg_load(cg_sgep(val, 1)), {val});
-    cg_ret_void();
-
-    set_insert_block(decr_block);
-    cg_store(cg_sub(rc, cg_i64(1)), rc_ptr);
-    cg_ret_void();
-
-    return func;
+extern "C" BasicBlock *create_block() {
+    return create_basic_block(get_insert_block()->getParent());
 }
 
-static Function *codegen_cell_rc_decr_func() {
-    Function *func = create_function(FunctionType::get(Type::getVoidTy(*context), {pointer_type(cell_type)}, false));
-    BasicBlock *entry_block = create_basic_block(func);
-    BasicBlock *free_block = create_basic_block(func);
-    BasicBlock *decr_block = create_basic_block(func);
-    Value *val = func->getArg(0);
+static FunctionType *get_function_type(vector<Type *> *param_types, Type *ret_type) {
+    param_types->push_back(pointer_type(captures_header_type));
+    FunctionType *func_type = FunctionType::get(ret_type, *param_types, false);
+    param_types->pop_back();
+    return func_type;
+}
 
-    set_insert_block(entry_block);
-    Value *rc_ptr = cg_sgep(val, 0);
-    Value *rc = cg_load(rc_ptr);
-    cg_cond_br(cg_icmp_eq(rc, cg_i64(0)), free_block, decr_block);
+extern "C" Function *codegen_new_function(vector<Type *> *param_types, Type *ret_type) {
+    return create_function(get_function_type(param_types, ret_type));
+}
 
-    set_insert_block(free_block);
-    Value *box = cg_load(cg_sgep(val, 1));
-    cg_call(box_rc_decr, {box});
+extern "C" Function *begin_captures_dtor() {
+    Function *dtor = create_function(captures_dtor_type);
+    set_insert_block(create_basic_block(dtor));
+    return dtor;
+}
+
+extern "C" Function *create_boxed_dtor() {
+    return create_function(boxed_dtor_type);
+}
+
+extern "C" void codegen_end_dtor(Value *val) {
     cg_call(free_func, {cg_bitcast(val, Type::getInt8PtrTy(*context))});
     cg_ret_void();
-
-    set_insert_block(decr_block);
-    cg_store(cg_sub(rc, cg_i64(1)), rc_ptr);
-    cg_ret_void();
-
-    return func;
 }
 
-static Function *codegen_list_dtor_func() {
-    Function *func = create_function(dtor_type);
-    BasicBlock *entry_block = create_basic_block(func);
-    BasicBlock *test_block = create_basic_block(func);
-    BasicBlock *loop_block = create_basic_block(func);
-    BasicBlock *end_block = create_basic_block(func);
+extern "C" Value *codegen_cell_rc_decr_get_rc(Value *cell) {
+    return cg_load(cg_sgep(cell, 0));
+}
 
-    set_insert_block(entry_block);
-    Value *val = cg_bitcast(func->getArg(0), pointer_type(list_type));
-    Value *len = cg_load(cg_sgep(val, 1));
-    cg_br(test_block);
+extern "C" void codegen_cell_rc_decr_decr_rc(Value *rc, Value *cell) {
+    cg_store(cg_sub(rc, cg_i64(1)), cg_sgep(cell, 0));
+}
 
-    set_insert_block(test_block);
-    PHINode *i = cg_phi(i64_type, 2);
-    i->addIncoming(cg_i64(0), entry_block);
+extern "C" void codegen_cell_rc_decr_free(Value *cell) {
+    cg_call(free_func, {cg_bitcast(cell, Type::getInt8PtrTy(*context))});
+}
+
+extern "C" void codegen_cell_rc_decr_branch(Value *rc, BasicBlock *free_block, BasicBlock *decr_block) {
+    cg_cond_br(cg_icmp_eq(rc, cg_i64(0)), free_block, decr_block);
+}
+
+extern "C" void codegen_cell_rc_incr(Value *cell) {
+    Value *rc_ptr = cg_sgep(cell, 0);
+    Value *rc = cg_load(rc_ptr);
+    cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
+}
+
+static Type *list_type(Type *elem_type) {
+    return struct_type({i64_type, i64_type, i64_type, ArrayType::get(elem_type, 0)});
+}
+
+extern "C" Value *codegen_list_dtor_get_val(Type *elem_type) {
+    return cg_bitcast(get_insert_block()->getParent()->getArg(0), pointer_type(list_type(elem_type)));
+}
+
+extern "C" Value *codegen_list_dtor_extract_len(Value *val) {
+    return cg_load(cg_sgep(val, 1));
+}
+
+extern "C" Value *codegen_list_dtor_extract_elem(Value *val, Value *i) {
+    return cg_load(cg_gep(val, {cg_i32(3), i}));
+}
+
+extern "C" Value *codegen_list_dtor_add_1(Value *i) {
+    return cg_add(i, cg_i64(1));
+}
+
+extern "C" void codegen_list_dtor_branch(Value *i, Value *len, BasicBlock *loop_block, BasicBlock *end_block) {
     cg_cond_br(cg_icmp_ult(i, len), loop_block, end_block);
+}
 
-    set_insert_block(loop_block);
-    cg_call(box_rc_decr, {cg_load(cg_gep(val, {cg_i32(3), i}))});
-    i->addIncoming(cg_add(i, cg_i64(1)), loop_block);
-    cg_br(test_block);
+extern "C" Type *codegen_int_type() {
+    return i64_type;
+}
 
-    set_insert_block(end_block);
-    cg_call(free_func, {cg_bitcast(val, Type::getInt8PtrTy(*context))});
-    cg_ret_void();
+extern "C" Type *codegen_boxed_type() {
+    return pointer_type(i64_type);
+}
 
-    return func;
+extern "C" Type *codegen_function_type(vector<Type *> *params, Type *ret) {
+    return struct_type({pointer_type(get_function_type(params, ret)), pointer_type(captures_header_type)});
 }
 
 extern "C" void llvm_init(u64 opt_level) {
@@ -208,19 +214,12 @@ extern "C" void llvm_init(u64 opt_level) {
     builder = new IRBuilder<>(*context);
     module_->setDataLayout(data_layout);
     module_->setTargetTriple(target_triple);
+    captures_header_type = StructType::create(*context, "Captures");
+    captures_dtor_type = FunctionType::get(Type::getVoidTy(*context), {pointer_type(captures_header_type)}, false);
+    captures_header_type->setBody({Type::getInt64Ty(*context), pointer_type(captures_dtor_type)});
+    boxed_dtor_type = FunctionType::get(Type::getVoidTy(*context), {pointer_type(i64_type)}, false);
     malloc_func = Function::Create(FunctionType::get(Type::getInt8PtrTy(*context), {Type::getInt64Ty(*context)}, false), Function::ExternalLinkage, "malloc", module_);
     free_func = Function::Create(FunctionType::get(Type::getVoidTy(*context), {Type::getInt8PtrTy(*context)}, false), Function::ExternalLinkage, "free", module_);
-    box_header_type = StructType::create(*context, "Box");
-    box_type = pointer_type(box_header_type);
-    box_header_type->setBody({i64_type, pointer_type(FunctionType::get(Type::getVoidTy(*context), {box_type}, false))});
-    tagged_header_type = struct_type({box_header_type, i64_type});
-    cell_type = StructType::create(*context, {i64_type, box_type}, "Cell");
-    list_type = StructType::create(*context, {box_header_type, i64_type, i64_type, ArrayType::get(box_type, 0)}, "List");
-    dtor_type = FunctionType::get(Type::getVoidTy(*context), {box_type}, false);
-    box_rc_decr = codegen_box_rc_decr_func();
-    cell_rc_decr = codegen_cell_rc_decr_func();
-    base_dtor = (Function *)cg_bitcast(free_func, pointer_type(dtor_type));
-    list_dtor = codegen_list_dtor_func();
     FunctionType *error_func_type = FunctionType::get(Type::getVoidTy(*context), false);
     overflow_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "overflow_error", module_);
     div_by_zero_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "div_by_zero_error", module_);
@@ -231,18 +230,8 @@ extern "C" void llvm_init(u64 opt_level) {
     set_insert_block(create_basic_block(main));
 }
 
-extern "C" BasicBlock *create_block() {
-    return create_basic_block(get_insert_block()->getParent());
-}
-
-static FunctionType *get_function_type(u64 num_params) {
-    return FunctionType::get(box_type, vector<Type *>(num_params + 1, box_type), false);
-}
-
-extern "C" Function *begin_new_function(u64 num_params) {
-    Function *func = create_function(get_function_type(num_params));
-    set_insert_block(create_basic_block(func));
-    return func;
+static bool is_type_small(Type *type) {
+    return module_->getDataLayout().getTypeAllocSize(type) <= 16;
 }
 
 static Value *codegen_malloc(Value *size, Type *type) {
@@ -255,100 +244,47 @@ static Value *codegen_malloc(Type *type) {
     return cg_bitcast(val, pointer_type(type));
 }
 
-static void codegen_box_header_init(Value *val, Value *dtor) {
-    val = cg_bitcast(val, pointer_type(box_header_type));
-    cg_store(cg_i64(0), cg_sgep(val, 0));
-    cg_store(dtor, cg_sgep(val, 1));
-}
-
-extern "C" void codegen_rc_incr(Value *val) {
-    Value *rc_ptr = cg_sgep(val, 0);
-    Value *rc = cg_load(rc_ptr);
-    cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
-}
-
-extern "C" void codegen_rc_decr(Value *val) {
-    cg_call(box_rc_decr, {val});
-}
-
-static Value *codegen_boxed_fuction(Function *func) {
-    Type *type = struct_type({box_header_type, pointer_type(func->getFunctionType())});
-    Value *val = codegen_malloc(type);
-    codegen_box_header_init(val, base_dtor);
-    cg_store(func, cg_sgep(val, 1));
-    return cg_bitcast(val, box_type);
-}
-
-static Value *codegen_boxed(Value *v) {
-    Value *val = codegen_malloc(struct_type({box_header_type, v->getType()}));
-    codegen_box_header_init(val, base_dtor);
-    cg_store(v, cg_sgep(val, 1));
-    return cg_bitcast(val, box_type);
+static void codegen_rc_init(Value *val) {
+    cg_store(cg_i64(0), val);
 }
 
 extern "C" Value *codegen_const_int(u64 value) {
-    return codegen_boxed(cg_i64(value));
+    return cg_i64(value);
 }
 
-static Value *codegen_tuple_(vector<Value *> elems, i64 tag) {
-    // Create type
-    vector<Type *> type_elems = {tag >= 0 ? tagged_header_type : box_header_type};
-    for (size_t i = 0; i < elems.size(); i++)
-        type_elems.push_back(box_type);
-    Type *type = struct_type(type_elems);
-
-    // Create destructor
-    BasicBlock *saved_bb = get_insert_block();
-    Function *dtor = Function::Create(dtor_type, Function::PrivateLinkage, "dtor", module_);
-    set_insert_block(create_basic_block(dtor));
-    Value *dtor_val = cg_bitcast(dtor->getArg(0), pointer_type(type));
-    for (size_t i = 0; i < elems.size(); i++)
-        codegen_rc_decr(cg_load(cg_sgep(dtor_val, 1 + i)));
-    cg_call(free_func, {cg_bitcast(dtor_val, Type::getInt8PtrTy(*context))});
-    cg_ret_void();
-    set_insert_block(saved_bb);
-
-    // Build tuple
-    Value *val = codegen_malloc(type);
-    codegen_box_header_init(val, dtor);
-    if (tag >= 0)
-        cg_store(cg_i64(tag), cg_gep(val, {cg_i32(0), cg_i32(1)}));
-    for (size_t i = 0; i < elems.size(); i++)
-        cg_store(elems[i], cg_sgep(val, 1 + i));
-    return cg_bitcast(val, box_type);
+static Value *codegen_malloc_empty_list() {
+    StructType *list_type = struct_type({i64_type, i64_type, i64_type});
+    return codegen_malloc(ConstantExpr::getSizeOf(list_type), list_type);
 }
 
-extern "C" Value *codegen_tuple(vector<Value *> *elems) {
-    return codegen_tuple_(*elems, -1);
-}
-
-static Value *codegen_malloc_list(Value *size) {
-    Value *data_size = cg_mul(ConstantExpr::getSizeOf(box_type), size);
-    return codegen_malloc(cg_add(ConstantExpr::getOffsetOf(list_type, 3), data_size), list_type);
+static Value *codegen_malloc_list(Value *size, Type *elem_type) {
+    Type *list_type_ = list_type(elem_type);
+    Value *data_size = cg_mul(ConstantExpr::getSizeOf(elem_type), size);
+    return codegen_malloc(cg_add(ConstantExpr::getSizeOf(list_type_), data_size), list_type_);
 }
 
 extern "C" Value *codegen_list(vector<Value *> *elems) {
-    Value *val = codegen_malloc_list(cg_i64(elems->size()));
-    codegen_box_header_init(val, list_dtor);
-    cg_store(cg_i64(elems->size()), cg_sgep(val, 1));
-    cg_store(cg_i64(elems->size()), cg_sgep(val, 2));
-    for (size_t i = 0; i < elems->size(); i++)
-        cg_store((*elems)[i], cg_gep(val, {cg_i32(3), cg_i64(i)}));
-    return cg_bitcast(val, box_type);
-}
-
-extern "C" void codegen_cell_rc_incr(Value *ptr) {
-    Value *rc_ptr = cg_sgep(ptr, 0);
-    cg_store(cg_add(cg_load(rc_ptr), cg_i64(1)), rc_ptr);
-}
-
-extern "C" void codegen_cell_rc_decr(Value *ptr) {
-    cg_call(cell_rc_decr, {ptr});
+    if (elems->size() == 0) {
+        Value *val = codegen_malloc_empty_list();
+        codegen_rc_init(cg_sgep(val, 0));
+        cg_store(cg_i64(0), cg_sgep(val, 1));
+        cg_store(cg_i64(0), cg_sgep(val, 2));
+        return cg_bitcast(val, pointer_type(i64_type));
+    } else {
+        Value *val = codegen_malloc_list(cg_i64(elems->size()), (*elems)[0]->getType());
+        codegen_rc_init(cg_sgep(val, 0));
+        cg_store(cg_i64(elems->size()), cg_sgep(val, 1));
+        cg_store(cg_i64(elems->size()), cg_sgep(val, 2));
+        for (size_t i = 0; i < elems->size(); i++)
+            cg_store((*elems)[i], cg_gep(val, {cg_i32(3), cg_i64(i)}));
+        return cg_bitcast(val, pointer_type(i64_type));
+    }
 }
 
 extern "C" Value *codegen_create_mut_var(Value *val) {
+    Type *cell_type = struct_type({i64_type, val->getType()});
     Value *ptr = codegen_malloc(cell_type);
-    cg_store(cg_i64(0), cg_sgep(ptr, 0));
+    codegen_rc_init(cg_sgep(ptr, 0));
     cg_store(val, cg_sgep(ptr, 1));
     return ptr;
 }
@@ -369,15 +305,13 @@ extern "C" void codegen_br(BasicBlock *bb) {
     cg_br(bb);
 }
 
-extern "C" void codegen_cond_br(Value *cond_box, BasicBlock *then, BasicBlock *else_) {
-    Value *cond = cg_bitcast(cond_box, pointer_type(tagged_header_type));
-    Value *cond_i64 = cg_load(cg_sgep(cond, 1));
-    codegen_rc_decr(cond_box);
-    cg_cond_br(cg_icmp_ne(cond_i64, cg_i64(0)), then, else_);
+extern "C" void codegen_cond_br(Value *cond, BasicBlock *then, BasicBlock *else_) {
+    Type *tagged_box_type = pointer_type(struct_type({i64_type, i64_type}));
+    cg_cond_br(cg_icmp_ne(cg_load(cg_sgep(cg_bitcast(cond, tagged_box_type), 1)), cg_i64(0)), then, else_);
 }
 
-extern "C" PHINode *codegen_phi(u64 reserved) {
-    return cg_phi(box_type, reserved);
+extern "C" PHINode *codegen_phi(Type *type, u64 reserved) {
+    return cg_phi(type, reserved);
 }
 
 extern "C" void phi_add_incoming(PHINode *phi, Value *val, BasicBlock *bb) {
@@ -385,11 +319,10 @@ extern "C" void phi_add_incoming(PHINode *phi, Value *val, BasicBlock *bb) {
 }
 
 extern "C" Value *codegen_apply(Value *func_val, vector<Value *> *args) {
-    FunctionType *func_type = get_function_type(args->size());
-    Type *func_header_type = struct_type({box_header_type, pointer_type(func_type)});
-    Value *func = cg_load(cg_sgep(cg_bitcast(func_val, pointer_type(func_header_type)), 1));
-    args->push_back(func_val);
-    Value *val = cg_call(func_type, func, *args);
+    Value *func = cg_extract_value(func_val, {0});
+    Value *captures = cg_extract_value(func_val, {1});
+    args->push_back(captures);
+    Value *val = cg_call((FunctionType *)(func->getType()->getPointerElementType()), func, *args);
     args->pop_back();
     return val;
 }
@@ -398,20 +331,21 @@ extern "C" Value *codegen_get_arg(u64 i) {
     return get_insert_block()->getParent()->getArg(i);
 }
 
-extern "C" Type *get_captures_type(u64 num_params, vector<Value *> captures) {
-    vector<Type *> elem_types = {struct_type({box_header_type, pointer_type(get_function_type(num_params))})};
-    for (Value *capture : captures)
-        elem_types.push_back(capture->getType());
-    return StructType::create(*context, elem_types, "Func");
-}
-
-extern "C" Value *codegen_get_captures() {
+extern "C" Value *codegen_get_captures(Value *outer) {
     Function *func = get_insert_block()->getParent();
     return func->getArg(func->arg_size() - 1);
 }
 
-extern "C" Value *codegen_pointer_bitcast(Value *val, Type *type) {
-    return cg_bitcast(val, pointer_type(type));
+extern "C" Type *codegen_type_of(Value *val) {
+    return val->getType();
+}
+
+extern "C" Type *codegen_pointer_type(Type *type) {
+    return pointer_type(type);
+}
+
+extern "C" Value *codegen_bitcast(Value *val, Type *type) {
+    return cg_bitcast(val, type);
 }
 
 extern "C" Value *codegen_extract_capture(Value *captures, u64 i) {
@@ -422,68 +356,185 @@ extern "C" void codegen_ret(Value *val) {
     cg_ret(val);
 }
 
-extern "C" Value *codegen_func_val(Function *func, vector<Value *> *captures, Type *type) {
-    // Create destructor
-    BasicBlock *saved_bb = get_insert_block();
-    Function *dtor = Function::Create(dtor_type, Function::PrivateLinkage, "dtor", module_);
-    set_insert_block(create_basic_block(dtor));
-    Value *dtor_val = cg_bitcast(dtor->getArg(0), pointer_type(type));
-    for (size_t i = 0; i < captures->size(); i++) {
-        Value *capture = cg_load(cg_sgep(dtor_val, 1 + i));
-        if (capture->getType() == box_type)
-            codegen_rc_decr(capture);
-        else
-            codegen_cell_rc_decr(capture);
-    }
-    cg_call(free_func, {cg_bitcast(dtor_val, Type::getInt8PtrTy(*context))});
-    cg_ret_void();
-    set_insert_block(saved_bb);
+extern "C" Value *codegen_extract_captures(Value *func) {
+    return cg_extract_value(func, {1});
+}
 
-    // Build value
+extern "C" void codegen_captures_rc_incr(Value *captures) {
+    Value *rc_ptr = cg_sgep(captures, 0);
+    Value *rc = cg_load(rc_ptr);
+    cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
+}
+
+extern "C" void codegen_captures_rc_decr(Value *captures) {
+    BasicBlock *free_block = create_block();
+    BasicBlock *decr_block = create_block();
+    BasicBlock *end_block = create_block();
+
+    Value *rc_ptr = cg_sgep(captures, 0);
+    Value *rc = cg_load(rc_ptr);
+    cg_cond_br(cg_icmp_eq(rc, cg_i64(0)), free_block, decr_block);
+
+    set_insert_block(free_block);
+    cg_call(captures_dtor_type, cg_load(cg_sgep(captures, 1)), {captures});
+    cg_br(end_block);
+
+    set_insert_block(decr_block);
+    cg_store(cg_sub(rc, cg_i64(1)), rc_ptr);
+    cg_br(end_block);
+
+    set_insert_block(end_block);
+}
+
+extern "C" Type *codegen_captures_type(vector<Value *> *vals) {
+    vector<Type *> types = {captures_header_type};
+    for (Value *val : *vals)
+        types.push_back(val->getType());
+    return struct_type(types);
+}
+
+extern "C" Value *codegen_captures_from_list(Type *type, vector<Value *> *vals, Value *dtor) {
+    Value *captures = codegen_malloc(type);
+    codegen_rc_init(cg_gep(captures, {cg_i32(0), cg_i32(0)}));
+    cg_store(dtor, cg_gep(captures, {cg_i32(0), cg_i32(1)}));
+    for (size_t i = 0; i < vals->size(); i++)
+        cg_store((*vals)[i], cg_sgep(captures, 1 + i));
+    return captures;
+}
+
+static Value *codegen_empty_captures() {
+    BasicBlock *parent_block = get_insert_block();
+    Function *dtor = begin_captures_dtor();
+    codegen_end_dtor(codegen_get_arg(0));
+    set_insert_block(parent_block);
+    vector <Value *> vals;
+    return codegen_captures_from_list(codegen_captures_type(&vals), &vals, dtor);
+}
+
+extern "C" Value *codegen_func_val(Function *func, Value *captures) {
+    Type *type = struct_type({func->getType(), pointer_type(captures_header_type)});
+    Value *val = cg_poison(type);
+    val = cg_insert_value(val, func, {0});
+    val = cg_insert_value(val, cg_bitcast(captures, pointer_type(captures_header_type)), {1});
+    return val;
+}
+
+static Value *codegen_tagless_boxed_tuple(vector<Value *> *elems) {
+    vector<Type *> type_elems = {i64_type};
+    for (unsigned i = 0; i < elems->size(); i++)
+        type_elems.push_back((*elems)[i]->getType());
+    Type *type = struct_type(type_elems);
     Value *val = codegen_malloc(type);
-    codegen_box_header_init(val, dtor);
-    cg_store(func, cg_gep(val, {cg_i32(0), cg_i32(1)}));
-    for (size_t i = 0; i < captures->size(); i++)
-        cg_store((*captures)[i], cg_sgep(val, 1 + i));
-    return cg_bitcast(val, box_type);
+    codegen_rc_init(cg_sgep(val, 0));
+    for (unsigned i = 0; i < elems->size(); i++)
+        cg_store((*elems)[i], cg_sgep(val, 1 + i));
+    return cg_bitcast(val, pointer_type(i64_type));
 }
 
-extern "C" Value *codegen_null() {
-    return ConstantPointerNull::get((PointerType *)box_type);
+static Value *codegen_tagged_boxed_tuple(vector<Value *> *elems, i64 tag) {
+    vector<Type *> type_elems = {struct_type({i64_type, i64_type})};
+    for (unsigned i = 0; i < elems->size(); i++)
+        type_elems.push_back((*elems)[i]->getType());
+    Type *type = struct_type(type_elems);
+    Value *val = codegen_malloc(type);
+    codegen_rc_init(cg_gep(val, {cg_i32(0), cg_i32(0)}));
+    cg_store(cg_i64(tag), cg_gep(val, {cg_i32(0), cg_i32(1)}));
+    for (unsigned i = 0; i < elems->size(); i++)
+        cg_store((*elems)[i], cg_sgep(val, 1 + i));
+    return cg_bitcast(val, pointer_type(i64_type));
 }
 
-extern "C" void codegen_set_capture(Value *fun, Type *type, u64 i, Value *val) {
-    fun = cg_bitcast(fun, pointer_type(type), "SCBITCAST");
-    cg_store(val, cg_sgep(fun, 1 + i));
-}
-
-static Value *codegen_create_ctor_(u64 num_params, i64 tag) {
-    if (num_params > 0) {
-        FunctionType *ctor_type = get_function_type(num_params);
+extern "C" Value *codegen_create_tagless_boxed_ctor(vector<Type *> *param_types) {
+    if (param_types->size() > 0) {
         BasicBlock *saved_bb = get_insert_block();
-        Function *ctor = Function::Create(ctor_type, Function::PrivateLinkage, "ctor", module_);
+        Function *ctor = codegen_new_function(param_types, pointer_type(i64_type));
         set_insert_block(create_basic_block(ctor));
         vector<Value *> elems;
-        for (u64 i = 0; i < num_params; i++)
+        for (u64 i = 0; i < param_types->size(); i++)
             elems.push_back(ctor->getArg(i));
-        cg_ret(codegen_tuple_(elems, tag));
+        cg_ret(codegen_tagless_boxed_tuple(&elems));
         set_insert_block(saved_bb);
-        return codegen_boxed_fuction(ctor);
+        return codegen_func_val(ctor, codegen_empty_captures());
     } else {
-        return codegen_tuple_({}, tag);
+        vector<Value *> elems;
+        return codegen_tagless_boxed_tuple(&elems);
     }
 }
 
-extern "C" Value *codegen_create_tagless_ctor(u64 num_params) {
-    return codegen_create_ctor_(num_params, -1);
+extern "C" Value *codegen_create_tagged_boxed_ctor(vector<Type *> *param_types, u64 tag) {
+    if (param_types->size() > 0) {
+        BasicBlock *saved_bb = get_insert_block();
+        Function *ctor = codegen_new_function(param_types, pointer_type(i64_type));
+        set_insert_block(create_basic_block(ctor));
+        vector<Value *> elems;
+        for (u64 i = 0; i < param_types->size(); i++)
+            elems.push_back(ctor->getArg(i));
+        cg_ret(codegen_tagged_boxed_tuple(&elems, tag));
+        set_insert_block(saved_bb);
+        return codegen_func_val(ctor, codegen_empty_captures());
+    } else {
+        vector<Value *> elems;
+        return codegen_tagged_boxed_tuple(&elems, tag);
+    }
 }
 
-extern "C" Value *codegen_create_tagged_ctor(u64 num_params, u64 tag) {
-    return codegen_create_ctor_(num_params, tag);
+extern "C" Value *codegen_tagless_boxed_cast(Value *val, vector<Type *> *types) {
+    vector<Type *> type_components = {i64_type};
+    for (Type *type : *types)
+        type_components.push_back(type);
+    Type *type = struct_type(type_components);
+    return cg_bitcast(val, pointer_type(type));
 }
 
-extern "C" Value *codegen_const_bool(u64 value) {
-    return codegen_create_tagged_ctor(0, value);
+extern "C" Value *codegen_tagged_boxed_cast(Value *val, vector<Type *> *types) {
+    vector<Type *> type_components = {struct_type({i64_type, i64_type})};
+    for (Type *type : *types)
+        type_components.push_back(type);
+    Type *type = struct_type(type_components);
+    return cg_bitcast(val, pointer_type(type));
+}
+
+extern "C" Value *codegen_boxed_extract(Value *val, u64 i) {
+    return cg_load(cg_sgep(val, i + 1));
+}
+
+extern "C" SwitchInst *codegen_tagged_boxed_dtor_branch(Value *val, u64 num_variants) {
+    BasicBlock *parent_block = get_insert_block();
+    Value *tag = cg_load(cg_sgep(cg_bitcast(val, pointer_type(struct_type({i64_type, i64_type}))), 1));
+    BasicBlock *undef_block = create_block();
+    set_insert_block(undef_block);
+    cg_unreachable();
+    set_insert_block(parent_block);
+    SwitchInst *switch_inst = builder->CreateSwitch(tag, undef_block, num_variants);
+    return switch_inst;
+}
+
+extern "C" void switch_add_case(SwitchInst *switch_inst, u64 i, BasicBlock *block) {
+    switch_inst->addCase(cg_i64(i), block);
+}
+
+extern "C" void codegen_boxed_rc_incr(Value *val) {
+    Value *rc = cg_load(val);
+    cg_store(cg_add(rc, cg_i64(1)), val);
+}
+
+extern "C" void codegen_boxed_rc_decr(Value *val, Function *dtor) {
+    BasicBlock *free_block = create_block();
+    BasicBlock *decr_block = create_block();
+    BasicBlock *end_block = create_block();
+
+    Value *rc = cg_load(val);
+    cg_cond_br(cg_icmp_eq(rc, cg_i64(0)), free_block, decr_block);
+
+    set_insert_block(free_block);
+    cg_call(boxed_dtor_type, dtor, {val});
+    cg_br(end_block);
+
+    set_insert_block(decr_block);
+    cg_store(cg_sub(rc, cg_i64(1)), val);
+    cg_br(end_block);
+
+    set_insert_block(end_block);
 }
 
 struct PatternEnd {
@@ -500,32 +551,14 @@ extern "C" void bind_pattern_end(PatternEnd *pattern_end, BasicBlock *fail_block
 }
 
 extern "C" PatternEnd *codegen_int_pattern_test(Value *val, u64 n) {
-    val = cg_bitcast(val, pointer_type(struct_type({box_header_type, i64_type})));
-    Value *val_i64 = cg_load(cg_sgep(val, 1));
-    Value *eq_test = cg_icmp_eq(val_i64, cg_i64(n));
+    Value *eq_test = cg_icmp_eq(val, cg_i64(n));
     BasicBlock *parent_block = get_insert_block();
     BasicBlock *success_block = create_basic_block(parent_block->getParent());
     set_insert_block(success_block);
     return new PatternEnd {parent_block, eq_test, success_block};
 }
 
-extern "C" Value *codegen_tuple_cast(Value *val, u64 n) {
-    vector<Type *> type_elems = {box_header_type};
-    for (u64 i = 0; i < n; i++)
-        type_elems.push_back(box_type);
-    Type *type = pointer_type(struct_type(type_elems));
-    return cg_bitcast(val, type);
-}
-
-extern "C" Value *codegen_tagged_cast(Value *val, u64 n) {
-    vector<Type *> type_elems = {tagged_header_type};
-    for (u64 i = 0; i < n; i++)
-        type_elems.push_back(box_type);
-    Type *type = pointer_type(struct_type(type_elems));
-    return cg_bitcast(val, type);
-}
-
-extern "C" PatternEnd *codegen_tag_check(Value *val, u64 tag) {
+extern "C" PatternEnd *codegen_boxed_tag_check(Value *val, u64 tag) {
     Value *val_tag = cg_load(cg_gep(val, {cg_i32(0), cg_i32(1)}));
     Value *tag_test = cg_icmp_eq(val_tag, cg_i64(tag));
     BasicBlock *parent_block = get_insert_block();
@@ -534,12 +567,8 @@ extern "C" PatternEnd *codegen_tag_check(Value *val, u64 tag) {
     return new PatternEnd {parent_block, tag_test, success_block};
 }
 
-extern "C" Value *codegen_tuple_get(Value *val, u64 i) {
-    return cg_load(cg_sgep(val, 1 + i));
-}
-
-extern "C" Value *codegen_list_cast(Value *val) {
-    return cg_bitcast(val, pointer_type(list_type));
+extern "C" Value *codegen_list_cast(Value *val, Type *elem_type) {
+    return cg_bitcast(val, pointer_type(list_type(elem_type)));
 }
 
 extern "C" PatternEnd *codegen_len_check(Value *val, u64 len) {
@@ -570,21 +599,21 @@ extern "C" Value *codegen_extern(vector<u64> *name_vector, u64 params, u64 ret_i
             false),
         Function::ExternalLinkage, name, module_);
     BasicBlock *saved_bb = get_insert_block();
-    Function *func = create_function(get_function_type(params));
+    vector<Type *> func_params(params, i64_type);
+    Function *func = create_function(get_function_type(&func_params, ret_int ? (Type *)i64_type : (Type *)pointer_type(i64_type)));
     set_insert_block(create_basic_block(func));
     vector<Value *> extern_func_args;
-    for (u64 i = 0; i < params; i++) {
-        Value *arg = cg_bitcast(func->getArg(i), pointer_type(struct_type({box_header_type, i64_type})));
-        extern_func_args.push_back(cg_load(cg_sgep(arg, 1)));
-        codegen_rc_decr(func->getArg(i));
-    }
+    for (u64 i = 0; i < params; i++)
+        extern_func_args.push_back(func->getArg(i));
     Value *extern_func_ret = cg_call(extern_func, extern_func_args);
-    if (ret_int)
-        cg_ret(codegen_boxed(extern_func_ret));
-    else
-        cg_ret(codegen_tuple_({}, -1));
+    if (ret_int) {
+        cg_ret(extern_func_ret);
+    } else {
+        vector <Value *> elems;
+        cg_ret(codegen_tagless_boxed_tuple(&elems));
+    }
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
 static Intrinsic::ID arith_intrinsics[3] = {
@@ -595,16 +624,15 @@ static Intrinsic::ID arith_intrinsics[3] = {
 
 extern "C" Value *codegen_arith_primitive(u64 op) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(2));
+    vector<Type *> param_types = {i64_type, i64_type};
+    Function *func = create_function(get_function_type(&param_types, i64_type));
     BasicBlock *entry_block = create_basic_block(func);
     BasicBlock *overflow_block = create_basic_block(func);
     BasicBlock *exit_block = create_basic_block(func);
 
     set_insert_block(entry_block);
-    Value *a = cg_load(cg_sgep(cg_bitcast(func->getArg(0), pointer_type(struct_type({box_header_type, i64_type}))), 1));
-    codegen_rc_decr(func->getArg(0));
-    Value *b = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
-    codegen_rc_decr(func->getArg(1));
+    Value *a = func->getArg(0);
+    Value *b = func->getArg(1);
     Value *r = builder->CreateBinaryIntrinsic(arith_intrinsics[op], a, b);
     cg_cond_br(cg_extract_value(r, {1}), overflow_block, exit_block);
 
@@ -613,15 +641,16 @@ extern "C" Value *codegen_arith_primitive(u64 op) {
     cg_unreachable();
 
     set_insert_block(exit_block);
-    cg_ret(codegen_boxed(cg_extract_value(r, {0})));
+    cg_ret(cg_extract_value(r, {0}));
 
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
 extern "C" Value *codegen_div_primitive(u64 is_mod) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(2));
+    vector<Type *> param_types = {i64_type, i64_type};
+    Function *func = create_function(get_function_type(&param_types, i64_type));
     BasicBlock *entry_block = create_basic_block(func);
     BasicBlock *div_by_zero_block = create_basic_block(func);
     BasicBlock *overflow_check_block = create_basic_block(func);
@@ -635,10 +664,8 @@ extern "C" Value *codegen_div_primitive(u64 is_mod) {
     BasicBlock *exit_block = create_basic_block(func);
 
     set_insert_block(entry_block);
-    Value *a = cg_load(cg_sgep(cg_bitcast(func->getArg(0), pointer_type(struct_type({box_header_type, i64_type}))), 1));
-    codegen_rc_decr(func->getArg(0));
-    Value *b = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
-    codegen_rc_decr(func->getArg(1));
+    Value *a = func->getArg(0);
+    Value *b = func->getArg(1);
     cg_cond_br(cg_icmp_eq(b, cg_i64(0)), div_by_zero_block, overflow_check_block);
 
     set_insert_block(div_by_zero_block);
@@ -652,7 +679,7 @@ extern "C" Value *codegen_div_primitive(u64 is_mod) {
 
     set_insert_block(overflow_block);
     if (is_mod) {
-        cg_ret(codegen_boxed(cg_i64(0)));
+        cg_ret(cg_i64(0));
     } else {
         cg_call(overflow_error_func, {});
         cg_unreachable();
@@ -681,9 +708,9 @@ extern "C" Value *codegen_div_primitive(u64 is_mod) {
     Value *a_ = cg_sub(a, d);
     Value *r = is_mod ? builder->CreateSRem(a_, b) : builder->CreateSDiv(a_, b);
     Value *r_ = is_mod ? cg_add(r, d) : r;
-    cg_ret(codegen_boxed(r_));
+    cg_ret(r_);
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
 static CmpInst::Predicate cmp_predicates[6] = {
@@ -695,60 +722,84 @@ static CmpInst::Predicate cmp_predicates[6] = {
     CmpInst::ICMP_SGE,
 };
 
+static Value *codegen_bool(Value *from) {
+    Type *type = struct_type({i64_type, i64_type});
+    Value *val = codegen_malloc(type);
+    codegen_rc_init(cg_sgep(val, 0));
+    cg_store(builder->CreateZExt(from, i64_type), cg_sgep(val, 1));
+    return cg_bitcast(val, pointer_type(i64_type));
+}
+
 extern "C" Value *codegen_cmp_primitive(u64 pred) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(2));
+    vector<Type *> param_types = {i64_type, i64_type};
+    Function *func = create_function(get_function_type(&param_types, pointer_type(i64_type)));
     set_insert_block(create_basic_block(func));
-    Value *a = cg_load(cg_sgep(cg_bitcast(func->getArg(0), pointer_type(struct_type({box_header_type, i64_type}))), 1));
-    codegen_rc_decr(func->getArg(0));
-    Value *b = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
-    codegen_rc_decr(func->getArg(1));
-    cg_ret(codegen_boxed(builder->CreateZExt(builder->CreateICmp(cmp_predicates[pred], a, b), i64_type)));
+    Value *a = func->getArg(0);
+    Value *b = func->getArg(1);
+    cg_ret(codegen_bool(builder->CreateZExt(builder->CreateICmp(cmp_predicates[pred], a, b), i64_type)));
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
-extern "C" Value *codegen_len_primitive() {
+extern "C" Value *codegen_len_primitive(Type *elem_type, Function *dtor) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(1));
+    vector <Type *> param_types = {pointer_type(i64_type)};
+    Function *func = create_function(get_function_type(&param_types, i64_type));
     set_insert_block(create_basic_block(func));
-    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
-    Value *r = codegen_boxed(cg_load(cg_sgep(l, 1)));
-    codegen_rc_decr(func->getArg(0));
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type(elem_type)));
+    Value *r = cg_load(cg_sgep(l, 1));
+    codegen_boxed_rc_decr(func->getArg(0), dtor);
     cg_ret(r);
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
-extern "C" Value *codegen_get_primitive() {
+static void codegen_rc_incr(Value *val, u64 ref_type) {
+    switch (ref_type) {
+    case 0:
+        break;
+    case 1:
+        codegen_boxed_rc_incr(val);
+        break;
+    case 2:
+        codegen_captures_rc_incr(codegen_extract_captures(val));
+        break;
+    default:
+        cerr << "Internal error: invalid ref_type\n";
+        exit(1);
+    }
+}
+
+extern "C" Value *codegen_get_primitive(Type *elem_type, Function *dtor, u64 ref_type) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(2));
+    vector <Type *> param_types = {pointer_type(i64_type), i64_type};
+    Function *func = create_function(get_function_type(&param_types, elem_type));
     BasicBlock *entry_block = create_basic_block(func);
     BasicBlock *out_of_range_block = create_basic_block(func);
     BasicBlock *exit_block = create_basic_block(func);
 
     set_insert_block(entry_block);
-    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
-    Value *i = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
-    codegen_rc_decr(func->getArg(1));
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type(elem_type)));
+    Value *i = func->getArg(1);
     Value *len = cg_load(cg_sgep(l, 1));
     cg_cond_br(cg_icmp_uge(i, len), out_of_range_block, exit_block);
 
     set_insert_block(out_of_range_block);
-    codegen_rc_decr(func->getArg(0));
+    codegen_boxed_rc_decr(func->getArg(0), dtor);
     cg_call(bounds_error_func, {});
     cg_unreachable();
 
     set_insert_block(exit_block);
     Value *r = cg_load(cg_gep(l, {cg_i32(3), i}));
-    codegen_rc_incr(r);
-    codegen_rc_decr(func->getArg(0));
+    codegen_rc_incr(r, ref_type);
+    codegen_boxed_rc_decr(func->getArg(0), dtor);
     cg_ret(r);
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
-static void codegen_copy_loop(Value *len, Value *src, Value *dest) {
+static void codegen_copy_loop(Value *len, Value *src, Value *dest, u64 ref_type) {
     BasicBlock *parent_block = get_insert_block();
     BasicBlock *copy_check_block = create_basic_block(parent_block->getParent());
     BasicBlock *copy_loop_block = create_basic_block(parent_block->getParent());
@@ -762,7 +813,7 @@ static void codegen_copy_loop(Value *len, Value *src, Value *dest) {
 
     set_insert_block(copy_loop_block);
     Value *e = cg_load(cg_gep(src, {ci}));
-    codegen_rc_incr(e);
+    codegen_rc_incr(e, ref_type);
     cg_store(e, cg_gep(dest, {ci}));
     ci->addIncoming(cg_add(ci, cg_i64(1)), copy_loop_block);
     cg_br(copy_check_block);
@@ -770,97 +821,100 @@ static void codegen_copy_loop(Value *len, Value *src, Value *dest) {
     set_insert_block(exit_block);
 }
 
-extern "C" Value *codegen_put_primitive() {
+extern "C" Value *codegen_put_primitive(Type *elem_type, Function *dtor, u64 ref_type) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(3));
+    vector <Type *> param_types = {pointer_type(i64_type), i64_type, elem_type};
+    Function *func = create_function(get_function_type(&param_types, pointer_type(i64_type)));
     BasicBlock *entry_block = create_basic_block(func);
     BasicBlock *out_of_range_block = create_basic_block(func);
     BasicBlock *alloc_block = create_basic_block(func);
 
     set_insert_block(entry_block);
-    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
-    Value *i = cg_load(cg_sgep(cg_bitcast(func->getArg(1), pointer_type(struct_type({box_header_type, i64_type}))), 1));
-    codegen_rc_decr(func->getArg(1));
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type(elem_type)));
+    Value *i = func->getArg(1);
     Value *len = cg_load(cg_sgep(l, 1));
     cg_cond_br(cg_icmp_uge(i, len), out_of_range_block, alloc_block);
 
     set_insert_block(out_of_range_block);
-    codegen_rc_decr(func->getArg(0));
-    codegen_rc_decr(func->getArg(2));
+    codegen_boxed_rc_decr(func->getArg(0), dtor);
+//    codegen_rc_decr(func->getArg(2));
     cg_call(bounds_error_func, {});
     cg_unreachable();
 
     set_insert_block(alloc_block);
-    Value *val = codegen_malloc_list(len);
-    codegen_box_header_init(val, list_dtor);
+    Value *val = codegen_malloc_list(len, elem_type);
+    codegen_rc_init(cg_sgep(val, 0));
     cg_store(len, cg_sgep(val, 1));
     cg_store(len, cg_sgep(val, 2));
 
-    codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3));
-    codegen_rc_decr(func->getArg(0));
+    codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3), ref_type);
+    codegen_boxed_rc_decr(func->getArg(0), dtor);
     cg_store(func->getArg(2), cg_gep(val, {cg_i32(3), i}));
-    cg_ret(cg_bitcast(val, box_type));
+    cg_ret(cg_bitcast(val, pointer_type(i64_type)));
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
-extern "C" Value *codegen_push_primitive() {
+extern "C" Value *codegen_push_primitive(Type *elem_type, Function *dtor, u64 ref_type) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(2));
+    vector <Type *> param_types = {pointer_type(i64_type), elem_type};
+    Function *func = create_function(get_function_type(&param_types, pointer_type(i64_type)));
     set_insert_block(create_basic_block(func));
-    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type(elem_type)));
     Value *len = cg_load(cg_sgep(l, 1));
     Value *new_len = cg_add(len, cg_i64(1));
-    Value *val = codegen_malloc_list(new_len);
-    codegen_box_header_init(val, list_dtor);
+    Value *val = codegen_malloc_list(new_len, elem_type);
+    codegen_rc_init(cg_sgep(val, 0));
     cg_store(new_len, cg_sgep(val, 1));
     cg_store(new_len, cg_sgep(val, 2));
-    codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3));
-    codegen_rc_decr(func->getArg(0));
-    cg_store(cg_bitcast(func->getArg(1), box_type), cg_gep(val, {cg_i32(3), len}));
-    cg_ret(cg_bitcast(val, box_type));
+    codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3), ref_type);
+    codegen_boxed_rc_decr(func->getArg(0), dtor);
+    cg_store(func->getArg(1), cg_gep(val, {cg_i32(3), len}));
+    cg_ret(cg_bitcast(val, pointer_type(i64_type)));
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
-extern "C" Value *codegen_pop_primitive() {
+extern "C" Value *codegen_pop_primitive(Type *elem_type, Function *dtor, u64 ref_type) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(1));
+    vector <Type *> param_types = {pointer_type(i64_type)};
+    Function *func = create_function(get_function_type(&param_types, pointer_type(i64_type)));
     BasicBlock *entry_block = create_basic_block(func);
     BasicBlock *out_of_range_block = create_basic_block(func);
     BasicBlock *alloc_block = create_basic_block(func);
 
     set_insert_block(entry_block);
-    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type));
+    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type(elem_type)));
     Value *len = cg_load(cg_sgep(l, 1));
     cg_cond_br(cg_icmp_eq(len, cg_i64(0)), out_of_range_block, alloc_block);
 
     set_insert_block(out_of_range_block);
-    codegen_rc_decr(func->getArg(0));
+    codegen_boxed_rc_decr(func->getArg(0), dtor);
     cg_call(pop_bounds_error_func, {});
     cg_unreachable();
 
     set_insert_block(alloc_block);
     Value *new_len = cg_sub(len, cg_i64(1));
-    Value *val = codegen_malloc_list(new_len);
-    codegen_box_header_init(val, list_dtor);
+    Value *val = codegen_malloc_list(new_len, elem_type);
+    codegen_rc_init(cg_sgep(val, 0));
     cg_store(new_len, cg_sgep(val, 1));
     cg_store(new_len, cg_sgep(val, 2));
-    codegen_copy_loop(new_len, cg_sgep(l, 3), cg_sgep(val, 3));
-    codegen_rc_decr(func->getArg(0));
-    cg_ret(cg_bitcast(val, box_type));
+    codegen_copy_loop(new_len, cg_sgep(l, 3), cg_sgep(val, 3), ref_type);
+    codegen_boxed_rc_decr(func->getArg(0), dtor);
+    cg_ret(cg_bitcast(val, pointer_type(i64_type)));
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
-extern "C" Value *codegen_unreachable_primitive() {
+extern "C" Value *codegen_unreachable_primitive(Type *ret_type) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
-    Function *func = create_function(get_function_type(0));
+    vector <Type *> param_types = {};
+    Function *func = create_function(get_function_type(&param_types, ret_type));
     set_insert_block(create_basic_block(func));
     cg_call(unreachable_error_func, {});
     cg_unreachable();
     set_insert_block(saved_bb);
-    return codegen_boxed_fuction(func);
+    return codegen_func_val(func, codegen_empty_captures());
 }
 
 static char temp_dir_path_buffer[L_tmpnam];

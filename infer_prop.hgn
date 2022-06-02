@@ -31,7 +31,7 @@ type. I_PatternData
     I_WildcardPattern
     I_TuplePattern(List(I_Pattern))
     I_VariantPattern(Int List(I_Pattern) List(TypeVar))
-    I_ListPattern(List(I_Pattern))
+    I_ListPattern(List(I_Pattern) TypeVar)
 
 type. I_Pattern I_Pattern(I_PatternData TypeVar FilePos)
 
@@ -724,7 +724,7 @@ fun. u_pattern→i_pattern(∈.(u_pattern U_Pattern) ∈.(context I_Context))
             let. elem_type new_type_var()
             set_type(this_type I_Named(list_type list.(elem_type)) file_pos)
             for‡ i_patterns λ. i_pattern: unify_type(i_pattern_type(i_pattern) elem_type file_pos)
-            *.(I_ListPattern(i_patterns) bindings)
+            *.(I_ListPattern(i_patterns elem_type) bindings)
         .U_TypedPattern(u_pattern u_type)
             let. *.(i_pattern bindings) u_pattern→i_pattern(u_pattern context)
             unify_type(this_type i_pattern_type(i_pattern) file_pos)

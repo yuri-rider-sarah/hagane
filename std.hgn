@@ -133,6 +133,11 @@ fun. ∀, T: concat(∈.(xss List(List(T))))
     for‡ xss λ. xs: set.(r ++(r xs))
     r
 
+fun. sum(∈.(xs List(Int)))
+    let. mut, sum 0
+    for(xs λ.(x: set.(sum +(sum x))))
+    sum
+
 fun. ∀, T: intercalate(∈.(xss List(List(T))) ∈.(sep List(T)))
     if. =(len(xss) 0)
         list¡
@@ -211,3 +216,25 @@ fun. sort(∈.(a List(Int)))
             set. j -(j 1)
         set. i +(i 1)
     a
+
+fun. ∀, T: find(∈.(xs List(T)) ∈.(x T) ∈.(=T ⇒.(T T : Bool)))
+    let. mut, found_i None
+    for‡ ι*(xs) λ. *.(i x′):
+        case. found_i
+        .None
+            if. =T(x′ x)
+                set. found_i Some(i)
+            else, *¡
+        .Some(_) *¡
+    found_i
+
+fun. ∀, T U: find_assoc(∈.(xs List(*.(T U))) ∈.(x T) ∈.(=T ⇒.(T T : Bool)))
+    let. mut, found_i None
+    for‡ ι*(xs) λ. *.(i *.(x′ _)):
+        case. found_i
+        .None
+            if. =T(x′ x)
+                set. found_i Some(i)
+            else, *¡
+        .Some(_) *¡
+    found_i

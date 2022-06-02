@@ -1,0 +1,289 @@
+type. M_Statement
+    M_ExprStatement(M_Expr)
+    M_Let(M_Pattern M_Expr M_Type)
+    M_LetMut(M_Expr M_Type)
+    M_Fun(Int)
+    M_TypeStatement(Int)
+    M_Extern(List(Int) M_Type FilePos)
+    M_Set(Int M_Expr)
+
+type. M_Expr
+    M_IntLiteral(Int)
+    M_Ident(Int Int)
+    M_Tuple(Int List(M_Expr))
+    M_Apply(M_Expr List(M_Expr))
+    M_If(List(*.(M_Expr M_Expr)) M_Expr)
+    M_While(M_Expr M_Expr)
+    M_And(List(M_Expr))
+    M_Or(List(M_Expr))
+    M_Do(List(M_Statement))
+    M_Lambda(List(*.(M_Pattern M_Type)) M_Expr M_Type)
+    M_Case(M_Expr M_Type List(*.(M_Pattern M_Expr)) M_Type)
+    M_ListLiteral(List(M_Expr))
+
+type. M_Pattern
+    M_IntLiteralPattern(Int)
+    M_IdentPattern(M_Type)
+    M_WildcardPattern
+    M_TuplePattern(Int List(M_Pattern))
+    M_VariantPattern(Int Int List(M_Pattern))
+    M_ListPattern(List(M_Pattern) M_Type)
+
+type. M_Type
+    M_PrimType(Int Int)
+    M_DefType(Int Int)
+    M_TupleType(Int)
+    M_Function(List(M_Type) M_Type)
+
+type. M_FunDef M_FunDef‡
+    List(*.(List(T_Pattern) T_Expr))
+    M_Context
+    List(*.(List(M_Type) List(*.(List(*.(M_Pattern M_Type)) M_Expr M_Type))))
+
+type. M_TypeDef M_TypeDef‡
+    List(List(T_Type))
+    M_Context
+    List(*.(List(M_Type) List(List(M_Type))))
+
+let. mut, m_var_prims
+    let. I_Context(i_vars _) empty_i_context
+    map_ι(len(i_vars) λ.(_: list¡))
+
+let. mut, m_funs list¡
+
+let. mut, m_type_prims
+    let. I_Context(_ i_types) empty_i_context
+    map_ι(len(i_types) λ.(_: list¡))
+
+let. mut, m_type_defs list¡
+
+let. mut, m_tuple_instances list.(list¡) ※ an empty tuple must be present
+
+type. M_VarBinding
+    M_PrimVar(Int)
+    M_FunVar(Int Int)
+    M_CtorVar(Int Int)
+    M_BoundVar
+
+type. M_TypeBinding
+    M_BoundPrimType(Int)
+    M_BoundDefType(Int)
+    M_BoundType(M_Type)
+
+type. M_Context M_Context‡
+    List(M_VarBinding)
+    List(M_TypeBinding)
+
+let. empty_m_context M_Context‡
+    map_ι(len(m_var_prims) λ.(i: M_PrimVar(i)))
+    map_ι(len(m_type_prims) λ.(i: M_BoundPrimType(i)))
+
+let. mut, m_prim_arg_type_gens list¡
+
+fun. m_new_fun_def(defs context)
+    ※ Hack to get defs to have recursive context without causing infinite loops
+    let. mut, context′ context
+    for_ι(len(defs) λ.(i: set.(context′ m_add_var_binding(context′ M_BoundVar))))
+    set. m_funs push(m_funs M_FunDef(defs context′ list¡))
+    -(len(m_funs) 1)
+
+fun. m_new_type_def(variants context)
+    set. m_type_defs push(m_type_defs M_TypeDef(variants context list¡))
+    -(len(m_type_defs) 1)
+
+fun. m_add_var_binding(∈.(context M_Context) ∈.(binding M_VarBinding))
+    let. M_Context(vars types) context
+    M_Context(push(vars binding) types)
+
+fun. m_add_type_binding(∈.(context M_Context) ∈.(binding M_TypeBinding))
+    let. M_Context(vars types) context
+    M_Context(vars push(types binding))
+
+fun. =m_type(t1 t2)
+    case. *.(t1 t2)
+    .*.(M_PrimType(id1 m1) M_PrimType(id2 m2)) ∧.(=(id1 id2) =(m1 m2))
+    .*.(M_DefType(id1 m1) M_DefType(id2 m2)) ∧.(=(id1 id2) =(m1 m2))
+    .*.(M_TupleType(m1) M_TupleType(m2)) =(m1 m2)
+    .*.(M_Function(params1 ret1) M_Function(params2 ret2)) ∧.(=list(params1 params2 =m_type) =m_type(ret1 ret2))
+    ._ ⊥
+
+fun. =list_m_type(a b) =list(a b =m_type)
+
+fun. get_prim_type_monomorph(∈.(id Int) ∈.(type_args List(M_Type)))
+    let. instances get(m_type_prims id)
+    case. find(instances type_args =list_m_type)
+    .Some(i) i
+    .None
+        set. m_type_prims put(m_type_prims id push(instances type_args))
+        len(instances)
+
+fun. get_def_type_monomorph(∈.(id Int) ∈.(type_args List(M_Type)))
+    let. M_TypeDef(t_variants context instances) get(m_type_defs id)
+    case. find_assoc(instances type_args =list_m_type)
+    .Some(i) i
+    .None
+        ※ Inserting a dummy instance to prevent infinite looping
+        set. m_type_defs put(m_type_defs id M_TypeDef(t_variants context push(instances *.(type_args list¡))))
+        let. mut, context′ context
+        for(type_args λ.(type: set.(context′ m_add_type_binding(context′ M_BoundType(type)))))
+        let. m_variants map(t_variants λ.(t_variant: map(t_variant λ.(t_type: t_type→m_type(t_type context′)))))
+        let. M_TypeDef(_ _ instances′) get(m_type_defs id)
+        set. m_type_defs put(m_type_defs id M_TypeDef(t_variants context put(instances′ len(instances) *.(type_args m_variants))))
+        len(instances)
+
+fun. get_tuple_monomorph(∈.(type_args List(M_Type)))
+    case. find(m_tuple_instances type_args =list_m_type)
+    .Some(i) i
+    .None
+        set. m_tuple_instances push(m_tuple_instances type_args)
+        -(len(m_tuple_instances) 1)
+
+fun. get_var_monomorph(∈.(binding M_VarBinding) ∈.(type_args List(M_Type)))
+    case. binding
+    .M_PrimVar(id)
+        let. instances get(m_var_prims id)
+        case. find_assoc(instances type_args =list_m_type)
+        .Some(i) i
+        .None
+            set. m_var_prims put(m_var_prims id push(instances *.(type_args get(m_prim_arg_type_gens id)(type_args))))
+            len(instances)
+    .M_FunVar(id _)
+        let. M_FunDef(t_defs context instances) get(m_funs id)
+        case. find_assoc(instances type_args =list_m_type)
+        .Some(i) i
+        .None
+            let. mut, context′ context
+            for(type_args λ.(type: set.(context′ m_add_type_binding(context′ M_BoundType(type)))))
+            let. m_defs map‡ t_defs λ. *.(t_params t_body):
+                let. *.(m_params bindings) t_params→m_params(t_params context′)
+                let. mut, context″ context′
+                for_ι(bindings λ.(i: set.(context″ m_add_var_binding(context″ M_BoundVar))))
+                *.(m_params t_expr→m_expr(t_body context″) t_type→m_type(t_expr_type(t_body) context′))
+            set. m_funs put(m_funs id M_FunDef(t_defs context push(instances *.(type_args m_defs))))
+            len(instances)
+    .M_CtorVar(id _) get_def_type_monomorph(id type_args)
+    .M_BoundVar 0
+
+fun. t_exprs→m_exprs(∈.(t_exprs List(T_Expr)) ∈.(context M_Context))
+    map(t_exprs λ.(e: t_expr→m_expr(e context)))
+
+fun. t_expr→m_expr(∈.(t_expr T_Expr) ∈.(context M_Context))
+    let. T_Expr(t_expr_data t_expr_type_ _) t_expr
+    case. t_expr_data
+    .T_IntLiteral(n) M_IntLiteral(n)
+    .T_Ident(vi type_args)
+        let. M_Context(vars _) context
+        M_Ident(vi get_var_monomorph(get(vars vi) t_types→m_types(type_args context)))
+    .T_Tuple(t_exprs) M_Tuple(get_tuple_monomorph(map(t_exprs λ.(T_Expr(_ t_type _): t_type→m_type(t_type context)))) t_exprs→m_exprs(t_exprs context))
+    .T_Apply(t_func t_args) M_Apply(t_expr→m_expr(t_func context) t_exprs→m_exprs(t_args context))
+    .T_If(t_cases t_else) M_If(map(t_cases λ.(*.(t_cond t_body): *.(t_expr→m_expr(t_cond context) t_expr→m_expr(t_body context)))) t_expr→m_expr(t_else context))
+    .T_While(t_cond t_body) M_While(t_expr→m_expr(t_cond context) t_expr→m_expr(t_body context))
+    .T_And(t_exprs) M_And(t_exprs→m_exprs(t_exprs context))
+    .T_Or(t_exprs) M_Or(t_exprs→m_exprs(t_exprs context))
+    .T_Do(t_statements) M_Do(t_statements→m_statements(t_statements context))
+    .T_Lambda(t_params t_body)
+        let. *.(m_params bindings) t_params→m_params(t_params context)
+        let. mut, context′ context
+        for_ι(bindings λ.(_: set.(context′ m_add_var_binding(context′ M_BoundVar))))
+        M_Lambda(m_params t_expr→m_expr(t_body context′) t_type→m_type(t_expr_type(t_body) context))
+    .T_Case(t_matched t_cases)
+        let. m_cases map‡ t_cases λ. *.(t_pattern t_body):
+            let. *.(m_pattern bindings) t_pattern→m_pattern(t_pattern context)
+            let. mut, context′ context
+            for_ι(bindings λ.(_: set.(context′ m_add_var_binding(context′ M_BoundVar))))
+            *.(m_pattern t_expr→m_expr(t_body context′))
+        M_Case(t_expr→m_expr(t_matched context) t_type→m_type(t_expr_type(t_matched) context) m_cases t_type→m_type(t_expr_type_ context))
+    .T_ListLiteral(t_exprs) M_ListLiteral(t_exprs→m_exprs(t_exprs context))
+
+fun. t_statements→m_statements(∈.(t_statements List(T_Statement)) ∈.(context M_Context))
+    let. mut, context context
+    let. new_type_defs_start len(m_type_defs)
+    for‡ t_statements λ. t_statement:
+        case. t_statement
+        .T_Statement(T_TypeStatement(_ t_variants) _)
+            set. context m_add_type_binding(context M_BoundDefType(m_new_type_def(t_variants context)))
+        ._ *¡
+    ※ Hack to get type defs to have recursive context
+    for_ι‡ -(len(m_type_defs) new_type_defs_start) λ. i:
+        let. M_TypeDef(t_variants _ instances) get(m_type_defs +(new_type_defs_start i))
+        set. m_type_defs put(m_type_defs +(new_type_defs_start i) M_TypeDef(t_variants context instances))
+    let. mut, next_id new_type_defs_start
+    map‡ t_statements λ. t_statement:
+        let. T_Statement(t_statement_data file_pos) t_statement
+        case. t_statement_data
+        .T_ExprStatement(t_expr) M_ExprStatement(t_expr→m_expr(t_expr context))
+        .T_Let(t_pattern t_expr)
+            let. m_expr t_expr→m_expr(t_expr context)
+            let. m_type t_type→m_type(t_expr_type(t_expr) context)
+            let. *.(m_pattern bindings) t_pattern→m_pattern(t_pattern context)
+            for_ι(bindings λ.(_: set.(context m_add_var_binding(context M_BoundVar))))
+            M_Let(m_pattern m_expr m_type)
+        .T_LetMut(t_expr)
+            let. m_expr t_expr→m_expr(t_expr context)
+            let. m_type t_type→m_type(t_expr_type(t_expr) context)
+            set. context m_add_var_binding(context M_BoundVar)
+            M_LetMut(m_expr m_type)
+        .T_Fun(_ t_defs)
+            let. id m_new_fun_def(t_defs context)
+            for_ι(len(t_defs) λ.(i: set.(context m_add_var_binding(context M_FunVar(id i)))))
+            M_Fun(id)
+        .T_TypeStatement(_ t_variants)
+            let. id next_id
+            set. next_id +(next_id 1)
+            for_ι(len(t_variants) λ.(i: set.(context m_add_var_binding(context M_CtorVar(id i)))))
+            M_TypeStatement(id)
+        .T_Extern(name t_type)
+            set. context m_add_var_binding(context M_BoundVar)
+            M_Extern(name t_type→m_type(t_type context) file_pos)
+        .T_Set(vi t_expr) M_Set(vi t_expr→m_expr(t_expr context))
+
+fun. t_params→m_params(∈.(t_patterns List(T_Pattern)) ∈.(context M_Context))
+    let. *.(m_params bindings_) unzip‡ map‡ t_patterns λ. t_pattern:
+        let. *.(m_pattern bindings) t_pattern→m_pattern(t_pattern context)
+        *.(*.(m_pattern t_type→m_type(t_pattern_type(t_pattern) context)) bindings)
+    *.(m_params sum(bindings_))
+
+fun. t_patterns→m_patterns(∈.(t_patterns List(T_Pattern)) ∈.(context M_Context))
+    let. *.(m_patterns bindings_) unzip(map(t_patterns λ.(p: t_pattern→m_pattern(p context))))
+    *.(m_patterns sum(bindings_))
+
+fun. t_pattern→m_pattern(∈.(t_pattern T_Pattern) ∈.(context M_Context))
+    let. T_Pattern(t_pattern_data _ _) t_pattern
+    case. t_pattern_data
+    .T_IntLiteralPattern(n) *.(M_IntLiteralPattern(n) 0)
+    .T_IdentPattern(t_type) *.(M_IdentPattern(t_type→m_type(t_type context)) 1)
+    .T_WildcardPattern *.(M_WildcardPattern 0)
+    .T_TuplePattern(t_subpats)
+        let. *.(m_subpats bindings) t_patterns→m_patterns(t_subpats context)
+        *.(M_TuplePattern(get_tuple_monomorph(map(t_subpats λ.(T_Pattern(_ t_type _): t_type→m_type(t_type context)))) m_subpats) bindings)
+    .T_VariantPattern(vi t_subpats type_args)
+        let. M_Context(vars _) context
+        let. *.(m_subpats bindings) t_patterns→m_patterns(t_subpats context)
+        *.(M_VariantPattern(vi get_var_monomorph(get(vars vi) t_types→m_types(type_args context)) m_subpats) bindings)
+    .T_ListPattern(t_subpats t_type)
+        let. *.(m_subpats bindings) t_patterns→m_patterns(t_subpats context)
+        *.(M_ListPattern(m_subpats t_type→m_type(t_type context)) bindings)
+
+fun. t_types→m_types(∈.(t_types List(T_Type)) ∈.(context M_Context))
+    map(t_types λ.(t: t_type→m_type(t context)))
+
+fun. t_type→m_type(∈.(t_type T_Type) ∈.(context M_Context))
+    case. t_type
+    .T_Named(ti type_args)
+        let. M_Context(_ types) context
+        case. get(types ti)
+        .M_BoundPrimType(id)
+            M_PrimType(id get_prim_type_monomorph(id map(type_args λ.(t: t_type→m_type(t context)))))
+        .M_BoundDefType(id)
+            M_DefType(id get_def_type_monomorph(id map(type_args λ.(t: t_type→m_type(t context)))))
+        .M_BoundType(m_type) m_type
+    .T_TupleType(t_types) M_TupleType(get_tuple_monomorph(t_types→m_types(t_types context)))
+    .T_Function(t_params t_ret) M_Function(t_types→m_types(t_params context) t_type→m_type(t_ret context))
+
+set. m_prim_arg_type_gens
+    fun. empty_gen(_) list¡
+    let. list_prim_id 2
+    fun. list_gen(type_args) case. type_args
+        .list.(elem) list.(M_PrimType(list_prim_id get_prim_type_monomorph(list_prim_id type_args)))
+        ._ internal_error("m_prim_arg_type_gens - Invalid type args")
+    concat(list.(repeat(13 empty_gen) repeat(5 list_gen) repeat(8 empty_gen)))

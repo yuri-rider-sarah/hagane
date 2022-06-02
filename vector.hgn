@@ -19,3 +19,9 @@ extern. utf8_encode ⇒.(Int : Int)
 fun. print_string(∈.(s List(Int)))
     for(vector→list(utf8_encode(list→vector(s))) print_byte)
     print_byte(#\n)
+
+fun. ∀, T: debug(∈.(name List(Int)) ∈.(f ⇒.(: T)))
+    print_string(++("DEBUG: Entering " name))
+    let. r f()
+    print_string(++("DEBUG: Exiting " name))
+    r
