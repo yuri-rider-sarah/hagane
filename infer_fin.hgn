@@ -139,8 +139,8 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
                 for‡ type_params λ. type:
                     set. context″ t_add_type_binding(context″ type list¡ list.(list¡))
                 let. t_variants map(i_variants λ.(type_vars: map(type_vars λ.(tv: type_var→t_type(tv context″ file_pos)))))
-                let. T_Context(_ ctx_types) context
-                let. type_params_base +(len(ctx_types) 1)
+                let. T_Context(_ ctx_types) context′
+                let. type_params_base len(ctx_types)
                 set. context t_add_type_binding(context type map_ι(len(type_params) λ.(i: +(type_params_base i))) t_variants)
             ._ *¡
     map‡ i_statements λ. i_statement:
