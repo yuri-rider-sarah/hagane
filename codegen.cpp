@@ -361,12 +361,14 @@ extern "C" Value *codegen_extract_captures(Value *func) {
 }
 
 extern "C" void codegen_captures_rc_incr(Value *captures) {
+    captures = cg_bitcast(captures, pointer_type(captures_header_type));
     Value *rc_ptr = cg_sgep(captures, 0);
     Value *rc = cg_load(rc_ptr);
     cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
 }
 
 extern "C" void codegen_captures_rc_decr(Value *captures) {
+    captures = cg_bitcast(captures, pointer_type(captures_header_type));
     BasicBlock *free_block = create_block();
     BasicBlock *decr_block = create_block();
     BasicBlock *end_block = create_block();

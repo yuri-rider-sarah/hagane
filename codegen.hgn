@@ -651,6 +651,8 @@ fun. codegen_statements(∈.(statements List(F_Statement)) ∈.(context C_Contex
                 let. c_param_types map(params λ.(*.(_ f_type): f_type→c_type(f_type)))
                 let. c_ret_type f_type→c_type(f_ret_type)
                 *.(codegen_new_function(list→vector(map(c_param_types codegen_type)) codegen_type(c_ret_type)) C_Function(c_param_types c_ret_type))
+            for_ι‡ -(len(defs) 1) λ. _:
+                codegen_captures_rc_incr(outer_captures)
             let. context′ context
             for‡ ι*(defs) λ. *.(i *.(params body _)):
                 let. *.(func type) get(rec_funcs i)
