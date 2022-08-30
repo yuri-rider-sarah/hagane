@@ -1,0 +1,10 @@
+※ 1
+※ 2
+
+fun. f(~!n)
+    set. n +(n 1)
+    print_int(n)
+
+let. mut, x 0
+f(~!x)
+f(~!x)

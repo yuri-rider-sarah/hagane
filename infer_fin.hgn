@@ -1,25 +1,33 @@
+type. T_FuncParam
+    T_FuncParamConst(T_Pattern)
+    T_FuncParamMut(T_Type)
+
 type. T_StatementData
     T_ExprStatement(T_Expr)
     T_Let(T_Pattern T_Expr)
     T_LetMut(T_Expr)
-    T_Fun(Int List(*.(List(T_Pattern) T_Expr)))
+    T_Fun(Int List(*.(List(T_FuncParam) T_Expr)))
     T_TypeStatement(Int List(List(T_Type)))
     T_Extern(List(Int) T_Type)
     T_Set(Int T_Expr)
 
 type. T_Statement T_Statement(T_StatementData FilePos)
 
+type. T_FuncArg
+    T_FuncArgConst(T_Expr)
+    T_FuncArgMut(Int)
+
 type. T_ExprData
     T_IntLiteral(Int)
     T_Ident(Int List(T_Type))
     T_Tuple(List(T_Expr))
-    T_Apply(T_Expr List(T_Expr))
+    T_Apply(T_Expr List(T_FuncArg))
     T_If(List(*.(T_Expr T_Expr)) T_Expr)
     T_While(T_Expr T_Expr)
     T_And(List(T_Expr))
     T_Or(List(T_Expr))
     T_Do(List(T_Statement))
-    T_Lambda(List(T_Pattern) T_Expr)
+    T_Lambda(List(T_FuncParam) T_Expr)
     T_Case(T_Expr List(*.(T_Pattern T_Expr)))
     T_ListLiteral(List(T_Expr))
 
@@ -35,10 +43,14 @@ type. T_PatternData
 
 type. T_Pattern T_Pattern(T_PatternData T_Type FilePos)
 
+type. T_FuncParamType
+    T_FuncParamConstType(T_Type)
+    T_FuncParamMutType(T_Type)
+
 type. T_Type
     T_Named(Int List(T_Type))
     T_TupleType(List(T_Type))
-    T_Function(List(T_Type) T_Type)
+    T_Function(List(T_FuncParamType) T_Type)
 
 fun. t_expr_type(∈.(expr T_Expr))
     let. T_Expr(_ type _) expr
@@ -81,6 +93,22 @@ fun. t_locate_type_in_context(∈.(type TypeName) ∈.(context T_Context) ∈.(f
     .Some(index) index
     .None error(LeakedType(type_name_string(type)) file_pos)
 
+fun. i_func_param→t_func_param(∈.(i_param I_FuncParam) ∈.(context T_Context))
+    case. i_param
+    .I_FuncParamConst(i_pattern)
+        let. *.(t_pattern bindings) i_pattern→t_pattern(i_pattern context)
+        *.(T_FuncParamConst(t_pattern) bindings)
+    .I_FuncParamMut(tv file_pos) *.(T_FuncParamMut(type_var→t_type(tv context file_pos)) 1)
+
+fun. i_func_params→t_func_params(∈.(i_params List(I_FuncParam)) ∈.(context T_Context))
+    let. *.(t_func_params bindings) unzip(map(i_params λ.(p: i_func_param→t_func_param(p context))))
+    *.(t_func_params sum(bindings))
+
+fun. i_func_arg→t_func_arg(∈.(i_arg I_FuncArg) ∈.(context T_Context))
+    case. i_arg
+    .I_FuncArgConst(i_expr) T_FuncArgConst(i_expr→t_expr(i_expr context))
+    .I_FuncArgMut(vi) T_FuncArgMut(vi)
+
 fun. i_exprs→t_exprs(∈.(i_exprs List(I_Expr)) ∈.(context T_Context))
     map(i_exprs λ.(e: i_expr→t_expr(e context)))
 
@@ -91,7 +119,7 @@ fun. i_expr→t_expr(∈.(i_expr I_Expr) ∈.(context T_Context))
         .I_IntLiteral(n) T_IntLiteral(n)
         .I_Ident(vi i_type_args) T_Ident(vi map(i_type_args λ.(t: type_var→t_type(t context file_pos))))
         .I_Tuple(i_exprs) T_Tuple(i_exprs→t_exprs(i_exprs context))
-        .I_Apply(i_func i_args) T_Apply(i_expr→t_expr(i_func context) i_exprs→t_exprs(i_args context))
+        .I_Apply(i_func i_args) T_Apply(i_expr→t_expr(i_func context) map(i_args λ.(i_arg: i_func_arg→t_func_arg(i_arg context))))
         .I_If(i_cases i_else) T_If(map(i_cases λ.(i_case:
             let. *.(i_cond i_body) i_case
             *.(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
@@ -99,7 +127,7 @@ fun. i_expr→t_expr(∈.(i_expr I_Expr) ∈.(context T_Context))
         .I_While(i_cond i_body) T_While(i_expr→t_expr(i_cond context) i_expr→t_expr(i_body context))
         .I_Do(i_statements) T_Do(i_statements→t_statements(i_statements context))
         .I_Lambda(i_params i_body)
-            let. *.(t_params bindings) i_patterns→t_patterns(i_params context)
+            let. *.(t_params bindings) i_func_params→t_func_params(i_params context)
             let. mut, context′ context
             for_ι‡ bindings λ. _: set. context′ t_add_var_binding(context′ None)
             T_Lambda(t_params i_expr→t_expr(i_body context′))
@@ -170,7 +198,7 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
                 let. mut, context′ context
                 for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type list¡ list.(list¡)))
                 let. t_defs map‡ i_defs λ. *.(i_params i_body):
-                    let. *.(t_params bindings) i_patterns→t_patterns(i_params context′)
+                    let. *.(t_params bindings) i_func_params→t_func_params(i_params context′)
                     let. mut, context″ context′
                     for_ι‡ bindings λ. _: set. context″ t_add_var_binding(context″ None)
                     *.(t_params i_expr→t_expr(i_body context′))
@@ -203,6 +231,11 @@ fun. i_pattern→t_pattern(∈.(i_pattern I_Pattern) ∈.(context T_Context))
             *.(T_ListPattern(t_patterns type_var→t_type(tv context file_pos)) bindings)
     *.(T_Pattern(t_pattern_data t_type file_pos) bindings)
 
+fun. i_param_type→t_param_type(∈.(i_param_type I_FuncParamType) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos))
+    case. i_param_type
+    .I_FuncParamConstType(tv) T_FuncParamConstType(type_var→t_type′(tv context err file_pos))
+    .I_FuncParamMutType(tv) T_FuncParamMutType(type_var→t_type′(tv context err file_pos))
+
 fun. type_var→t_type′(∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos))
     let. TypeVar(tvi) tv
     case. get(type_variables tvi)
@@ -210,10 +243,15 @@ fun. type_var→t_type′(∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Erro
     .I_Equal(tv′) type_var→t_type′(tv′ context err file_pos)
     .I_Named(name type_args) T_Named(t_locate_type_in_context(name context file_pos) map(type_args λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
     .I_TupleType(tvs) T_TupleType(map(tvs λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
-    .I_Function(params ret) T_Function(map(params λ.(param: type_var→t_type′(param context err file_pos))) type_var→t_type′(ret context err file_pos))
+    .I_Function(params ret) T_Function(map(params λ.(param: i_param_type→t_param_type(param context err file_pos))) type_var→t_type′(ret context err file_pos))
 
 fun. type_var→t_type(∈.(tv TypeVar) ∈.(context T_Context) ∈.(file_pos FilePos))
     type_var→t_type′(tv context AmbiguousType(type_var→partial_type(tv)) file_pos)
+
+fun. t_substitute_in_param_type(∈.(pt T_FuncParamType) ∈.(subs List(*.(Int T_Type))))
+    case. pt
+    .T_FuncParamConstType(t) T_FuncParamConstType(t_substitute_in_type(t subs))
+    .T_FuncParamMutType(t) T_FuncParamMutType(t_substitute_in_type(t subs))
 
 fun. t_substitute_in_type(∈.(type T_Type) ∈.(subs List(*.(Int T_Type))))
     case. type
@@ -227,7 +265,7 @@ fun. t_substitute_in_type(∈.(type T_Type) ∈.(subs List(*.(Int T_Type))))
         .Some(t′) t′
         .None T_Named(ti map(type_args λ.(t: t_substitute_in_type(t subs))))
     .T_TupleType(subtypes) T_TupleType(map(subtypes λ.(t: t_substitute_in_type(t subs))))
-    .T_Function(params ret) T_Function(map(params λ.(t: t_substitute_in_type(t subs))) t_substitute_in_type(ret subs))
+    .T_Function(params ret) T_Function(map(params λ.(t: t_substitute_in_param_type(t subs))) t_substitute_in_type(ret subs))
 
 fun. is_match_exhaustive(∈.(pattern_lists List(List(T_Pattern))) ∈.(types List(T_Type)) ∈.(context T_Context))
     if. =(len(types) 0)

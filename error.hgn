@@ -2,11 +2,20 @@ extern. vector_string_error ⇒.(Int Int : *¡)
 
 type. FilePos FilePos(List(Int) Int Int)
 
+type. PartialParamType
+    P_FuncParamConstType(PartialType)
+    P_FuncParamMutType(PartialType)
+
 type. PartialType
     P_Var(Int)
     P_Applied(List(Int) List(PartialType))
     P_TupleType(List(PartialType))
-    P_Function(List(PartialType) PartialType)
+    P_Function(List(PartialParamType) PartialType)
+
+fun. partial_param_type→string(∈.(pt PartialParamType))
+    case. pt
+    .P_FuncParamConstType(t) partial_type→string(t)
+    .P_FuncParamMutType(t) concat(list.("~.(" partial_type→string(t) ")"))
 
 fun. partial_type→string(∈.(type PartialType))
     case. type
@@ -17,7 +26,7 @@ fun. partial_type→string(∈.(type PartialType))
     .P_TupleType(types) concat‡ list.
         "*.(" intercalate(map(types partial_type→string) " ") ")"
     .P_Function(params ret) concat‡ list.
-        "⇒.(" concat(map(params λ.(p: ++(partial_type→string(p) " ")))) ": " partial_type→string(ret) ")"
+        "⇒.(" concat(map(params λ.(p: ++(partial_param_type→string(p) " ")))) ": " partial_type→string(ret) ")"
 
 type. Error
     UnexpectedChar(Option(Int))

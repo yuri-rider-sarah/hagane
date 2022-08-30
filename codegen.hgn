@@ -21,6 +21,7 @@ extern. codegen_cell_rc_decr_free ⇒.(Int : *¡)
 extern. codegen_cell_rc_decr_decr_rc ⇒.(Int Int : *¡)
 extern. codegen_cell_rc_decr_branch ⇒.(Int Int Int : *¡)
 extern. codegen_cell_rc_incr ⇒.(Int : *¡)
+extern. codegen_cell_type ⇒.(Int : Int)
 extern. codegen_create_mut_var ⇒.(Int : Int)
 extern. codegen_load_mut_var ⇒.(Int : Int)
 extern. codegen_store_mut_var ⇒.(Int Int : *¡)
@@ -89,11 +90,15 @@ type. C_Variable
     C_Unused
     C_BoxedDCtor(Option(Int) List(C_Type))
 
+type. C_FuncParamType
+    C_FuncParamConstType(C_Type)
+    C_FuncParamMutType(C_Type)
+
 type. C_Type
     C_IntType
     C_ListType(C_Type Int)
     C_DefType(Int)
-    C_Function(List(C_Type) C_Type)
+    C_Function(List(C_FuncParamType) C_Type)
 
 type. C_Context C_Context‡
     List(C_Variable) ※ vars
@@ -231,7 +236,7 @@ fun. c_lookup_var(∈.(vi Int) ∈.(context C_Context))
     get(vars vi)
 
 fun. extern_binding(∈.(name List(Int)) ∈.(num_params Int) ∈.(ret_int Int))
-    C_ConstVar(codegen_extern(list→vector(name) num_params ret_int) C_Function(repeat(num_params C_IntType) if.(≠(ret_int 0) C_IntType C_DefType(0))))
+    C_ConstVar(codegen_extern(list→vector(name) num_params ret_int) C_Function(repeat(num_params C_FuncParamConstType(C_IntType)) if.(≠(ret_int 0) C_IntType C_DefType(0))))
 
 fun. codegen_type_ctors(∈.(id Int))
     case. get(c_type_defs id)
@@ -261,11 +266,11 @@ fun. codegen_rc_incr_type(∈.(type C_Type))
 fun. get_empty_c_context()
     let. bool_ctors codegen_type_ctors(bool_type_id)
     let. codegen_arith_primitive λ. ∈.(i Int):
-        C_ConstVar(codegen_arith_primitive(i) C_Function(list.(C_IntType C_IntType) C_IntType))
+        C_ConstVar(codegen_arith_primitive(i) C_Function(list.(C_FuncParamConstType(C_IntType) C_FuncParamConstType(C_IntType)) C_IntType))
     let. codegen_div_primitive λ. ∈.(i Int):
-        C_ConstVar(codegen_div_primitive(i) C_Function(list.(C_IntType C_IntType) C_IntType))
+        C_ConstVar(codegen_div_primitive(i) C_Function(list.(C_FuncParamConstType(C_IntType) C_FuncParamConstType(C_IntType)) C_IntType))
     let. codegen_cmp_primitive λ. ∈.(i Int):
-        C_ConstVar(codegen_cmp_primitive(i) C_Function(list.(C_IntType C_IntType) C_DefType(bool_type_id)))
+        C_ConstVar(codegen_cmp_primitive(i) C_Function(list.(C_FuncParamConstType(C_IntType) C_FuncParamConstType(C_IntType)) C_DefType(bool_type_id)))
     C_Context‡ ++‡
         map_ι‡ len(m_tuple_instances) λ. id: case. get(c_type_defs id)
             .C_Boxed(list.(c_types) _)
@@ -292,31 +297,31 @@ fun. get_empty_c_context()
                 let. c_param_type f_type→c_type(f_param_type)
                 C_ConstVar‡
                     codegen_len_primitive(codegen_type(c_type) c_list_dtor_from_type(c_param_type))
-                    C_Function(list.(c_param_type) C_IntType)
+                    C_Function(list.(C_FuncParamConstType(c_param_type)) C_IntType)
             .*.(14 list.(f_type) list.(f_param_type))
                 let. c_type f_type→c_type(f_type)
                 let. c_param_type f_type→c_type(f_param_type)
                 C_ConstVar‡
                     codegen_get_primitive(codegen_type(c_type) c_list_dtor_from_type(c_param_type) codegen_rc_incr_type(c_type))
-                    C_Function(list.(c_param_type C_IntType) c_type)
+                    C_Function(list.(C_FuncParamConstType(c_param_type) C_FuncParamConstType(C_IntType)) c_type)
             .*.(15 list.(f_type) list.(f_param_type))
                 let. c_type f_type→c_type(f_type)
                 let. c_param_type f_type→c_type(f_param_type)
                 C_ConstVar‡
                     codegen_put_primitive(codegen_type(c_type) c_list_dtor_from_type(c_param_type) codegen_rc_incr_type(c_type))
-                    C_Function(list.(c_param_type C_IntType c_type) c_param_type)
+                    C_Function(list.(C_FuncParamConstType(c_param_type) C_FuncParamConstType(C_IntType) C_FuncParamConstType(c_type)) c_param_type)
             .*.(16 list.(f_type) list.(f_param_type))
                 let. c_type f_type→c_type(f_type)
                 let. c_param_type f_type→c_type(f_param_type)
                 C_ConstVar‡
                     codegen_push_primitive(codegen_type(c_type) c_list_dtor_from_type(c_param_type) codegen_rc_incr_type(c_type))
-                    C_Function(list.(c_param_type c_type) c_param_type)
+                    C_Function(list.(C_FuncParamConstType(c_param_type) C_FuncParamConstType(c_type)) c_param_type)
             .*.(17 list.(f_type) list.(f_param_type))
                 let. c_type f_type→c_type(f_type)
                 let. c_param_type f_type→c_type(f_param_type)
                 C_ConstVar‡
                     codegen_pop_primitive(codegen_type(c_type) c_list_dtor_from_type(c_param_type) codegen_rc_incr_type(c_type))
-                    C_Function(list.(c_param_type) c_param_type)
+                    C_Function(list.(C_FuncParamConstType(c_param_type)) c_param_type)
             .*.(18 list¡ list¡) extern_binding("print_int" 1 0)
             .*.(19 list¡ list¡) extern_binding("read_int" 0 1)
             .*.(20 list¡ list¡) extern_binding("print_byte" 1 0)
@@ -342,7 +347,15 @@ fun. free_vars(∈.(expr F_Expr) ∈.(length Int))
             if. <(vi len(table))
             then, set. table put(table vi ⊤)
             else, *¡
-        .F_Apply(func args) for(push(args func) rec)
+        .F_Apply(func args)
+            for‡ args λ. arg:
+                case. arg
+                .F_FuncArgConst(e) rec(e)
+                .F_FuncArgMut(vi)
+                    if. <(vi len(table))
+                    then, set. table put(table vi ⊤)
+                    else, *¡
+            rec(func)
         .F_If(cases else) for(++(concat(map(cases λ.(*.(cond body): list.(cond body)))) list.(else)) rec)
         .F_While(cond body) for(list.(cond body) rec)
         .F_Do(statements)
@@ -406,13 +419,13 @@ fun. codegen_captures(∈.(vars List(C_Variable)) ∈.(is_captured List(Bool)))
 
 fun. codegen_function(
     ∈.(func Int)
-    ∈.(params List(*.(F_Pattern F_Type)))
+    ∈.(params List(F_FuncParam))
     ∈.(body F_Expr)
     ∈.(context C_Context)
     ∈.(is_captured List(Bool))
     ∈.(outer_captures Int)
     ∈.(rec_funcs List(*.(Int C_Type)))
-    )
+)
     let. C_Context(vars) context
     let. parent_block get_insert_block()
     set_insert_block(create_basic_block(func))
@@ -441,14 +454,18 @@ fun. codegen_function(
         map‡ rec_funcs λ. *.(rec_func type):
             codegen_captures_rc_incr(inner_captures_boxed)
             C_ConstVar(codegen_func_val(rec_func inner_captures) type)
-        concat‡ map‡ ι*(params) λ. *.(i *.(param type)):
+        concat‡ map‡ ι*(params) λ. *.(i param):
             let. arg codegen_get_arg(i)
-            let. *.(bound_vars pattern_ends) codegen_pattern_test(arg param context)
-            if. ≠(len(pattern_ends) 0) internal_error("pattern_ends not empty")
-            else, *¡
-            for(bound_vars codegen_var_rc_incr)
-            codegen_rc_decr(arg f_type→c_type(type))
-            bound_vars
+            case. param
+            .F_FuncParamConst(pattern type)
+                let. *.(bound_vars pattern_ends) codegen_pattern_test(arg pattern context)
+                if. ≠(len(pattern_ends) 0) internal_error("pattern_ends not empty")
+                else, *¡
+                for(bound_vars codegen_var_rc_incr)
+                codegen_rc_decr(arg f_type→c_type(type))
+                bound_vars
+            .F_FuncParamMut(type)
+                list.(C_MutVar(arg f_type→c_type(type)))
     let. context′ C_Context(vars′)
     codegen_captures_rc_decr(inner_captures_boxed)
     let. ret_val codegen_expr(body context′)
@@ -456,6 +473,16 @@ fun. codegen_function(
     codegen_ret(ret_val)
     set_insert_block(parent_block)
     codegen_func_val(func outer_captures)
+
+fun. codegen_func_arg(∈.(func_arg F_FuncArg) ∈.(context C_Context))
+    case. func_arg
+    .F_FuncArgConst(expr) codegen_expr(expr context)
+    .F_FuncArgMut(vi) case. c_lookup_var(vi context)
+        .C_MutVar(var _)
+            codegen_cell_rc_incr(var)
+            var
+        .C_Unused internal_error("Variable incorrectly marked as unused")
+        ._ internal_error("Immutable variable passed as mutable argument")
 
 fun. codegen_empty_tuple()
     codegen_create_tagless_boxed_ctor(list→vector(list¡))
@@ -481,7 +508,7 @@ fun. codegen_expr(∈.(expr F_Expr) ∈.(context C_Context))
             .C_Unused internal_error("Variable incorrectly marked as unused")
             .C_BoxedDCtor(_ _) internal_error("Variable incorrectly marked as unused")
     .F_Apply(func args)
-        codegen_apply(codegen_expr(func context) list→vector(map(args λ.(e: codegen_expr(e context)))))
+        codegen_apply(codegen_expr(func context) list→vector(map(args λ.(e: codegen_func_arg(e context)))))
     .F_If(cases else)
         let. branches map‡ cases λ. case:
             let. *.(cond body) case
@@ -574,7 +601,7 @@ fun. codegen_expr(∈.(expr F_Expr) ∈.(context C_Context))
         let. C_Context(vars) context
         let. is_captured free_vars(body len(vars))
         let. outer_captures codegen_captures(vars is_captured)
-        let. param_types map(params λ.(*.(_ f_type): codegen_type(f_type→c_type(f_type))))
+        let. param_types map(params λ.(param: codegen_param_type(f_param_type→c_param_type(f_func_param_type(param)))))
         let. ret_type codegen_type(f_type→c_type(f_ret_type))
         codegen_function(codegen_new_function(list→vector(param_types) ret_type) params body context is_captured outer_captures list¡)
     .F_Case(expr matched_expr_type cases type)
@@ -615,7 +642,7 @@ fun. codegen_expr(∈.(expr F_Expr) ∈.(context C_Context))
 
 fun. ctor_type(∈.(params List(C_Type)) ∈.(ret_id Int))
     if. >(len(params) 0)
-    then, C_Function(params C_DefType(ret_id))
+    then, C_Function(map(params C_FuncParamConstType) C_DefType(ret_id))
     else, C_DefType(ret_id)
 
 fun. codegen_statements(∈.(statements List(F_Statement)) ∈.(context C_Context))
@@ -648,9 +675,9 @@ fun. codegen_statements(∈.(statements List(F_Statement)) ∈.(context C_Contex
                 .None internal_error("free_vars returned different lengths")
             let. outer_captures codegen_captures(vars is_captured)
             let. rec_funcs map‡ defs λ. *.(params body f_ret_type):
-                let. c_param_types map(params λ.(*.(_ f_type): f_type→c_type(f_type)))
+                let. c_param_types map(params λ.(pt: f_param_type→c_param_type(f_func_param_type(pt))))
                 let. c_ret_type f_type→c_type(f_ret_type)
-                *.(codegen_new_function(list→vector(map(c_param_types codegen_type)) codegen_type(c_ret_type)) C_Function(c_param_types c_ret_type))
+                *.(codegen_new_function(list→vector(map(c_param_types codegen_param_type)) codegen_type(c_ret_type)) C_Function(c_param_types c_ret_type))
             for_ι‡ -(len(defs) 1) λ. _:
                 codegen_captures_rc_incr(outer_captures)
             let. context′ context
@@ -664,7 +691,7 @@ fun. codegen_statements(∈.(statements List(F_Statement)) ∈.(context C_Contex
             case. f_type→c_type(f_type)
             .C_Function(params ret)
                 for‡ params λ. param: case. param
-                    .C_IntType *¡
+                    .C_FuncParamConstType(C_IntType) *¡
                     ._ error(InvalidExternType(name) file_pos)
                 let. ret_int case. ret
                     .C_IntType ⊤
@@ -673,7 +700,7 @@ fun. codegen_statements(∈.(statements List(F_Statement)) ∈.(context C_Contex
                 set. context c_add_let_binding‡ context
                     C_ConstVar‡
                         codegen_extern(utf8_encode(list→vector(name)) len(params) if.(ret_int 1 0))
-                        C_Function(map(params λ.(_: C_IntType)) if.(ret_int C_IntType C_DefType(0)))
+                        C_Function(map(params λ.(_: C_FuncParamConstType(C_IntType))) if.(ret_int C_IntType C_DefType(0)))
             ._
                 error(InvalidExternType(name) file_pos)
         .F_Set(vi expr)
@@ -722,11 +749,21 @@ fun. codegen_pattern_test(∈.(val Int) ∈.(pattern F_Pattern) ∈.(context C_C
             codegen_pattern_test(codegen_list_get(list i) get(patterns i) context)
         *.(concat(bindings_) push(concat(ends_) len_fail))
 
+fun. f_param_type→c_param_type(∈.(f_param_type F_FuncParamType))
+    case. f_param_type
+    .F_FuncParamConstType(f_type) C_FuncParamConstType(f_type→c_type(f_type))
+    .F_FuncParamMutType(f_type) C_FuncParamMutType(f_type→c_type(f_type))
+
 fun. f_type→c_type(∈.(f_type F_Type))
     case. f_type
     .F_PrimType(id) get(c_type_prims id)
     .F_DefType(id) C_DefType(id)
-    .F_Function(f_params f_ret) C_Function(map(f_params f_type→c_type) f_type→c_type(f_ret))
+    .F_Function(f_params f_ret) C_Function(map(f_params f_param_type→c_param_type) f_type→c_type(f_ret))
+
+fun. codegen_param_type(∈.(c_param_type C_FuncParamType))
+    case. c_param_type
+    .C_FuncParamConstType(c_type) codegen_type(c_type)
+    .C_FuncParamMutType(c_type) codegen_cell_type(codegen_type(c_type))
 
 fun. codegen_type(∈.(c_type C_Type))
     case. c_type
@@ -734,4 +771,4 @@ fun. codegen_type(∈.(c_type C_Type))
     .C_ListType(_ _) codegen_boxed_type()
     .C_DefType(id) case. get(c_type_defs id)
         .C_Boxed(_ _) codegen_boxed_type()
-    .C_Function(params ret) codegen_function_type(list→vector(map(params codegen_type)) codegen_type(ret))
+    .C_Function(params ret) codegen_function_type(list→vector(map(params codegen_param_type)) codegen_type(ret))

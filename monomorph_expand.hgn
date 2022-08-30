@@ -1,3 +1,7 @@
+type. M_FuncParam
+    M_FuncParamConst(M_Pattern M_Type)
+    M_FuncParamMut(M_Type)
+
 type. M_Statement
     M_ExprStatement(M_Expr)
     M_Let(M_Pattern M_Expr M_Type)
@@ -7,17 +11,21 @@ type. M_Statement
     M_Extern(List(Int) M_Type FilePos)
     M_Set(Int M_Expr)
 
+type. M_FuncArg
+    M_FuncArgConst(M_Expr)
+    M_FuncArgMut(Int)
+
 type. M_Expr
     M_IntLiteral(Int)
     M_Ident(Int Int)
     M_Tuple(Int List(M_Expr))
-    M_Apply(M_Expr List(M_Expr))
+    M_Apply(M_Expr List(M_FuncArg))
     M_If(List(*.(M_Expr M_Expr)) M_Expr)
     M_While(M_Expr M_Expr)
     M_And(List(M_Expr))
     M_Or(List(M_Expr))
     M_Do(List(M_Statement))
-    M_Lambda(List(*.(M_Pattern M_Type)) M_Expr M_Type)
+    M_Lambda(List(M_FuncParam) M_Expr M_Type)
     M_Case(M_Expr M_Type List(*.(M_Pattern M_Expr)) M_Type)
     M_ListLiteral(List(M_Expr))
 
@@ -29,16 +37,20 @@ type. M_Pattern
     M_VariantPattern(Int Int List(M_Pattern))
     M_ListPattern(List(M_Pattern) M_Type)
 
+type. M_FuncParamType
+    M_FuncParamConstType(M_Type)
+    M_FuncParamMutType(M_Type)
+
 type. M_Type
     M_PrimType(Int Int)
     M_DefType(Int Int)
     M_TupleType(Int)
-    M_Function(List(M_Type) M_Type)
+    M_Function(List(M_FuncParamType) M_Type)
 
 type. M_FunDef M_FunDef‡
-    List(*.(List(T_Pattern) T_Expr))
+    List(*.(List(T_FuncParam) T_Expr))
     M_Context
-    List(*.(List(M_Type) List(*.(List(*.(M_Pattern M_Type)) M_Expr M_Type))))
+    List(*.(List(M_Type) List(*.(List(M_FuncParam) M_Expr M_Type))))
 
 type. M_TypeDef M_TypeDef‡
     List(List(T_Type))
@@ -99,12 +111,18 @@ fun. m_add_type_binding(∈.(context M_Context) ∈.(binding M_TypeBinding))
     let. M_Context(vars types) context
     M_Context(vars push(types binding))
 
+fun. =m_param_type(pt1 pt2)
+    case. *.(pt1 pt2)
+    .*.(M_FuncParamConstType(t1) M_FuncParamConstType(t2)) =m_type(t1 t2)
+    .*.(M_FuncParamMutType(t1) M_FuncParamMutType(t2)) =m_type(t1 t2)
+    ._ ⊥
+
 fun. =m_type(t1 t2)
     case. *.(t1 t2)
     .*.(M_PrimType(id1 m1) M_PrimType(id2 m2)) ∧.(=(id1 id2) =(m1 m2))
     .*.(M_DefType(id1 m1) M_DefType(id2 m2)) ∧.(=(id1 id2) =(m1 m2))
     .*.(M_TupleType(m1) M_TupleType(m2)) =(m1 m2)
-    .*.(M_Function(params1 ret1) M_Function(params2 ret2)) ∧.(=list(params1 params2 =m_type) =m_type(ret1 ret2))
+    .*.(M_Function(params1 ret1) M_Function(params2 ret2)) ∧.(=list(params1 params2 =m_param_type) =m_type(ret1 ret2))
     ._ ⊥
 
 fun. =list_m_type(a b) =list(a b =m_type)
@@ -164,6 +182,11 @@ fun. get_var_monomorph(∈.(binding M_VarBinding) ∈.(type_args List(M_Type)))
     .M_CtorVar(id _) get_def_type_monomorph(id type_args)
     .M_BoundVar 0
 
+fun. t_arg→m_arg(∈.(t_arg T_FuncArg) ∈.(context M_Context))
+    case. t_arg
+    .T_FuncArgConst(t_expr) M_FuncArgConst(t_expr→m_expr(t_expr context))
+    .T_FuncArgMut(vi) M_FuncArgMut(vi)
+
 fun. t_exprs→m_exprs(∈.(t_exprs List(T_Expr)) ∈.(context M_Context))
     map(t_exprs λ.(e: t_expr→m_expr(e context)))
 
@@ -175,7 +198,7 @@ fun. t_expr→m_expr(∈.(t_expr T_Expr) ∈.(context M_Context))
         let. M_Context(vars _) context
         M_Ident(vi get_var_monomorph(get(vars vi) t_types→m_types(type_args context)))
     .T_Tuple(t_exprs) M_Tuple(get_tuple_monomorph(map(t_exprs λ.(T_Expr(_ t_type _): t_type→m_type(t_type context)))) t_exprs→m_exprs(t_exprs context))
-    .T_Apply(t_func t_args) M_Apply(t_expr→m_expr(t_func context) t_exprs→m_exprs(t_args context))
+    .T_Apply(t_func t_args) M_Apply(t_expr→m_expr(t_func context) map(t_args λ.(a: t_arg→m_arg(a context))))
     .T_If(t_cases t_else) M_If(map(t_cases λ.(*.(t_cond t_body): *.(t_expr→m_expr(t_cond context) t_expr→m_expr(t_body context)))) t_expr→m_expr(t_else context))
     .T_While(t_cond t_body) M_While(t_expr→m_expr(t_cond context) t_expr→m_expr(t_body context))
     .T_And(t_exprs) M_And(t_exprs→m_exprs(t_exprs context))
@@ -237,10 +260,13 @@ fun. t_statements→m_statements(∈.(t_statements List(T_Statement)) ∈.(conte
             M_Extern(name t_type→m_type(t_type context) file_pos)
         .T_Set(vi t_expr) M_Set(vi t_expr→m_expr(t_expr context))
 
-fun. t_params→m_params(∈.(t_patterns List(T_Pattern)) ∈.(context M_Context))
-    let. *.(m_params bindings_) unzip‡ map‡ t_patterns λ. t_pattern:
-        let. *.(m_pattern bindings) t_pattern→m_pattern(t_pattern context)
-        *.(*.(m_pattern t_type→m_type(t_pattern_type(t_pattern) context)) bindings)
+fun. t_params→m_params(∈.(t_params List(T_FuncParam)) ∈.(context M_Context))
+    let. *.(m_params bindings_) unzip‡ map‡ t_params λ. t_param:
+        case. t_param
+        .T_FuncParamConst(t_pattern)
+            let. *.(m_pattern bindings) t_pattern→m_pattern(t_pattern context)
+            *.(M_FuncParamConst(m_pattern t_type→m_type(t_pattern_type(t_pattern) context)) bindings)
+        .T_FuncParamMut(t_type) *.(M_FuncParamMut(t_type→m_type(t_type context)) 1)
     *.(m_params sum(bindings_))
 
 fun. t_patterns→m_patterns(∈.(t_patterns List(T_Pattern)) ∈.(context M_Context))
@@ -264,6 +290,11 @@ fun. t_pattern→m_pattern(∈.(t_pattern T_Pattern) ∈.(context M_Context))
         let. *.(m_subpats bindings) t_patterns→m_patterns(t_subpats context)
         *.(M_ListPattern(m_subpats t_type→m_type(t_type context)) bindings)
 
+fun. t_param_type→m_param_type(∈.(t_param_type T_FuncParamType) ∈.(context M_Context))
+    case. t_param_type
+    .T_FuncParamConstType(t_type) M_FuncParamConstType(t_type→m_type(t_type context))
+    .T_FuncParamMutType(t_type) M_FuncParamMutType(t_type→m_type(t_type context))
+
 fun. t_types→m_types(∈.(t_types List(T_Type)) ∈.(context M_Context))
     map(t_types λ.(t: t_type→m_type(t context)))
 
@@ -278,7 +309,7 @@ fun. t_type→m_type(∈.(t_type T_Type) ∈.(context M_Context))
             M_DefType(id get_def_type_monomorph(id map(type_args λ.(t: t_type→m_type(t context)))))
         .M_BoundType(m_type) m_type
     .T_TupleType(t_types) M_TupleType(get_tuple_monomorph(t_types→m_types(t_types context)))
-    .T_Function(t_params t_ret) M_Function(t_types→m_types(t_params context) t_type→m_type(t_ret context))
+    .T_Function(t_params t_ret) M_Function(map(t_params λ.(pt: t_param_type→m_param_type(pt context))) t_type→m_type(t_ret context))
 
 set. m_prim_arg_type_gens
     fun. empty_gen(_) list¡

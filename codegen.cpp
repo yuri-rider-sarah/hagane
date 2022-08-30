@@ -281,6 +281,10 @@ extern "C" Value *codegen_list(vector<Value *> *elems) {
     }
 }
 
+extern "C" Type *codegen_cell_type(Type *type) {
+    return pointer_type(struct_type({i64_type, type}));
+}
+
 extern "C" Value *codegen_create_mut_var(Value *val) {
     Type *cell_type = struct_type({i64_type, val->getType()});
     Value *ptr = codegen_malloc(cell_type);

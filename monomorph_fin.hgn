@@ -1,22 +1,30 @@
+type. F_FuncParam
+    F_FuncParamConst(F_Pattern F_Type)
+    F_FuncParamMut(F_Type)
+
 type. F_Statement
     F_ExprStatement(F_Expr)
     F_Let(F_Pattern F_Expr F_Type)
     F_LetMut(F_Expr F_Type)
-    F_Fun(List(*.(List(*.(F_Pattern F_Type)) F_Expr F_Type)))
+    F_Fun(List(*.(List(F_FuncParam) F_Expr F_Type)))
     F_TypeStatement(Int)
     F_Extern(List(Int) F_Type FilePos)
     F_Set(Int F_Expr)
 
+type. F_FuncArg
+    F_FuncArgConst(F_Expr)
+    F_FuncArgMut(Int)
+
 type. F_Expr
     F_IntLiteral(Int)
     F_Ident(Int)
-    F_Apply(F_Expr List(F_Expr))
+    F_Apply(F_Expr List(F_FuncArg))
     F_If(List(*.(F_Expr F_Expr)) F_Expr)
     F_While(F_Expr F_Expr)
     F_And(List(F_Expr))
     F_Or(List(F_Expr))
     F_Do(List(F_Statement))
-    F_Lambda(List(*.(F_Pattern F_Type)) F_Expr F_Type)
+    F_Lambda(List(F_FuncParam) F_Expr F_Type)
     F_Case(F_Expr F_Type List(*.(F_Pattern F_Expr)) F_Type)
     F_ListLiteral(List(F_Expr))
 
@@ -27,10 +35,14 @@ type. F_Pattern
     F_VariantPattern(Int List(F_Pattern))
     F_ListPattern(List(F_Pattern) F_Type)
 
+type. F_FuncParamType
+    F_FuncParamConstType(F_Type)
+    F_FuncParamMutType(F_Type)
+
 type. F_Type
     F_PrimType(Int)
     F_DefType(Int)
-    F_Function(List(F_Type) F_Type)
+    F_Function(List(F_FuncParamType) F_Type)
 
 type. F_Context F_Context(List(*.(Int Int)) Int)
 
@@ -74,6 +86,16 @@ fun. fill_f_types()
             set. f_var_prims push(f_var_prims *.(id map(m_type_args m_type→f_type) map(m_param_types m_type→f_type)))
         set. empty_f_context f_add_var_bindings(empty_f_context 1 len(instances))
 
+fun. f_func_param_type(∈.(param F_FuncParam))
+    case. param
+    .F_FuncParamConst(_ t) F_FuncParamConstType(t)
+    .F_FuncParamMut(t) F_FuncParamMutType(t)
+
+fun. m_func_arg→f_func_arg(∈.(m_arg M_FuncArg) ∈.(context F_Context))
+    case. m_arg
+    .M_FuncArgConst(m_expr) F_FuncArgConst(m_expr→f_expr(m_expr context))
+    .M_FuncArgMut(vi) F_FuncArgMut(f_lookup_var(context vi 0))
+
 fun. m_exprs→f_exprs(∈.(m_exprs List(M_Expr)) ∈.(context F_Context))
     map(m_exprs λ.(e: m_expr→f_expr(e context)))
 
@@ -82,8 +104,8 @@ fun. m_expr→f_expr(∈.(m_expr M_Expr) ∈.(context F_Context))
     .M_IntLiteral(n) F_IntLiteral(n)
     .M_Ident(vi mi) F_Ident(f_lookup_var(context vi mi))
     .M_Tuple(id list¡) F_Ident(id)
-    .M_Tuple(id m_exprs) F_Apply(F_Ident(id) m_exprs→f_exprs(m_exprs context))
-    .M_Apply(m_func m_args) F_Apply(m_expr→f_expr(m_func context) m_exprs→f_exprs(m_args context))
+    .M_Tuple(id m_exprs) F_Apply(F_Ident(id) map(m_exprs λ.(m_expr: F_FuncArgConst(m_expr→f_expr(m_expr context)))))
+    .M_Apply(m_func m_args) F_Apply(m_expr→f_expr(m_func context) map(m_args λ.(m_arg: m_func_arg→f_func_arg(m_arg context))))
     .M_If(m_cases m_else) F_If(map(m_cases λ.(*.(m_cond m_body): *.(m_expr→f_expr(m_cond context) m_expr→f_expr(m_body context)))) m_expr→f_expr(m_else context))
     .M_While(m_cond m_body) F_While(m_expr→f_expr(m_cond context) m_expr→f_expr(m_body context))
     .M_And(m_exprs) F_And(m_exprs→f_exprs(m_exprs context))
@@ -141,10 +163,13 @@ fun. m_patterns→f_patterns(∈.(m_patterns List(M_Pattern)) ∈.(context F_Con
     let. *.(f_patterns bindings_) unzip(map(m_patterns λ.(p: m_pattern→f_pattern(p context))))
     *.(f_patterns sum(bindings_))
 
-fun. m_params→f_params(∈.(m_params List(*.(M_Pattern M_Type))) ∈.(context F_Context))
-    let. *.(f_params bindings_) unzip‡ map‡ m_params λ. *.(m_pattern m_type):
-        let. *.(f_pattern bindings) m_pattern→f_pattern(m_pattern context)
-        *.(*.(f_pattern m_type→f_type(m_type)) bindings)
+fun. m_params→f_params(∈.(m_params List(M_FuncParam)) ∈.(context F_Context))
+    let. *.(f_params bindings_) unzip‡ map‡ m_params λ. m_param:
+        case. m_param
+        .M_FuncParamConst(m_pattern m_type)
+            let. *.(f_pattern bindings) m_pattern→f_pattern(m_pattern context)
+            *.(F_FuncParamConst(f_pattern m_type→f_type(m_type)) bindings)
+        .M_FuncParamMut(m_type) *.(F_FuncParamMut(m_type→f_type(m_type)) 1)
     let. bindings sum(bindings_)
     *.(f_params bindings)
 
@@ -163,9 +188,14 @@ fun. m_pattern→f_pattern(∈.(m_pattern M_Pattern) ∈.(context F_Context))
         let. *.(f_subpats bindings) m_patterns→f_patterns(m_subpats context)
         *.(F_ListPattern(f_subpats m_type→f_type(m_type)) bindings)
 
+fun. m_param_type→f_param_type(∈.(m_param_type M_FuncParamType))
+    case. m_param_type
+    .M_FuncParamConstType(m_type) F_FuncParamConstType(m_type→f_type(m_type))
+    .M_FuncParamMutType(m_type) F_FuncParamMutType(m_type→f_type(m_type))
+
 fun. m_type→f_type(∈.(m_type M_Type))
     case. m_type
     .M_PrimType(id mi) F_PrimType(+(get(f_m_type_prim_offset id) mi))
     .M_DefType(id mi) F_DefType(+(get(f_m_type_def_offset id) mi))
     .M_TupleType(id) F_DefType(id)
-    .M_Function(m_params m_ret) F_Function(map(m_params m_type→f_type) m_type→f_type(m_ret))
+    .M_Function(m_params m_ret) F_Function(map(m_params m_param_type→f_param_type) m_type→f_type(m_ret))
