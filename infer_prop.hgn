@@ -345,7 +345,12 @@ fun. variable_type(∈.(vi Int) ∈.(context I_Context))
 fun. u_func_arg→i_func_arg(∈.(u_func_arg U_FuncArg) ∈.(context I_Context))
     case. u_func_arg
     .U_FuncArgConst(u_expr) I_FuncArgConst(u_expr→i_expr(u_expr context))
-    .U_FuncArgMut(name file_pos) I_FuncArgMut(locate_var(name context file_pos))
+    .U_FuncArgMut(name file_pos)
+        let. vi locate_var(name context file_pos)
+        if. ¬(variable_is_mut(vi context))
+            error(PassConstVariableAsMut(name) file_pos)
+        else, *¡
+        I_FuncArgMut(vi)
 
 fun. substitute_type_names_in_param_type(∈.(subs List(*.(TypeName TypeVar))) ∈.(pt I_FuncParamType))
     case. pt

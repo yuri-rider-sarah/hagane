@@ -1,0 +1,8 @@
+※-cfail
+
+fun. f(~!n)
+    set. n +(n 1)
+    print_int(n)
+
+let. n 0
+f(~!n)
