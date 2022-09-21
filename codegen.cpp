@@ -52,35 +52,110 @@ static Value *cg_call(Function *func, ArrayRef<Value *> args) {
     return builder->CreateCall(func->getFunctionType(), func, args);
 }
 
-#define pointer_type PointerType::getUnqual
-#define i1_type Type::getInt1Ty(*context)
-#define i64_type Type::getInt64Ty(*context)
-#define cg_i1 builder->getInt1
-#define cg_i32 builder->getInt32
-#define cg_i64 builder->getInt64
+extern "C" Value *cg_call_(Function *func, vector<Value *> *args) {
+    return builder->CreateCall(func->getFunctionType(), func, *args);
+}
 
-#define cg_bitcast builder->CreateBitCast
-#define cg_sgep builder->CreateStructGEP
-#define cg_load builder->CreateLoad
-#define cg_store builder->CreateStore
-#define cg_br builder->CreateBr
-#define cg_cond_br builder->CreateCondBr
-#define cg_unreachable builder->CreateUnreachable
-#define cg_phi builder->CreatePHI
-#define cg_ret builder->CreateRet
-#define cg_ret_void builder->CreateRetVoid
+extern "C" Type *pointer_type(Type *type) {
+    return PointerType::getUnqual(type);
+}
+
+static Type *i64_type;
+
+extern "C" Type *get_i64_type() {
+    return i64_type;
+}
+
+extern "C" ConstantInt *cg_i32(u64 n) {
+    return builder->getInt32(n);
+}
+
+extern "C" ConstantInt *cg_i64(u64 n) {
+    return builder->getInt64(n);
+}
+
+extern "C" Value *cg_bitcast(Value *val, Type *type) {
+    return builder->CreateBitCast(val, type);
+}
+
+extern "C" Value *cg_sgep(Value *val, u64 n) {
+    return builder->CreateStructGEP(val, n);
+}
+
+extern "C" Value *cg_load(Value *ptr) {
+    return builder->CreateLoad(ptr);
+}
+
+extern "C" void cg_store(Value *val, Value *ptr) {
+    builder->CreateStore(val, ptr);
+}
+
+extern "C" void cg_br(BasicBlock *bb) {
+    builder->CreateBr(bb);
+}
+
+extern "C" void cg_cond_br(Value *val, BasicBlock *t, BasicBlock *f) {
+    builder->CreateCondBr(val, t, f);
+}
+
+extern "C" void cg_unreachable() {
+    builder->CreateUnreachable();
+}
+
+extern "C" PHINode *cg_phi(Type *type, u64 reserved) {
+    return builder->CreatePHI(type, reserved);
+}
+
+extern "C" void cg_ret(Value *val) {
+    builder->CreateRet(val);
+}
+
+extern "C" void cg_ret_void() {
+    builder->CreateRetVoid();
+}
+
 #define cg_insert_value builder->CreateInsertValue
 #define cg_extract_value builder->CreateExtractValue
-#define cg_and builder->CreateAnd
-#define cg_add builder->CreateAdd
-#define cg_sub builder->CreateSub
-#define cg_mul builder->CreateMul
-#define cg_icmp_eq builder->CreateICmpEQ
-#define cg_icmp_ne builder->CreateICmpNE
-#define cg_icmp_sge builder->CreateICmpSGE
-#define cg_icmp_ult builder->CreateICmpULT
-#define cg_icmp_uge builder->CreateICmpUGE
-#define cg_poison PoisonValue::get
+
+extern "C" Value *cg_and(Value *v1, Value *v2) {
+    return builder->CreateAnd(v1, v2);
+}
+
+extern "C" Value *cg_add(Value *v1, Value *v2) {
+    return builder->CreateAdd(v1, v2);
+}
+
+extern "C" Value *cg_sub(Value *v1, Value *v2) {
+    return builder->CreateSub(v1, v2);
+}
+
+extern "C" Value *cg_mul(Value *v1, Value *v2) {
+    return builder->CreateMul(v1, v2);
+}
+
+extern "C" Value *cg_icmp_eq(Value *v1, Value *v2) {
+    return builder->CreateICmpEQ(v1, v2);
+}
+
+extern "C" Value *cg_icmp_ne(Value *v1, Value *v2) {
+    return builder->CreateICmpNE(v1, v2);
+}
+
+extern "C" Value *cg_icmp_sge(Value *v1, Value *v2) {
+    return builder->CreateICmpSGE(v1, v2);
+}
+
+extern "C" Value *cg_icmp_ult(Value *v1, Value *v2) {
+    return builder->CreateICmpULT(v1, v2);
+}
+
+extern "C" Value *cg_icmp_uge(Value *v1, Value *v2) {
+    return builder->CreateICmpUGE(v1, v2);
+}
+
+extern "C" Value *cg_poison(Type *type) {
+    return PoisonValue::get(type);
+}
 
 static Value *cg_gep(Value *val, vector<Value *> idx_) {
     vector<Value *> idx = {cg_i64(0)};
@@ -89,11 +164,19 @@ static Value *cg_gep(Value *val, vector<Value *> idx_) {
     return builder->CreateInBoundsGEP(val, idx);
 }
 
+extern "C" Value *cg_gep(Value *val, vector<Value *> *idx_) {
+    return cg_gep(val, *idx_);
+}
+
 extern "C" BasicBlock *create_basic_block(Function *func) {
     return BasicBlock::Create(*context, "", func);
 }
 
-static Function *create_function(FunctionType *ftype) {
+extern "C" Function *get_basic_block_parent(BasicBlock *bb) {
+    return bb->getParent();
+}
+
+extern "C" Function *create_function(FunctionType *ftype) {
     return Function::Create(ftype, Function::PrivateLinkage, "", module_);
 }
 
@@ -109,7 +192,7 @@ extern "C" BasicBlock *create_block() {
     return create_basic_block(get_insert_block()->getParent());
 }
 
-static FunctionType *get_function_type(vector<Type *> *param_types, Type *ret_type) {
+extern "C" FunctionType *get_function_type(vector<Type *> *param_types, Type *ret_type) {
     param_types->push_back(pointer_type(captures_header_type));
     FunctionType *func_type = FunctionType::get(ret_type, *param_types, false);
     param_types->pop_back();
@@ -157,7 +240,11 @@ extern "C" void codegen_cell_rc_incr(Value *cell) {
     cg_store(cg_add(rc, cg_i64(1)), rc_ptr);
 }
 
-static Type *list_type(Type *elem_type) {
+extern "C" Type *cell_type(Type *type) {
+    return pointer_type(struct_type({i64_type, type}));
+}
+
+extern "C" Type *list_type(Type *elem_type) {
     return struct_type({i64_type, i64_type, i64_type, ArrayType::get(elem_type, 0)});
 }
 
@@ -193,6 +280,20 @@ extern "C" Type *codegen_function_type(vector<Type *> *params, Type *ret) {
     return struct_type({pointer_type(get_function_type(params, ret)), pointer_type(captures_header_type)});
 }
 
+static FunctionType *error_func_type;
+
+extern "C" Value *codegen_error_func(vector<u64> *name_vector) {
+    string name;
+    for (u64 c : *name_vector)
+        name.push_back(c);
+    return Function::Create(error_func_type, Function::ExternalLinkage, name, module_);
+}
+
+extern "C" Value *get_error_func(u64 i) {
+    vector<Value *> funcs = {overflow_error_func, div_by_zero_error_func, bounds_error_func, pop_bounds_error_func, unreachable_error_func};
+    return funcs[i];
+}
+
 extern "C" void llvm_init(u64 opt_level) {
     InitializeAllTargetInfos();
     InitializeAllTargets();
@@ -214,13 +315,14 @@ extern "C" void llvm_init(u64 opt_level) {
     builder = new IRBuilder<>(*context);
     module_->setDataLayout(data_layout);
     module_->setTargetTriple(target_triple);
+    i64_type = Type::getInt64Ty(*context);
     captures_header_type = StructType::create(*context, "Captures");
     captures_dtor_type = FunctionType::get(Type::getVoidTy(*context), {pointer_type(captures_header_type)}, false);
     captures_header_type->setBody({Type::getInt64Ty(*context), pointer_type(captures_dtor_type)});
     boxed_dtor_type = FunctionType::get(Type::getVoidTy(*context), {pointer_type(i64_type)}, false);
     malloc_func = Function::Create(FunctionType::get(Type::getInt8PtrTy(*context), {Type::getInt64Ty(*context)}, false), Function::ExternalLinkage, "malloc", module_);
     free_func = Function::Create(FunctionType::get(Type::getVoidTy(*context), {Type::getInt8PtrTy(*context)}, false), Function::ExternalLinkage, "free", module_);
-    FunctionType *error_func_type = FunctionType::get(Type::getVoidTy(*context), false);
+    error_func_type = FunctionType::get(Type::getVoidTy(*context), false);
     overflow_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "overflow_error", module_);
     div_by_zero_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "div_by_zero_error", module_);
     bounds_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "bounds_error", module_);
@@ -239,12 +341,12 @@ static Value *codegen_malloc(Value *size, Type *type) {
     return cg_bitcast(val, pointer_type(type));
 }
 
-static Value *codegen_malloc(Type *type) {
+extern "C" Value *codegen_malloc(Type *type) {
     Value *val = cg_call(malloc_func, {ConstantExpr::getSizeOf(type)});
     return cg_bitcast(val, pointer_type(type));
 }
 
-static void codegen_rc_init(Value *val) {
+extern "C" void codegen_rc_init(Value *val) {
     cg_store(cg_i64(0), val);
 }
 
@@ -252,12 +354,12 @@ extern "C" Value *codegen_const_int(u64 value) {
     return cg_i64(value);
 }
 
-static Value *codegen_malloc_empty_list() {
+extern "C" Value *codegen_malloc_empty_list() {
     StructType *list_type = struct_type({i64_type, i64_type, i64_type});
     return codegen_malloc(ConstantExpr::getSizeOf(list_type), list_type);
 }
 
-static Value *codegen_malloc_list(Value *size, Type *elem_type) {
+extern "C" Value *codegen_malloc_list(Value *size, Type *elem_type) {
     Type *list_type_ = list_type(elem_type);
     Value *data_size = cg_mul(ConstantExpr::getSizeOf(elem_type), size);
     return codegen_malloc(cg_add(ConstantExpr::getSizeOf(list_type_), data_size), list_type_);
@@ -279,10 +381,6 @@ extern "C" Value *codegen_list(vector<Value *> *elems) {
             cg_store((*elems)[i], cg_gep(val, {cg_i32(3), cg_i64(i)}));
         return cg_bitcast(val, pointer_type(i64_type));
     }
-}
-
-extern "C" Type *codegen_cell_type(Type *type) {
-    return pointer_type(struct_type({i64_type, type}));
 }
 
 extern "C" Value *codegen_create_mut_var(Value *val) {
@@ -329,6 +427,10 @@ extern "C" Value *codegen_apply(Value *func_val, vector<Value *> *args) {
     Value *val = cg_call((FunctionType *)(func->getType()->getPointerElementType()), func, *args);
     args->pop_back();
     return val;
+}
+
+extern "C" Value *cg_get_arg(u64 i) {
+    return get_insert_block()->getParent()->getArg(i);
 }
 
 extern "C" Value *codegen_get_arg(u64 i) {
@@ -408,7 +510,7 @@ extern "C" Value *codegen_captures_from_list(Type *type, vector<Value *> *vals, 
     return captures;
 }
 
-static Value *codegen_empty_captures() {
+extern "C" Value *codegen_empty_captures() {
     BasicBlock *parent_block = get_insert_block();
     Function *dtor = begin_captures_dtor();
     codegen_end_dtor(codegen_get_arg(0));
@@ -827,40 +929,6 @@ static void codegen_copy_loop(Value *len, Value *src, Value *dest, u64 ref_type)
     set_insert_block(exit_block);
 }
 
-extern "C" Value *codegen_put_primitive(Type *elem_type, Function *dtor, u64 ref_type) {
-    BasicBlock *saved_bb = builder->GetInsertBlock();
-    vector <Type *> param_types = {pointer_type(i64_type), i64_type, elem_type};
-    Function *func = create_function(get_function_type(&param_types, pointer_type(i64_type)));
-    BasicBlock *entry_block = create_basic_block(func);
-    BasicBlock *out_of_range_block = create_basic_block(func);
-    BasicBlock *alloc_block = create_basic_block(func);
-
-    set_insert_block(entry_block);
-    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type(elem_type)));
-    Value *i = func->getArg(1);
-    Value *len = cg_load(cg_sgep(l, 1));
-    cg_cond_br(cg_icmp_uge(i, len), out_of_range_block, alloc_block);
-
-    set_insert_block(out_of_range_block);
-    codegen_boxed_rc_decr(func->getArg(0), dtor);
-//    codegen_rc_decr(func->getArg(2));
-    cg_call(bounds_error_func, {});
-    cg_unreachable();
-
-    set_insert_block(alloc_block);
-    Value *val = codegen_malloc_list(len, elem_type);
-    codegen_rc_init(cg_sgep(val, 0));
-    cg_store(len, cg_sgep(val, 1));
-    cg_store(len, cg_sgep(val, 2));
-
-    codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3), ref_type);
-    codegen_boxed_rc_decr(func->getArg(0), dtor);
-    cg_store(func->getArg(2), cg_gep(val, {cg_i32(3), i}));
-    cg_ret(cg_bitcast(val, pointer_type(i64_type)));
-    set_insert_block(saved_bb);
-    return codegen_func_val(func, codegen_empty_captures());
-}
-
 extern "C" Value *codegen_push_primitive(Type *elem_type, Function *dtor, u64 ref_type) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
     vector <Type *> param_types = {pointer_type(i64_type), elem_type};
@@ -921,6 +989,11 @@ extern "C" Value *codegen_unreachable_primitive(Type *ret_type) {
     cg_unreachable();
     set_insert_block(saved_bb);
     return codegen_func_val(func, codegen_empty_captures());
+}
+
+extern "C" void print_type_of(Value *val) {
+    val->getType()->print(outs());
+    cout << "\n";
 }
 
 static char temp_dir_path_buffer[L_tmpnam];

@@ -3,4 +3,4 @@ let. mut, a list¡
 set. a push(a 1)
 set. a push(a 2)
 set. a push(a 3)
-set. a put(a -(0 1) 0)
+put(~!a -(0 1) 0)
