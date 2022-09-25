@@ -1,6 +1,6 @@
 ※-fail
 let. mut, a list¡
-set. a push(a 1)
-set. a push(a 2)
-set. a push(a 3)
+push(~!a 1)
+push(~!a 2)
+push(~!a 3)
 print_int(get(a -(0 1)))

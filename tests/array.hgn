@@ -5,12 +5,12 @@
 ※ 2
 ※ 2
 let. mut, a list¡
-set. a push(a 1)
-set. a push(a 4)
-set. a push(a 9)
+push(~!a 1)
+push(~!a 4)
+push(~!a 9)
 print_int(len(a))
 print_int(get(a 2))
-set. a push(a 16)
+push(~!a 16)
 print_int(len(a))
 print_int(get(a 3))
 set. a pop(a)

@@ -12,10 +12,12 @@ let. mut, a list¡
 
 let. mut, i 0
 while. <(i 3)
-    set. a push(a list¡)
+    push(~!a list¡)
     let. mut, j 0
     while. <(j 3)
-        put(~!a i push(get(a i) *(+(i 1) +(j 4))))
+        let. mut, a_i get(a i)
+        push(~!a_i *(+(i 1) +(j 4)))
+        put(~!a i a_i)
         set. j +(j 1)
     set. i +(i 1)
 

@@ -33,6 +33,7 @@ static StructType *captures_header_type;
 static FunctionType *captures_dtor_type;
 static FunctionType *boxed_dtor_type;
 static Function *malloc_func;
+static Function *realloc_func;
 static Function *free_func;
 static Function *overflow_error_func;
 static Function *div_by_zero_error_func;
@@ -321,6 +322,7 @@ extern "C" void llvm_init(u64 opt_level) {
     captures_header_type->setBody({Type::getInt64Ty(*context), pointer_type(captures_dtor_type)});
     boxed_dtor_type = FunctionType::get(Type::getVoidTy(*context), {pointer_type(i64_type)}, false);
     malloc_func = Function::Create(FunctionType::get(Type::getInt8PtrTy(*context), {Type::getInt64Ty(*context)}, false), Function::ExternalLinkage, "malloc", module_);
+    realloc_func = Function::Create(FunctionType::get(Type::getInt8PtrTy(*context), {Type::getInt8PtrTy(*context), Type::getInt64Ty(*context)}, false), Function::ExternalLinkage, "realloc", module_);
     free_func = Function::Create(FunctionType::get(Type::getVoidTy(*context), {Type::getInt8PtrTy(*context)}, false), Function::ExternalLinkage, "free", module_);
     error_func_type = FunctionType::get(Type::getVoidTy(*context), false);
     overflow_error_func = Function::Create(error_func_type, Function::ExternalLinkage, "overflow_error", module_);
@@ -346,6 +348,11 @@ extern "C" Value *codegen_malloc(Type *type) {
     return cg_bitcast(val, pointer_type(type));
 }
 
+static Value *codegen_realloc(Value *old, Value *size, Type *type) {
+    Value *val = cg_call(realloc_func, {cg_bitcast(old, Type::getInt8PtrTy(*context)), size});
+    return cg_bitcast(val, pointer_type(type));
+}
+
 extern "C" void codegen_rc_init(Value *val) {
     cg_store(cg_i64(0), val);
 }
@@ -365,22 +372,21 @@ extern "C" Value *codegen_malloc_list(Value *size, Type *elem_type) {
     return codegen_malloc(cg_add(ConstantExpr::getSizeOf(list_type_), data_size), list_type_);
 }
 
-extern "C" Value *codegen_list(vector<Value *> *elems) {
-    if (elems->size() == 0) {
-        Value *val = codegen_malloc_empty_list();
-        codegen_rc_init(cg_sgep(val, 0));
-        cg_store(cg_i64(0), cg_sgep(val, 1));
-        cg_store(cg_i64(0), cg_sgep(val, 2));
-        return cg_bitcast(val, pointer_type(i64_type));
-    } else {
-        Value *val = codegen_malloc_list(cg_i64(elems->size()), (*elems)[0]->getType());
-        codegen_rc_init(cg_sgep(val, 0));
-        cg_store(cg_i64(elems->size()), cg_sgep(val, 1));
-        cg_store(cg_i64(elems->size()), cg_sgep(val, 2));
-        for (size_t i = 0; i < elems->size(); i++)
-            cg_store((*elems)[i], cg_gep(val, {cg_i32(3), cg_i64(i)}));
-        return cg_bitcast(val, pointer_type(i64_type));
-    }
+extern "C" Value *codegen_realloc_list(Value *old, Value *size, Type *elem_type) {
+    Type *list_type_ = list_type(elem_type);
+    Value *data_size = cg_mul(ConstantExpr::getSizeOf(elem_type), size);
+    return codegen_realloc(old, cg_add(ConstantExpr::getSizeOf(list_type_), data_size), list_type_);
+}
+
+extern "C" Value *codegen_list(vector<Value *> *elems, Type *type) {
+    u64 cap = elems->size() > 0 ? elems->size() : 1;
+    Value *val = codegen_malloc_list(cg_i64(cap), type);
+    codegen_rc_init(cg_sgep(val, 0));
+    cg_store(cg_i64(elems->size()), cg_sgep(val, 1));
+    cg_store(cg_i64(cap), cg_sgep(val, 2));
+    for (size_t i = 0; i < elems->size(); i++)
+        cg_store((*elems)[i], cg_gep(val, {cg_i32(3), cg_i64(i)}));
+    return cg_bitcast(val, pointer_type(i64_type));
 }
 
 extern "C" Value *codegen_create_mut_var(Value *val) {

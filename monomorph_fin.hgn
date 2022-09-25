@@ -26,7 +26,7 @@ type. F_Expr
     F_Do(List(F_Statement))
     F_Lambda(List(F_FuncParam) F_Expr F_Type)
     F_Case(F_Expr F_Type List(*.(F_Pattern F_Expr)) F_Type)
-    F_ListLiteral(List(F_Expr))
+    F_ListLiteral(List(F_Expr) F_Type)
 
 type. F_Pattern
     F_IntLiteralPattern(Int)
@@ -123,7 +123,7 @@ fun. m_expr→f_expr(∈.(m_expr M_Expr) ∈.(context F_Context))
             set. context′ f_add_var_bindings(context′ bindings 1)
             *.(f_pattern m_expr→f_expr(m_body context′))
         F_Case(m_expr→f_expr(m_matched context) m_type→f_type(m_matched_type) f_cases m_type→f_type(m_type))
-    .M_ListLiteral(m_exprs) F_ListLiteral(m_exprs→f_exprs(m_exprs context))
+    .M_ListLiteral(m_exprs m_type) F_ListLiteral(m_exprs→f_exprs(m_exprs context) m_type→f_type(m_type))
 
 fun. m_statements→f_statements(∈.(m_statements List(M_Statement)) ∈.(context F_Context))
     let. mut, context context
