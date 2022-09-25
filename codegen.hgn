@@ -354,7 +354,6 @@ fun. codegen_put_primitive(∈.(elem_type C_Type) ∈.(elem_list_type C_Type))
     cg_cond_br(cg_icmp_uge(i len) out_of_range_block in_range_block)
 
     set_insert_block(out_of_range_block)
-    codegen_cell_rc_decr(cg_get_arg(0) elem_list_type)
     codegen_rc_decr(cg_get_arg(2) elem_type)
     let. _ cg_call(bounds_error_func list→vector(list¡))
     cg_unreachable()
