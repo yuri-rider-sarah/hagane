@@ -1,2 +1,3 @@
 ※-fail
-let. a pop(∈.(list¡ List(Int)))
+let. mut, a ∈.(list¡ List(Int))
+let. _ pop(~!a)

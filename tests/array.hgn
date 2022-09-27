@@ -2,6 +2,8 @@
 ※ 9
 ※ 4
 ※ 16
+※ 16
+※ 9
 ※ 2
 ※ 2
 let. mut, a list¡
@@ -13,8 +15,8 @@ print_int(get(a 2))
 push(~!a 16)
 print_int(len(a))
 print_int(get(a 3))
-set. a pop(a)
-set. a pop(a)
+print_int(pop(~!a))
+print_int(pop(~!a))
 put(~!a 0 2)
 print_int(len(a))
 print_int(get(a 0))
