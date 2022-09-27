@@ -378,8 +378,12 @@ extern "C" Value *codegen_realloc_list(Value *old, Value *size, Type *elem_type)
     return codegen_realloc(old, cg_add(ConstantExpr::getSizeOf(list_type_), data_size), list_type_);
 }
 
+static u64 round_up_to_power_of_2(u64 n) {
+    return n > 1 ? 1 << (64 - __builtin_clzll(n - 1)) : 1;
+}
+
 extern "C" Value *codegen_list(vector<Value *> *elems, Type *type) {
-    u64 cap = elems->size() > 0 ? elems->size() : 1;
+    u64 cap = elems->size() > 8 ? round_up_to_power_of_2(elems->size()) : 8;
     Value *val = codegen_malloc_list(cg_i64(cap), type);
     codegen_rc_init(cg_sgep(val, 0));
     cg_store(cg_i64(elems->size()), cg_sgep(val, 1));
