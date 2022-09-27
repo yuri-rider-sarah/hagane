@@ -290,22 +290,32 @@ fun. is_match_exhaustive(∈.(pattern_lists List(List(T_Pattern))) ∈.(types Li
                     map(variant λ.(t: t_substitute_in_type(t subs)))
                 ∀‡ ι*(variants) λ. *.(vi subtypes):
                     let. pattern_lists′ map_opt‡ pattern_lists λ. ps:
-                        case. get(ps 0)
-                        .T_Pattern(T_VariantPattern(ctor_vi subpatterns _) _ file_pos) case. get(ctx_vars ctor_vi)
+                        let. T_Pattern(pd _ file_pos) get(ps 0)
+                        case. pd
+                        .T_VariantPattern(ctor_vi subpatterns _) case. get(ctx_vars ctor_vi)
                             .Some(vi′) if. =(vi′ vi)
                                 then, Some(++(subpatterns drop(ps 1)))
                                 else, None
                             .None
                                 internal_error("Not a constructor")
+                        .T_IdentPattern(_)
+                            Some(++(map(subtypes λ.(t: T_Pattern(T_WildcardPattern t file_pos))) drop(ps 1)))
+                        .T_WildcardPattern
+                            Some(++(map(subtypes λ.(t: T_Pattern(T_WildcardPattern t file_pos))) drop(ps 1)))
                         ._ None
                     if. ≠(len(pattern_lists′) 0)
                     then, is_match_exhaustive(pattern_lists′ ++(subtypes drop(types 1)) context)
                     else, ⊥
             .T_TupleType(subtypes)
                 let. pattern_lists′ map_opt‡ pattern_lists λ. ps:
-                    case. get(ps 0)
-                    .T_Pattern(T_TuplePattern(subpatterns) _ _)
+                    let. T_Pattern(pd _ file_pos) get(ps 0)
+                    case. pd
+                    .T_TuplePattern(subpatterns)
                         Some(++(subpatterns drop(ps 1)))
+                    .T_IdentPattern(_)
+                        Some(++(map(subtypes λ.(t: T_Pattern(T_WildcardPattern t file_pos))) drop(ps 1)))
+                    .T_WildcardPattern
+                        Some(++(map(subtypes λ.(t: T_Pattern(T_WildcardPattern t file_pos))) drop(ps 1)))
                     ._ None
                 if. ≠(len(pattern_lists′) 0)
                 then, is_match_exhaustive(pattern_lists′ ++(subtypes drop(types 1)) context)

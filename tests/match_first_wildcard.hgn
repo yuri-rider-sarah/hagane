@@ -1,0 +1,11 @@
+※ 2
+※ 1
+
+case. *.(⊥ ⊥)
+.*.(_ ⊤) print_int(0)
+.*.(⊤ ⊥) print_int(1)
+.*.(⊥ ⊥) print_int(2)
+
+case. *.(*¡ ⊥)
+.*.(*¡ ⊤) print_int(0)
+.*.(_ ⊥) print_int(1)
