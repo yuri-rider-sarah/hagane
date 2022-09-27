@@ -935,26 +935,6 @@ static void codegen_copy_loop(Value *len, Value *src, Value *dest, u64 ref_type)
     set_insert_block(exit_block);
 }
 
-extern "C" Value *codegen_push_primitive(Type *elem_type, Function *dtor, u64 ref_type) {
-    BasicBlock *saved_bb = builder->GetInsertBlock();
-    vector <Type *> param_types = {pointer_type(i64_type), elem_type};
-    Function *func = create_function(get_function_type(&param_types, pointer_type(i64_type)));
-    set_insert_block(create_basic_block(func));
-    Value *l = cg_bitcast(func->getArg(0), pointer_type(list_type(elem_type)));
-    Value *len = cg_load(cg_sgep(l, 1));
-    Value *new_len = cg_add(len, cg_i64(1));
-    Value *val = codegen_malloc_list(new_len, elem_type);
-    codegen_rc_init(cg_sgep(val, 0));
-    cg_store(new_len, cg_sgep(val, 1));
-    cg_store(new_len, cg_sgep(val, 2));
-    codegen_copy_loop(len, cg_sgep(l, 3), cg_sgep(val, 3), ref_type);
-    codegen_boxed_rc_decr(func->getArg(0), dtor);
-    cg_store(func->getArg(1), cg_gep(val, {cg_i32(3), len}));
-    cg_ret(cg_bitcast(val, pointer_type(i64_type)));
-    set_insert_block(saved_bb);
-    return codegen_func_val(func, codegen_empty_captures());
-}
-
 extern "C" Value *codegen_pop_primitive(Type *elem_type, Function *dtor, u64 ref_type) {
     BasicBlock *saved_bb = builder->GetInsertBlock();
     vector <Type *> param_types = {pointer_type(i64_type)};
