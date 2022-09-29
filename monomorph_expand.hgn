@@ -96,20 +96,20 @@ fun. m_new_fun_def(defs context)
     ※ Hack to get defs to have recursive context without causing infinite loops
     let. mut, context′ context
     for_ι(len(defs) λ.(i: set.(context′ m_add_var_binding(context′ M_BoundVar))))
-    set. m_funs push(m_funs M_FunDef(defs context′ list¡))
+    push(~!m_funs M_FunDef(defs context′ list¡))
     -(len(m_funs) 1)
 
 fun. m_new_type_def(variants context)
-    set. m_type_defs push(m_type_defs M_TypeDef(variants context list¡))
+    push(~!m_type_defs M_TypeDef(variants context list¡))
     -(len(m_type_defs) 1)
 
 fun. m_add_var_binding(∈.(context M_Context) ∈.(binding M_VarBinding))
     let. M_Context(vars types) context
-    M_Context(push(vars binding) types)
+    M_Context(++(vars list.(binding)) types)
 
 fun. m_add_type_binding(∈.(context M_Context) ∈.(binding M_TypeBinding))
     let. M_Context(vars types) context
-    M_Context(vars push(types binding))
+    M_Context(vars ++(types list.(binding)))
 
 fun. =m_param_type(pt1 pt2)
     case. *.(pt1 pt2)
@@ -132,7 +132,7 @@ fun. get_prim_type_monomorph(∈.(id Int) ∈.(type_args List(M_Type)))
     case. find(instances type_args =list_m_type)
     .Some(i) i
     .None
-        set. m_type_prims put(m_type_prims id push(instances type_args))
+        put(~!m_type_prims id ++(instances list.(type_args)))
         len(instances)
 
 fun. get_def_type_monomorph(∈.(id Int) ∈.(type_args List(M_Type)))
@@ -141,19 +141,21 @@ fun. get_def_type_monomorph(∈.(id Int) ∈.(type_args List(M_Type)))
     .Some(i) i
     .None
         ※ Inserting a dummy instance to prevent infinite looping
-        set. m_type_defs put(m_type_defs id M_TypeDef(t_variants context push(instances *.(type_args list¡))))
+        put(~!m_type_defs id M_TypeDef(t_variants context ++(instances list.(*.(type_args list¡)))))
         let. mut, context′ context
         for(type_args λ.(type: set.(context′ m_add_type_binding(context′ M_BoundType(type)))))
         let. m_variants map(t_variants λ.(t_variant: map(t_variant λ.(t_type: t_type→m_type(t_type context′)))))
         let. M_TypeDef(_ _ instances′) get(m_type_defs id)
-        set. m_type_defs put(m_type_defs id M_TypeDef(t_variants context put(instances′ len(instances) *.(type_args m_variants))))
+        let. mut, instances′ instances′
+        put(~!instances′ len(instances) *.(type_args m_variants))
+        put(~!m_type_defs id M_TypeDef(t_variants context instances′))
         len(instances)
 
 fun. get_tuple_monomorph(∈.(type_args List(M_Type)))
     case. find(m_tuple_instances type_args =list_m_type)
     .Some(i) i
     .None
-        set. m_tuple_instances push(m_tuple_instances type_args)
+        push(~!m_tuple_instances type_args)
         -(len(m_tuple_instances) 1)
 
 fun. get_var_monomorph(∈.(binding M_VarBinding) ∈.(type_args List(M_Type)))
@@ -163,7 +165,7 @@ fun. get_var_monomorph(∈.(binding M_VarBinding) ∈.(type_args List(M_Type)))
         case. find_assoc(instances type_args =list_m_type)
         .Some(i) i
         .None
-            set. m_var_prims put(m_var_prims id push(instances *.(type_args get(m_prim_arg_type_gens id)(type_args))))
+            put(~!m_var_prims id ++(instances list.(*.(type_args get(m_prim_arg_type_gens id)(type_args)))))
             len(instances)
     .M_FunVar(id _)
         let. M_FunDef(t_defs context instances) get(m_funs id)
@@ -177,7 +179,7 @@ fun. get_var_monomorph(∈.(binding M_VarBinding) ∈.(type_args List(M_Type)))
                 let. mut, context″ context′
                 for_ι(bindings λ.(i: set.(context″ m_add_var_binding(context″ M_BoundVar))))
                 *.(m_params t_expr→m_expr(t_body context″) t_type→m_type(t_expr_type(t_body) context′))
-            set. m_funs put(m_funs id M_FunDef(t_defs context push(instances *.(type_args m_defs))))
+            put(~!m_funs id M_FunDef(t_defs context ++(instances list.(*.(type_args m_defs)))))
             len(instances)
     .M_CtorVar(id _) get_def_type_monomorph(id type_args)
     .M_BoundVar 0
@@ -229,7 +231,7 @@ fun. t_statements→m_statements(∈.(t_statements List(T_Statement)) ∈.(conte
     ※ Hack to get type defs to have recursive context
     for_ι‡ -(len(m_type_defs) new_type_defs_start) λ. i:
         let. M_TypeDef(t_variants _ instances) get(m_type_defs +(new_type_defs_start i))
-        set. m_type_defs put(m_type_defs +(new_type_defs_start i) M_TypeDef(t_variants context instances))
+        put(~!m_type_defs +(new_type_defs_start i) M_TypeDef(t_variants context instances))
     let. mut, next_id new_type_defs_start
     map‡ t_statements λ. t_statement:
         let. T_Statement(t_statement_data file_pos) t_statement

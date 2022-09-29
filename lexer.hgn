@@ -76,17 +76,18 @@ fun. read_quoted_char(∈.(lexer Lexer))
         *.(lexer c)
     .None error(UnexpectedChar(None) file_pos)
 
-fun. read_string_literal_contents(∈.(lexer Lexer) ∈.(s List(Int)))
+fun. read_string_literal_contents(∈.(lexer Lexer) ~!s)
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)
     case. c
     .Some(#")
         set. lexer lexer′
-        *.(lexer s)
+        lexer
     .Some(c)
         let. *.(lexer′ c) read_quoted_char(lexer)
         set. lexer lexer′
-        read_string_literal_contents(lexer push(s c))
+        push(~!s c)
+        read_string_literal_contents(lexer ~!s)
     .None error(UnexpectedChar(None) file_pos)
 
 fun. read_int_literal(∈.(lexer Lexer) ∈.(n Int))
@@ -105,18 +106,19 @@ fun. read_int_literal(∈.(lexer Lexer) ∈.(n Int))
     .None
         *.(lexer n)
 
-fun. read_identifier(∈.(lexer Lexer) ∈.(s List(Int)))
+fun. read_identifier(∈.(lexer Lexer) ~!s)
     let. mut, lexer lexer
     let. *.(lexer′ c file_pos) read_char(lexer)
     case. c
     .Some(c)
         if. is_ident_character(c)
             set. lexer lexer′
-            read_identifier(lexer push(s c))
+            push(~!s c)
+            read_identifier(lexer ~!s)
         else,
-            *.(lexer s)
+            lexer
     .None
-        *.(lexer s)
+        lexer
 
 fun. check_after_ident(∈.(lexer Lexer))
     let. *.(_ c file_pos) read_char(lexer)
@@ -141,7 +143,8 @@ fun. read_token_char(∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_dept
     .Some(#‡) return(CallToken)
     .Some(#†) return(CallOneToken)
     .Some(#")
-        let. *.(lexer′ str) read_string_literal_contents(lexer list¡)
+        let. mut, str list¡
+        let. lexer′ read_string_literal_contents(lexer ~!str)
         set. lexer lexer′
         check_after_ident(lexer)
         return(StringLiteral(str))
@@ -158,7 +161,8 @@ fun. read_token_char(∈.(lexer Lexer) ∈.(at_line_start Bool) ∈.(indent_dept
             check_after_ident(lexer)
             return(IntLiteralToken(n))
         if, is_starting_ident_character(c)
-            let. *.(lexer′ s) read_identifier(lexer list.(c))
+            let. mut, s list.(c)
+            let. lexer′ read_identifier(lexer ~!s)
             set. lexer lexer′
             if. =list(s "_" =)
                 check_after_ident(lexer)

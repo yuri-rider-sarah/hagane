@@ -159,7 +159,7 @@ let. mut, bool_type_id 0
 
 fun. fill_c_types()
     set. bool_type_id len(f_type_defs)
-    set. f_type_defs push(f_type_defs list.(list¡ list¡))
+    push(~!f_type_defs list.(list¡ list¡))
     set. c_list_dtors map_opt‡ f_type_prims λ. f_type_prim: case. f_type_prim
         .*.(2 _) Some(create_boxed_dtor())
         ._ None
@@ -281,7 +281,7 @@ fun. codegen_var_rc_incr(∈.(var C_Variable))
 
 fun. c_add_let_binding(∈.(context C_Context) ∈.(var C_Variable))
     let. C_Context(vars) context
-    C_Context(push(vars var))
+    C_Context(++(vars list.(var)))
 
 fun. c_lookup_var(∈.(vi Int) ∈.(context C_Context))
     let. C_Context(vars) context
@@ -560,14 +560,14 @@ fun. get_empty_c_context()
 
 fun. free_vars(∈.(expr F_Expr) ∈.(length Int))
     let. mut, table list¡
-    for_ι(length λ.(_: set. table push(table ⊥)))
+    for_ι(length λ.(_: push(~!table ⊥)))
     let. mut, rec λ. ∈.(expr F_Expr): *¡
     set. rec λ. ∈.(expr F_Expr):
         case. expr
         .F_IntLiteral(_) *¡
         .F_Ident(vi)
             if. <(vi len(table))
-            then, set. table put(table vi ⊤)
+            then, put(~!table vi ⊤)
             else, *¡
         .F_Apply(func args)
             for‡ args λ. arg:
@@ -575,7 +575,7 @@ fun. free_vars(∈.(expr F_Expr) ∈.(length Int))
                 .F_FuncArgConst(e) rec(e)
                 .F_FuncArgMut(vi)
                     if. <(vi len(table))
-                    then, set. table put(table vi ⊤)
+                    then, put(~!table vi ⊤)
                     else, *¡
             rec(func)
         .F_If(cases else) for(++(concat(map(cases λ.(*.(cond body): list.(cond body)))) list.(else)) rec)
@@ -591,7 +591,7 @@ fun. free_vars(∈.(expr F_Expr) ∈.(length Int))
                 .F_Extern(_ _ _) *¡
                 .F_Set(vi subexpr)
                     if. <(vi len(table))
-                    then, set. table put(table vi ⊤)
+                    then, put(~!table vi ⊤)
                     else, *¡
                     rec(subexpr)
         .F_Lambda(_ body _) rec(body)
@@ -958,7 +958,7 @@ fun. codegen_pattern_test(∈.(val Int) ∈.(pattern F_Pattern) ∈.(context C_C
             let. tag_fail codegen_boxed_tag_check(tagged tag)
             let. *.(bindings_ ends_) unzip‡ map_ι‡ len(patterns) λ. i:
                 codegen_pattern_test(codegen_boxed_extract(tagged i) get(patterns i) context)
-            *.(concat(bindings_) push(concat(ends_) tag_fail))
+            *.(concat(bindings_) ++(concat(ends_) list.(tag_fail)))
         .None
             let. tuple codegen_tagless_boxed_cast(val list→vector(map(c_types codegen_type)))
             let. *.(bindings_ ends_) unzip‡ map_ι‡ len(patterns) λ. i:
@@ -969,7 +969,7 @@ fun. codegen_pattern_test(∈.(val Int) ∈.(pattern F_Pattern) ∈.(context C_C
         let. len_fail codegen_len_check(list len(patterns))
         let. *.(bindings_ ends_) unzip‡ map_ι‡ len(patterns) λ. i:
             codegen_pattern_test(codegen_list_get(list i) get(patterns i) context)
-        *.(concat(bindings_) push(concat(ends_) len_fail))
+        *.(concat(bindings_) ++(concat(ends_) list.(len_fail)))
 
 fun. f_param_type→c_param_type(∈.(f_param_type F_FuncParamType))
     case. f_param_type

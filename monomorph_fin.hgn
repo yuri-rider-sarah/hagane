@@ -71,19 +71,19 @@ fun. fill_f_types()
     let. mut, m_prim_instances list¡
     for‡ ι*(m_type_prims) λ. *.(id instances):
         let. instances map(instances λ.(m_type_args: *.(id m_type_args)))
-        set. f_m_type_prim_offset push(f_m_type_prim_offset len(m_prim_instances))
+        push(~!f_m_type_prim_offset len(m_prim_instances))
         set. m_prim_instances ++(m_prim_instances instances)
     let. mut, m_def_instances map(m_tuple_instances λ.(m_types: list.(m_types)))
     for‡ m_type_defs λ. M_TypeDef(_ _ instances):
         let. instances map(instances λ.(*.(_ m_variants): m_variants))
-        set. f_m_type_def_offset push(f_m_type_def_offset len(m_def_instances))
+        push(~!f_m_type_def_offset len(m_def_instances))
         set. m_def_instances ++(m_def_instances instances)
     set. f_type_prims map(m_prim_instances λ.(*.(id m_type_args): *.(id map(m_type_args m_type→f_type))))
     set. f_type_defs map(m_def_instances λ.(m_variants: map(m_variants λ.(m_variant: map(m_variant m_type→f_type)))))
     set. empty_f_context F_Context(list¡ len(m_tuple_instances))
     for‡ ι*(m_var_prims) λ. *.(id instances):
         for‡ instances λ. *.(m_type_args m_param_types):
-            set. f_var_prims push(f_var_prims *.(id map(m_type_args m_type→f_type) map(m_param_types m_type→f_type)))
+            push(~!f_var_prims *.(id map(m_type_args m_type→f_type) map(m_param_types m_type→f_type)))
         set. empty_f_context f_add_var_bindings(empty_f_context 1 len(instances))
 
 fun. f_func_param_type(∈.(param F_FuncParam))

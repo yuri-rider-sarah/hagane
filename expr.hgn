@@ -66,36 +66,48 @@ type. ClauseGroup ClauseGroup(ClauseSeparator List(R_Expr))
 
 type. ClauseGrouping ClauseGrouping(List(R_Expr) List(ClauseGroup))
 
-fun. group_clauses_loop(∈.(clauses List(Clause)) ∈.(i Int) ∈.(init_group List(R_Expr)) ∈.(groups List(ClauseGroup)) ∈.(this_sep ClauseSeparator) ∈.(this_group List(R_Expr)))
+fun. group_clauses_loop(∈.(clauses List(Clause)) ∈.(i Int) ∈.(init_group List(R_Expr)) ~!groups ∈.(this_sep ClauseSeparator) ~!this_group)
     if. <(i len(clauses))
         case. get(clauses i)
         .ExprClause(expr)
-            group_clauses_loop(clauses +(i 1) init_group groups this_sep push(this_group expr))
+            push(~!this_group expr)
+            group_clauses_loop(clauses +(i 1) init_group ~!groups this_sep ~!this_group)
         .SecKeywordClause(kw)
-            group_clauses_loop(clauses +(i 1) init_group push(groups ClauseGroup(this_sep this_group)) NamedSep(kw) list¡)
+            push(~!groups ClauseGroup(this_sep this_group))
+            set. this_group list¡
+            group_clauses_loop(clauses +(i 1) init_group ~!groups NamedSep(kw) ~!this_group)
         .ColonClause
-            group_clauses_loop(clauses +(i 1) init_group push(groups ClauseGroup(this_sep this_group)) ColonSep list¡)
+            push(~!groups ClauseGroup(this_sep this_group))
+            set. this_group list¡
+            group_clauses_loop(clauses +(i 1) init_group ~!groups ColonSep ~!this_group)
         .Label(expr)
-            group_clauses_loop(clauses +(i 1) init_group push(groups ClauseGroup(this_sep this_group)) LabelSep(expr) list¡)
+            push(~!groups ClauseGroup(this_sep this_group))
+            set. this_group list¡
+            group_clauses_loop(clauses +(i 1) init_group ~!groups LabelSep(expr) ~!this_group)
     else,
-        ClauseGrouping(init_group push(groups ClauseGroup(this_sep this_group)))
+        push(~!groups ClauseGroup(this_sep this_group))
+        ClauseGrouping(init_group groups)
 
-fun. group_clauses_init(∈.(clauses List(Clause)) ∈.(i Int) ∈.(init_group List(R_Expr)))
+fun. group_clauses_init(∈.(clauses List(Clause)) ∈.(i Int) ~!init_group)
+    let. mut, groups list¡
+    let. mut, this_group list¡
     if. <(i len(clauses))
         case. get(clauses i)
         .ExprClause(expr)
-            group_clauses_init(clauses +(i 1) push(init_group expr))
+            push(~!init_group expr)
+            group_clauses_init(clauses +(i 1) ~!init_group)
         .SecKeywordClause(kw)
-            group_clauses_loop(clauses +(i 1) init_group list¡ NamedSep(kw) list¡)
+            group_clauses_loop(clauses +(i 1) init_group ~!groups NamedSep(kw) ~!this_group)
         .ColonClause
-            group_clauses_loop(clauses +(i 1) init_group list¡ ColonSep list¡)
+            group_clauses_loop(clauses +(i 1) init_group ~!groups ColonSep ~!this_group)
         .Label(expr)
-            group_clauses_loop(clauses +(i 1) init_group list¡ LabelSep(expr) list¡)
+            group_clauses_loop(clauses +(i 1) init_group ~!groups LabelSep(expr) ~!this_group)
     else,
         ClauseGrouping(init_group list¡)
 
 fun. group_clauses(∈.(clauses List(Clause)))
-    group_clauses_init(clauses 0 list¡)
+    let. mut, init_group list¡
+    group_clauses_init(clauses 0 ~!init_group)
 
 fun. r_expr→u_func_param_type(∈.(r_expr R_Expr))
     case. r_expr
@@ -164,13 +176,14 @@ fun. split_off(∈.(exprs List(R_Expr)) ∈.(kw List(Int)) ∈.(file_pos FilePos
     then, *.(get(exprs 0) drop(exprs 1))
     else, error(InvalidExpr(Some(kw)) file_pos)
 
-fun. <grouping→if>_loop(∈.(groups List(ClauseGroup)) ∈.(i Int) ∈.(branches List(*.(U_Expr U_Expr))) ∈.(file_pos FilePos))
+fun. <grouping→if>_loop(∈.(groups List(ClauseGroup)) ∈.(i Int) ~!branches ∈.(file_pos FilePos))
     fun. invalid_expr() error(InvalidExpr(Some("if")) file_pos)
     if. <(i len(groups))
         let. ClauseGroup(sep content) get(groups i)
         case. sep
         .LabelSep(cond)
-            <grouping→if>_loop(groups +(i 1) push(branches *.(r_expr→u_expr(cond) block→u_expr(content file_pos))) file_pos)
+            push(~!branches *.(r_expr→u_expr(cond) block→u_expr(content file_pos)))
+            <grouping→if>_loop(groups +(i 1) ~!branches file_pos)
         .NamedSep("else")
             if. ≠(len(groups) +(i 1))
                 invalid_expr()
@@ -187,10 +200,12 @@ fun. <grouping→if>_loop(∈.(groups List(ClauseGroup)) ∈.(i Int) ∈.(branch
                 let. ClauseGroup(sep′ content′) get(groups +(i 1))
                 case. sep′
                 .NamedSep("then")
-                    <grouping→if>_loop(groups +(i 2) push(branches *.(block→u_expr(content file_pos) block→u_expr(content′ file_pos))) file_pos)
+                    push(~!branches *.(block→u_expr(content file_pos) block→u_expr(content′ file_pos)))
+                    <grouping→if>_loop(groups +(i 2) ~!branches file_pos)
                 ._
                     let. *.(cond then) split_off(content "if" file_pos)
-                    <grouping→if>_loop(groups +(i 1) push(branches *.(r_expr→u_expr(cond) block→u_expr(then file_pos))) file_pos)
+                    push(~!branches *.(r_expr→u_expr(cond) block→u_expr(then file_pos))) 
+                    <grouping→if>_loop(groups +(i 1) ~!branches file_pos)
             else,
                 U_If(branches block→u_expr(content file_pos))
     else, invalid_expr()
@@ -205,8 +220,12 @@ fun. grouping→if(ClauseGrouping(first_group groups) ∈.(file_pos FilePos))
         else, invalid_expr()
     else,
         if. =(len(first_group) 0)
-        then, <grouping→if>_loop(groups 0 list¡ file_pos)
-        else, <grouping→if>_loop(++(list.(ClauseGroup(ColonSep first_group)) groups) 0 list¡ file_pos)
+        then,
+            let. mut, branches list¡
+            <grouping→if>_loop(groups 0 ~!branches file_pos)
+        else,
+            let. mut, branches list¡
+            <grouping→if>_loop(++(list.(ClauseGroup(ColonSep first_group)) groups) 0 ~!branches file_pos)
 
 fun. r_expr→u_func_param(∈.(r_expr R_Expr))
     case. r_expr
@@ -345,7 +364,7 @@ fun. r_exprs→u_statements(∈.(r_exprs List(R_Expr)))
                         case. r_expr_data
                         .R_Special("fun" clauses)
                             set. i +(i 1)
-                            set. defs push(defs parse_fun_clauses(clauses file_pos))
+                            push(~!defs parse_fun_clauses(clauses file_pos))
                             read_fun_loop()
                         ._
                     else,
@@ -400,5 +419,5 @@ fun. r_exprs→u_statements(∈.(r_exprs List(R_Expr)))
             ._ U_ExprStatement(U_Expr(clauses→expr_data(kw clauses file_pos) file_pos))
         ._ U_ExprStatement(r_expr→u_expr(r_expr))
         )
-        set. u_statements push(u_statements U_Statement(u_expr_data file_pos))
+        push(~!u_statements U_Statement(u_expr_data file_pos))
     u_statements

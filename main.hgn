@@ -21,11 +21,11 @@ for‡ argv λ. arg:
         ._
             if. >(len(arg) 1)
                 case. get(arg 1)
-                .#L set. cc_args push(cc_args drop(arg 2))
+                .#L push(~!cc_args drop(arg 2))
                 .#o set. output_file drop(arg 2)
                 ._ string_error(++("Error: Invalid argument: " arg) 0)
             else, string_error(++("Error: Invalid argument: " arg) 0)
-    else, set. filenames push(filenames arg)
+    else, push(~!filenames arg)
 
 if. =(len(filenames) 0)
 then, string_error("Error: No input files given" 0)
@@ -42,7 +42,7 @@ while.
 do,
     let. *.(lexer′ r_expr) read_expr(lexer)
     set. lexer lexer′
-    set. r_exprs push(r_exprs r_expr)
+    push(~!r_exprs r_expr)
 let. u_statements r_exprs→u_statements(r_exprs)
 let. i_statements u_statements→i_statements(u_statements empty_i_context new_type_var() FilePos(get(argv 0) 1 1))
 if. >(len(i_statements) 0)

@@ -75,11 +75,11 @@ let. empty_t_context T_Context‡
 
 fun. t_add_var_binding(∈.(context T_Context) ∈.(var Option(Int)))
     let. T_Context(vars types) context
-    T_Context(push(vars var) types)
+    T_Context(++(vars list.(var)) types)
 
 fun. t_add_type_binding(∈.(context T_Context) ∈.(type TypeName) ∈.(type_params List(Int)) ∈.(variants List(List(T_Type))))
     let. T_Context(vars types) context
-    T_Context(vars push(types *.(type type_params variants)))
+    T_Context(vars ++(types list.(*.(type type_params variants))))
 
 fun. t_locate_type_in_context(∈.(type TypeName) ∈.(context T_Context) ∈.(file_pos FilePos))
     let. T_Context(_ types) context

@@ -86,7 +86,7 @@ fun. i_pattern_file_pos(∈.(pattern I_Pattern))
 let. mut, named_types list¡
 
 fun. new_type_name(∈.(name Option(List(Int))) ∈.(params Int))
-    set. named_types push(named_types *.(name params))
+    push(~!named_types *.(name params))
     TypeName(-(len(named_types) 1))
 
 let. int_type new_type_name(Some("Int") 0)
@@ -114,7 +114,7 @@ fun. type_referenced_types′(∈.(tv TypeVar))
     .I_Equal(tv′) type_referenced_types′(tv′)
     .I_Named(_ args) concat(map(args type_referenced_types′))
     .I_TupleType(types) concat(map(types type_referenced_types′))
-    .I_Function(params ret) concat(push(map(params func_param_type_referenced_types) type_referenced_types′(ret)))
+    .I_Function(params ret) concat(++(map(params func_param_type_referenced_types) list.(type_referenced_types′(ret))))
 
 fun. type_referenced_types(∈.(tv TypeVar)) dedup(type_referenced_types′(tv) =type_var)
 
@@ -128,14 +128,14 @@ fun. type_referenced_type_names′(∈.(tv TypeVar))
     case. get(type_variables tvi)
     .I_Any list¡
     .I_Equal(tv′) type_referenced_type_names′(tv′)
-    .I_Named(tn args) push(concat(map(args type_referenced_type_names′)) tn)
+    .I_Named(tn args) ++(concat(map(args type_referenced_type_names′)) list.(tn))
     .I_TupleType(types) concat(map(types type_referenced_type_names′))
-    .I_Function(params ret) concat(push(map(params func_param_type_referenced_type_names) type_referenced_type_names′(ret)))
+    .I_Function(params ret) concat(++(map(params func_param_type_referenced_type_names) list.(type_referenced_type_names′(ret))))
 
 fun. type_referenced_type_names(∈.(tv TypeVar)) dedup(type_referenced_type_names′(tv) =type_name)
 
 fun. new_type_var_with_type(∈.(type I_Type))
-    set. type_variables push(type_variables type)
+    push(~!type_variables type)
     TypeVar(-(len(type_variables) 1))
 
 fun. new_type_var()
@@ -147,7 +147,7 @@ fun. assign_type_var(∈.(tv TypeVar) ∈.(type I_Type) ∈.(file_pos FilePos))
         error(CyclicalType file_pos)
     else, *¡
     let. TypeVar(tvi) tv
-    set. type_variables put(type_variables tvi type)
+    put(~!type_variables tvi type)
 
 fun. i_func_param_type→partial_param_type(∈.(pt I_FuncParamType))
     case. pt
@@ -309,11 +309,11 @@ fun. type_from_name(∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos F
 
 fun. i_add_let_binding(∈.(context I_Context) ∈.(var VarBinding))
     let. I_Context(vars types) context
-    I_Context(push(vars var) types)
+    I_Context(++(vars list.(var)) types)
 
 fun. i_add_type_binding(∈.(context I_Context) ∈.(type TypeName))
     let. I_Context(vars types) context
-    I_Context(vars push(types type))
+    I_Context(vars ++(types list.(type)))
 
 fun. variable_is_mut(∈.(vi Int) ∈.(context I_Context))
     let. I_Context(vars _) context
@@ -535,9 +535,9 @@ fun. u_free_vars(U_Expr(expr_data _))
     .U_IntLiteral(_) list¡
     .U_Ident(name) list.(name)
     .U_Tuple(subexprs) concat(map(subexprs u_free_vars))
-    .U_Apply(func args) concat(push(map(args u_free_vars_in_func_arg) u_free_vars(func)))
+    .U_Apply(func args) concat(++(map(args u_free_vars_in_func_arg) list.(u_free_vars(func))))
     .U_Typed(subexpr _) u_free_vars(subexpr)
-    .U_If(cases else) concat(map(push(concat(map(cases λ.(*.(e1 e2): list.(e1 e2)))) else) u_free_vars))
+    .U_If(cases else) concat(map(++(concat(map(cases λ.(*.(e1 e2): list.(e1 e2)))) list.(else)) u_free_vars))
     .U_While(cond body) ++(u_free_vars(cond) u_free_vars(body))
     .U_And(subexprs) concat(map(subexprs u_free_vars))
     .U_Or(subexprs) concat(map(subexprs u_free_vars))
@@ -552,7 +552,7 @@ fun. u_free_vars(U_Expr(expr_data _))
                 fvs
             .U_LetMut(name expr)
                 let. fvs \(u_free_vars(expr) shadowed_vars)
-                set. shadowed_vars push(shadowed_vars name)
+                push(~!shadowed_vars name)
                 fvs
             .U_Fun(defs)
                 let. fvs \(concat(map(defs λ.(*.(_ _ params body): \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)))))) shadowed_vars)
@@ -560,11 +560,11 @@ fun. u_free_vars(U_Expr(expr_data _))
                 fvs
             .U_TypeStatement(_ _ _) list¡
             .U_Extern(name _)
-                set. shadowed_vars push(shadowed_vars name)
+                push(~!shadowed_vars name)
                 list¡
             .U_Set(_ expr) \(u_free_vars(expr) shadowed_vars)
     .U_Lambda(params body) \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)))
-    .U_Case(matched cases) concat(push(map(cases λ.(*.(pat expr): \(u_free_vars(expr) u_bound_vars(pat)))) u_free_vars(matched)))
+    .U_Case(matched cases) concat(++(map(cases λ.(*.(pat expr): \(u_free_vars(expr) u_bound_vars(pat)))) list.(u_free_vars(matched))))
     .U_ListLiteral(subexprs) concat(map(subexprs u_free_vars))
     .U_StringLiteral(_) list¡
 
@@ -584,29 +584,28 @@ fun. get_sccs(∈.(graph List(List(Int))))
     let. mut, stack list¡
     let. mut, on_stack map(graph λ.(_: ⊥))
     fun. rec(i)
-        set. visited put(visited i ⊤)
-        set. index put(index i next_index)
-        set. lowlink put(lowlink i next_index)
+        put(~!visited i ⊤)
+        put(~!index i next_index)
+        put(~!lowlink i next_index)
         set. next_index +(next_index 1)
-        set. stack push(stack i)
-        set. on_stack put(on_stack i ⊤)
+        push(~!stack i)
+        put(~!on_stack i ⊤)
         for‡ get(graph i) λ. j:
             if. ¬(get(visited j))
                 rec(j)
-                set. lowlink put(lowlink i min(get(lowlink i) get(lowlink j)))
+                put(~!lowlink i min(get(lowlink i) get(lowlink j)))
             if, get(on_stack j)
-                set. lowlink put(lowlink i min(get(lowlink i) get(index j)))
+                put(~!lowlink i min(get(lowlink i) get(index j)))
             else, *¡
         if. =(get(lowlink i) get(index i))
             let. mut, scc list¡
             while.
-                let. j get(stack -(len(stack) 1))
-                set. stack pop(stack)
-                set. on_stack put(on_stack j ⊥)
-                set. scc push(scc j)
+                let. j pop(~!stack)
+                put(~!on_stack j ⊥)
+                push(~!scc j)
                 ≠(j i)
             do, *¡
-            set. sccs push(sccs scc)
+            push(~!sccs scc)
         else, *¡
     for_ι‡ len(graph) λ. i:
         if. ¬(get(visited i))

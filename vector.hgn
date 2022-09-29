@@ -10,7 +10,7 @@ fun. list→vector(∈.(a List(Int)))
 
 fun. vector→list(∈.(v Int))
     let. mut, a list¡
-    for_ι(vector_len(v) λ.(i: set.(a push(a vector_get(v i)))))
+    for_ι(vector_len(v) λ.(i: push(~!a vector_get(v i))))
     a
 
 extern. utf8_decode ⇒.(Int : Int)

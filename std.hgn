@@ -29,19 +29,19 @@ fun. ∀, T U: for2(∈.(xs List(T)) ∈.(ys List(U)) ∈.(f ⇒.(T U : *¡)))
 
 fun. ∀, T U: map(∈.(xs List(T)) ∈.(f ⇒.(T : U)))
     let. mut, ys list¡
-    for‡ xs λ. x: set.(ys push(ys f(x)))
+    for‡ xs λ. x: push(~!ys f(x))
     ys
 
 fun. ∀, T: map_ι(∈.(n Int) ∈.(f ⇒.(Int : T)))
     let. mut, ys list¡
-    for_ι(n λ.(i: set.(ys push(ys f(i)))))
+    for_ι(n λ.(i: push(~!ys f(i))))
     ys
 
 fun. ∀, T U: map_opt(∈.(xs List(T)) ∈.(f ⇒.(T : Option(U))))
     let. mut, ys list¡
     for‡ xs λ. x:
         case. f(x)
-        .Some(y) set. ys push(ys y)
+        .Some(y) push(~!ys y)
         .None *¡
     ys
 
@@ -79,7 +79,7 @@ fun. ∀, T: drop(∈.(xs List(T)) ∈.(n Int))
     let. mut, r list¡
     let. mut, i n
     while. <(i len(xs))
-        set. r push(r get(xs i))
+        push(~!r get(xs i))
         set. i +(i 1)
     r
 
@@ -98,7 +98,7 @@ fun. ∀, T: dedup(∈.(xs List(T)) ∈.(=T ⇒.(T T : Bool)))
     let. mut, r list¡
     for‡ xs λ. x:
         if. ∉(x r =T)
-        then, set. r push(r x)
+        then, push(~!r x)
         else, *¡
     r
 
@@ -117,7 +117,7 @@ fun. =list_int(∈.(x List(Int)) ∈.(y List(Int)))
 
 fun. ∀, T: filter(∈.(xs List(T)) ∈.(f ⇒.(T : Bool)))
     let. mut, r list¡
-    for‡ xs λ. x: set.(r if.(f(x) push(r x) r))
+    for‡ xs λ. x: if.(f(x) push(~!r x) *¡)
     r
 
 fun. ∀, T: \(∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
@@ -125,7 +125,7 @@ fun. ∀, T: \(∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
 
 fun. ∀, T: ++(∈.(xs List(T)) ∈.(ys List(T)))
     let. mut, r xs
-    for‡ ys λ. y: set.(r push(r y))
+    for‡ ys λ. y: push(~!r y)
     r
 
 fun. ∀, T: concat(∈.(xss List(List(T))))
@@ -156,8 +156,8 @@ fun. ∀, T U: unzip(∈.(xs List(*.(T U))))
     let. mut, xs2 list¡
     for‡ xs λ. x:
         let. *.(x1 x2) x
-        set. xs1 push(xs1 x1)
-        set. xs2 push(xs2 x2)
+        push(~!xs1 x1)
+        push(~!xs2 x2)
     *.(xs1 xs2)
 
 fun. int→string(∈.(n Int))
@@ -177,7 +177,7 @@ fun. int→string(∈.(n Int))
 
 fun. ∀, T: repeat(∈.(n Int) ∈.(x T))
     let. mut, a list¡
-    for_ι(n λ.(_: set.(a push(a x))))
+    for_ι(n λ.(_: push(~!a x)))
     a
 
 fun. ∀, T: is_permutation(∈.(a1 List(T)) ∈.(a2 List(T)) ∈.(=T ⇒.(T T: Bool)))
@@ -188,7 +188,7 @@ fun. ∀, T: is_permutation(∈.(a1 List(T)) ∈.(a2 List(T)) ∈.(=T ⇒.(T T: 
             let. mut, found2 ⊥
             for‡ ι*(a2) λ. *.(i2 x2):
                 if. ∧.(¬(found2) ¬(get(found i2)) =T(x1 x2))
-                    set. found put(found i2 ⊤)
+                    put(~!found i2 ⊤)
                     set. found2 ⊤
                 else, *¡
             if. ¬(found2)
@@ -211,8 +211,8 @@ fun. sort(∈.(a List(Int)))
         let. mut, j i
         while. ∧.(>(j 0) >(get(a -(j 1)) get(a j)))
             let. t get(a j)
-            set. a put(a j get(a -(j 1)))
-            set. a put(a -(j 1) t)
+            put(~!a j get(a -(j 1)))
+            put(~!a -(j 1) t)
             set. j -(j 1)
         set. i +(i 1)
     a
