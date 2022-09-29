@@ -10,7 +10,7 @@ Move the executable, either downloaded or built, into a directory in `$PATH`.
 
 Only do this if necessary. The x86\_64 Linux version is avaiable to download as a release.
 
-Compiling v0.1.2 of the Hagane compiler requires v0.1.1 of the compiler to be available in `$PATH` as `hagane-0.1.1`.
+Compiling v0.2 of the Hagane compiler requires v0.1.2 of the compiler to be available in `$PATH` as `hagane-0.1.2`.
 It also requires LLVM-12, `clang++`, and Python 3.
 
 To build the compiler, execute:
@@ -22,5 +22,5 @@ The compiler will be found in the file named `hagane-0.1.2`.
 
 ## Usage
 ```
-hagane-0.1.2 input-file ... [OPTION ...]
+hagane-0.2 input-file ... [OPTION ...]
 ```
