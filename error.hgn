@@ -10,7 +10,7 @@ type. PartialType
     P_Var(Int)
     P_Applied(List(Int) List(PartialType))
     P_TupleType(List(PartialType))
-    P_Function(List(PartialParamType) PartialType)
+    P_Function(List(PartialParamType) PartialType Int)
 
 fun. partial_param_type→string(∈.(pt PartialParamType))
     case. pt
@@ -25,8 +25,8 @@ fun. partial_type→string(∈.(type PartialType))
         name "(" intercalate(map(types partial_type→string) " ") ")"
     .P_TupleType(types) concat‡ list.
         "*.(" intercalate(map(types partial_type→string) " ") ")"
-    .P_Function(params ret) concat‡ list.
-        "⇒.(" concat(map(params λ.(p: ++(partial_param_type→string(p) " ")))) ": " partial_type→string(ret) ")"
+    .P_Function(params ret eff) concat‡ list.
+        "⇒.(" concat(map(params λ.(p: ++(partial_param_type→string(p) " ")))) ": " partial_type→string(ret) "ε, ?E" int→string(eff) ")"
 
 type. Error
     UnexpectedChar(Option(Int))
@@ -46,7 +46,9 @@ type. Error
     InexhaustivePatterns
     UnusedTypeParam(List(Int))
     AmbiguousType(PartialType)
+    AmbiguousEffect
     LeakedType(List(Int))
+    LeakedEffect(List(Int))
     InvalidExternType(List(Int))
     MutRecPolyDifferentType(List(Int) List(Int))
 
@@ -79,7 +81,9 @@ fun. error_string(∈.(err Error))
     .InexhaustivePatterns "Inexhaustive patterns"
     .UnusedTypeParam(name) ++("Unused type parameter " name)
     .AmbiguousType(t) ++("Ambiguous type " partial_type→string(t))
+    .AmbiguousEffect "Ambiguous effect"
     .LeakedType(name) ++("Inferred type contains leaked type " name)
+    .LeakedEffect(name) ++("Inferred effect contains leaked effect " name)
     .InvalidExternType(name) ++("Invalid extern type for variable " name)
     .MutRecPolyDifferentType(name1 name2) concat(list.("Mutually recursive functions " name1 " and " name2 " are polymorphic over different types"))
 

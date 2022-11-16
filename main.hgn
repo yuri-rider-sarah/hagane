@@ -44,12 +44,14 @@ do,
     set. lexer lexer′
     push(~!r_exprs r_expr)
 let. u_statements r_exprs→u_statements(r_exprs)
-let. i_statements u_statements→i_statements(u_statements empty_i_context new_type_var() FilePos(get(argv 0) 1 1))
+let. *.(i_statements _) u_statements→i_statements(u_statements empty_i_context new_type_var() FilePos(get(argv 0) 1 1))
 if. >(len(i_statements) 0)
     case. get(i_statements -(len(i_statements) 1))
-    .I_Statement(I_ExprStatement(I_Expr(_ type _)) file_pos) set_type(type I_TupleType(list.()) file_pos)
+    .I_Statement(I_ExprStatement(I_Expr(_ type _ _)) _ file_pos)
+        set_type(type I_TupleType(list.()) file_pos)
     ._ *¡
 else, *¡
+decompose_effect_vars()
 let. t_statements i_statements→t_statements(i_statements empty_t_context)
 let. m_statements t_statements→m_statements(t_statements empty_m_context)
 fill_f_types()
