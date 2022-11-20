@@ -73,6 +73,7 @@ def run_test(test_name):
         pass
     if not success:
         print('\033[31mTest failed\033[39m')
+    return success
 
 args = sys.argv[1:]
 if len(args) == 2:
@@ -82,9 +83,13 @@ elif len(args) == 3:
     compiler, tests_dir, test_name = args
 
 if test_name is None:
+    all_passed = True
     for test in sorted(os.listdir(tests_dir)):
         if test.endswith('.hgn'):
             test_name = test[:-4]
-            run_test(test_name)
+            success = run_test(test_name)
+            all_passed = all_passed and success
+    if all_passed:
+        print('\033[32mAll tests passed\033[39m')
 else:
     run_test(test_name)
