@@ -1,6 +1,6 @@
 type. I_FuncParam
     I_FuncParamConst(I_Pattern)
-    I_FuncParamMut(TypeVar FilePos)
+    I_FuncParamMut(TypeVar EffectName FilePos)
 
 type. I_StatementData
     I_ExprStatement(I_Expr)
@@ -71,7 +71,7 @@ fun. =effect_name(∈.(tn1 EffectName) ∈.(tn2 EffectName))
 
 type. I_FuncParamType
     I_FuncParamConstType(TypeVar)
-    I_FuncParamMutType(TypeVar)
+    I_FuncParamMutType(TypeVar EffectName)
 
 type. I_Type
     I_Any
@@ -135,6 +135,7 @@ type. EffectVarData
     EffectUnset(FilePos)
     EffectNamed(EffectName)
     EffectSum(List(EffectComponent))
+    EffectSubst(EffectVar List(*.(EffectName EffectName)))
 
 fun. new_effect(∈.(effect_data EffectVarData))
     push(~!effect_vars effect_data)
@@ -152,18 +153,24 @@ fun. new_sum_effect(∈.(subeffects List(EffectVar)))
 fun. new_compound_effect(∈.(components List(EffectComponent)))
     new_effect(EffectSum(components))
 
+fun. new_subst_effect(∈.(ev EffectVar) ∈.(subs List(*.(EffectName EffectName))))
+    new_effect(EffectSubst(ev subs))
+
 let. mut, equal_effects list¡
 
-fun. unify_effect(∈.(ev1 EffectVar) ∈.(ev2 EffectVar) ∈.(err Error) ∈.(file_pos FilePos))
+fun. unify_effect(∈.(ev1 EffectVar) ∈.(ev2 EffectVar) ∈.(params1 List(EffectName)) ∈.(params2 List(EffectName)) ∈.(err Error) ∈.(file_pos FilePos))
+    let. subs case. zip(params1 params2)
+        .Some(subs) subs
+        .None internal_error("params1 and params2 have different lengths")
     let. EffectVar(evi1) ev1
     let. EffectVar(evi2) ev2
     case. *.(get(effect_vars evi1) get(effect_vars evi2))
     .*.(EffectUnset(_) _)
-        put(~!effect_vars evi1 EffectSum(list.(EffectAdd(ev2))))
+        put(~!effect_vars evi1 EffectSubst(ev2 map(subs λ.(*.(x y): *.(y x)))))
     .*.(_ EffectUnset(_))
-        put(~!effect_vars evi2 EffectSum(list.(EffectAdd(ev1))))
+        put(~!effect_vars evi2 EffectSubst(ev1 subs))
     ._
-        push(~!equal_effects *.(ev1 ev2 err file_pos))
+        push(~!equal_effects *.(ev1 ev2 subs err file_pos))
 
 fun. set_effect(∈.(ev EffectVar) ∈.(data EffectVarData))
     let. EffectVar(evi) ev
@@ -179,10 +186,20 @@ fun. effect_name_string(∈.(en EffectName))
     .Some(name) name
     .None ++("?EG" int→string(eni))
 
+fun. params_effects(∈.(params List(I_FuncParam)))
+    map_opt‡ params λ. param: case. param
+        .I_FuncParamConst(_) None
+        .I_FuncParamMut(_ en _) Some(en)
+
+fun. param_types_effects(∈.(params List(I_FuncParamType)))
+    map_opt‡ params λ. param: case. param
+        .I_FuncParamConstType(_) None
+        .I_FuncParamMutType(_ en) Some(en)
+
 fun. func_param_type_referenced_types(∈.(fpt I_FuncParamType))
     case. fpt
     .I_FuncParamConstType(t) type_referenced_types(t)
-    .I_FuncParamMutType(t) type_referenced_types(t)
+    .I_FuncParamMutType(t _) type_referenced_types(t)
 
 fun. type_referenced_types′(∈.(tv TypeVar))
     let. TypeVar(tvi) tv
@@ -198,7 +215,7 @@ fun. type_referenced_types(∈.(tv TypeVar)) dedup(type_referenced_types′(tv) 
 fun. func_param_type_referenced_type_names(∈.(fpt I_FuncParamType))
     case. fpt
     .I_FuncParamConstType(t) type_referenced_type_names(t)
-    .I_FuncParamMutType(t) type_referenced_type_names(t)
+    .I_FuncParamMutType(t _) type_referenced_type_names(t)
 
 fun. type_referenced_type_names′(∈.(tv TypeVar))
     let. TypeVar(tvi) tv
@@ -221,12 +238,13 @@ fun. effect_referenced_effects′(∈.(ev EffectVar) ~!visited)
         .EffectSum(components) concat‡ map‡ components λ. comp: case. comp
             .EffectAdd(ev′) effect_referenced_effects′(ev′ ~!visited)
             .EffectBlock(_) list¡
+        .EffectSubst(ev′ _) effect_referenced_effects′(ev′ ~!visited)
     else, list¡
 
 fun. func_param_type_referenced_effects′(∈.(fpt I_FuncParamType) ~!visited)
     case. fpt
     .I_FuncParamConstType(t) type_referenced_effects′(t ~!visited)
-    .I_FuncParamMutType(t) type_referenced_effects′(t ~!visited)
+    .I_FuncParamMutType(t _) type_referenced_effects′(t ~!visited)
 
 fun. type_referenced_effects′(∈.(tv TypeVar) ~!visited)
     let. TypeVar(tvi) tv
@@ -259,7 +277,7 @@ fun. assign_type_var(∈.(tv TypeVar) ∈.(type I_Type) ∈.(file_pos FilePos))
 fun. i_func_param_type→partial_param_type(∈.(pt I_FuncParamType))
     case. pt
     .I_FuncParamConstType(t) P_FuncParamConstType(type_var→partial_type(t))
-    .I_FuncParamMutType(t) P_FuncParamMutType(type_var→partial_type(t))
+    .I_FuncParamMutType(t _) P_FuncParamMutType(type_var→partial_type(t))
 
 fun. i_type→partial_type(∈.(t I_Type) ∈.(tvi Int))
     case. t
@@ -276,7 +294,7 @@ fun. type_var→partial_type(∈.(tv TypeVar))
 fun. unify_func_param_type(∈.(pt1 I_FuncParamType) ∈.(pt2 I_FuncParamType) ∈.(err Error) ∈.(file_pos FilePos))
     case. *.(pt1 pt2)
     .*.(I_FuncParamConstType(t1) I_FuncParamConstType(t2)) unify_type′(t1 t2 err file_pos)
-    .*.(I_FuncParamMutType(t1) I_FuncParamMutType(t2)) unify_type′(t1 t2 err file_pos)
+    .*.(I_FuncParamMutType(t1 _) I_FuncParamMutType(t2 _)) unify_type′(t1 t2 err file_pos)
     ._ error(err file_pos)
 
 fun. unify_type_value′(∈.(t1 I_Type) ∈.(t2 I_Type) ∈.(err Error) ∈.(file_pos FilePos))
@@ -299,7 +317,7 @@ fun. unify_type_value′(∈.(t1 I_Type) ∈.(t2 I_Type) ∈.(err Error) ∈.(fi
         .None error(err file_pos)
         .Some(*¡) *¡
         unify_type′(ret1 ret2 err file_pos)
-        unify_effect(eff1 eff2 err file_pos)
+        unify_effect(eff1 eff2 param_types_effects(params1) param_types_effects(params2) err file_pos)
     ._ error(err file_pos)
 
 fun. unify_type′(∈.(tv1 TypeVar) ∈.(tv2 TypeVar) ∈.(err Error) ∈.(file_pos FilePos))
@@ -352,6 +370,8 @@ let. cmp_tv new_type_var_with_type(I_Function(list.(I_FuncParamConstType(int_tv)
 let. t_type new_type_name(None 0)
 let. t_tv new_type_var_with_type(I_Named(t_type list¡))
 let. list_tv new_type_var_with_type(I_Named(list_type list.(t_tv)))
+let. e_effect new_effect_name(None)
+let. e_ev new_named_effect(e_effect)
 
 let. builtin_types list.(int_type bool_type list_type)
 
@@ -372,9 +392,9 @@ let. empty_i_context I_Context‡
         VarBinding("≥" list¡ list¡ cmp_tv ConstVB)
         VarBinding("len" list.(t_type) list¡ new_type_var_with_type(I_Function(list.(I_FuncParamConstType(list_tv)) int_tv empty_effect)) ConstVB)
         VarBinding("get" list.(t_type) list¡ new_type_var_with_type(I_Function(list.(I_FuncParamConstType(list_tv) I_FuncParamConstType(int_tv)) t_tv empty_effect)) ConstVB)
-        VarBinding("put" list.(t_type) list¡ new_type_var_with_type(I_Function(list.(I_FuncParamMutType(list_tv) I_FuncParamConstType(int_tv) I_FuncParamConstType(t_tv)) unit_tv empty_effect)) ConstVB)
-        VarBinding("push" list.(t_type) list¡ new_type_var_with_type(I_Function(list.(I_FuncParamMutType(list_tv) I_FuncParamConstType(t_tv)) unit_tv empty_effect)) ConstVB)
-        VarBinding("pop" list.(t_type) list¡ new_type_var_with_type(I_Function(list.(I_FuncParamMutType(list_tv)) t_tv empty_effect)) ConstVB)
+        VarBinding("put" list.(t_type) list¡ new_type_var_with_type(I_Function(list.(I_FuncParamMutType(list_tv e_effect) I_FuncParamConstType(int_tv) I_FuncParamConstType(t_tv)) unit_tv e_ev)) ConstVB)
+        VarBinding("push" list.(t_type) list¡ new_type_var_with_type(I_Function(list.(I_FuncParamMutType(list_tv e_effect) I_FuncParamConstType(t_tv)) unit_tv e_ev)) ConstVB)
+        VarBinding("pop" list.(t_type) list¡ new_type_var_with_type(I_Function(list.(I_FuncParamMutType(list_tv e_effect)) t_tv e_ev)) ConstVB)
         VarBinding("print_int" list¡ list¡ new_type_var_with_type(I_Function(list.(I_FuncParamConstType(int_tv)) unit_tv empty_effect)) ConstVB)
         VarBinding("read_int" list¡ list¡ new_type_var_with_type(I_Function(list¡ int_tv empty_effect)) ConstVB)
         VarBinding("print_byte" list¡ list¡ new_type_var_with_type(I_Function(list.(I_FuncParamConstType(int_tv)) unit_tv empty_effect)) ConstVB)
@@ -451,12 +471,17 @@ fun. variable_type(∈.(vi Int) ∈.(context I_Context))
     let. VarBinding(_ type_params effect_params monotype _) get(vars vi)
     *.(type_params effect_params monotype)
 
-fun. variable_effect(∈.(vi Int) ∈.(context I_Context))
+fun. variable_effect_name(∈.(vi Int) ∈.(context I_Context))
     let. I_Context(vars _) context
     let. VarBinding(_ _ _ _ kind) get(vars vi)
     case. kind
-    .MutVB(en) new_named_effect(en)
-    ._ empty_effect
+    .MutVB(en) Some(en)
+    ._ None
+
+fun. variable_effect(∈.(vi Int) ∈.(context I_Context))
+    case. variable_effect_name(vi context)
+    .Some(en) new_named_effect(en)
+    .None empty_effect
 
 fun. u_func_arg→i_func_arg(∈.(u_func_arg U_FuncArg) ∈.(context I_Context))
     case. u_func_arg
@@ -483,10 +508,8 @@ fun. substitute_names_in_effect(∈.(effect_subs List(*.(EffectName EffectVar)))
             .Some(ev′) ev′
             .None ev
         .EffectSum(components)
-            case. find_assoc(visited ev =effect_var)
-            .Some(i)
-                let. *.(_ ev′) get(visited i)
-                ev′
+            case. get_assoc(visited ev =effect_var)
+            .Some(ev′) ev′
             .None
                 let. ev′ new_unset_effect(FilePos("" 0 0))
                 push(~!visited *.(ev ev′))
@@ -494,11 +517,16 @@ fun. substitute_names_in_effect(∈.(effect_subs List(*.(EffectName EffectVar)))
                     .EffectAdd(ev) EffectAdd(substitute_names_in_effect(effect_subs ev ~!visited))
                     .EffectBlock(en) EffectBlock(en)
                 ev′
+        .EffectSubst(ev subs)
+            let. ev′ new_unset_effect(FilePos("" 0 0))
+            push(~!visited *.(ev ev′))
+            set_effect(ev′ EffectSubst(substitute_names_in_effect(effect_subs ev ~!visited) subs))
+            ev′
 
 fun. substitute_names_in_param_type(∈.(type_subs List(*.(TypeName TypeVar))) ∈.(effect_subs List(*.(EffectName EffectVar))) ∈.(pt I_FuncParamType) ~!visited)
     case. pt
     .I_FuncParamConstType(tv) I_FuncParamConstType(substitute_names(type_subs effect_subs tv ~!visited))
-    .I_FuncParamMutType(tv) I_FuncParamMutType(substitute_names(type_subs effect_subs tv ~!visited))
+    .I_FuncParamMutType(tv en) I_FuncParamMutType(substitute_names(type_subs effect_subs tv ~!visited) en)
 
 fun. substitute_names(∈.(type_subs List(*.(TypeName TypeVar))) ∈.(effect_subs List(*.(EffectName EffectVar))) ∈.(tv TypeVar) ~!visited)
     let. TypeVar(tvi) tv
@@ -546,13 +574,6 @@ fun. context_referenced_effects(∈.(context I_Context))
         type_referenced_effects(type)
     ))) =effect_var)
 
-fun. i_func_arg_type(∈.(arg I_FuncArg) ∈.(context I_Context))
-    case. arg
-    .I_FuncArgConst(expr) I_FuncParamConstType(i_expr_type(expr))
-    .I_FuncArgMut(vi)
-        let. *.(_ _ var_type) variable_type(vi context)
-        I_FuncParamMutType(var_type)
-
 fun. i_func_arg_effect(∈.(arg I_FuncArg))
     case. arg
     .I_FuncArgConst(expr) i_expr_effect(expr)
@@ -561,7 +582,7 @@ fun. i_func_arg_effect(∈.(arg I_FuncArg))
 fun. i_func_param_type(∈.(param I_FuncParam))
     case. param
     .I_FuncParamConst(pattern) I_FuncParamConstType(i_pattern_type(pattern))
-    .I_FuncParamMut(type _) I_FuncParamMutType(type)
+    .I_FuncParamMut(type en _) I_FuncParamMutType(type en)
 
 fun. u_expr→i_expr(∈.(expr U_Expr) ∈.(context I_Context))
     let. this_type new_type_var()
@@ -584,8 +605,19 @@ fun. u_expr→i_expr(∈.(expr U_Expr) ∈.(context I_Context))
             let. i_func u_expr→i_expr(u_func context)
             let. i_args map(u_args λ.(e: u_func_arg→i_func_arg(e context)))
             let. call_effect new_unset_effect(file_pos)
-            set_type(i_expr_type(i_func) I_Function(map(i_args λ.(arg: i_func_arg_type(arg context))) this_type call_effect) i_expr_file_pos(i_func))
-            *.(I_Apply(i_func i_args) new_sum_effect(++(map(i_args i_func_arg_effect) list.(i_expr_effect(i_func) call_effect))))
+            let. mut, subs list¡
+            let. param_types map‡ i_args λ. arg: case. arg
+                .I_FuncArgConst(expr) I_FuncParamConstType(i_expr_type(expr))
+                .I_FuncArgMut(vi)
+                    let. *.(_ _ var_type) variable_type(vi context)
+                    let. param_effect new_effect_name(None)
+                    let. arg_effect case. variable_effect_name(vi context)
+                        .Some(en) en
+                        .None internal_error("Variable is not mutable")
+                    push(~!subs *.(param_effect arg_effect))
+                    I_FuncParamMutType(var_type arg_effect)
+            set_type(i_expr_type(i_func) I_Function(param_types this_type call_effect) i_expr_file_pos(i_func))
+            *.(I_Apply(i_func i_args) new_sum_effect(++(map(i_args i_func_arg_effect) list.(i_expr_effect(i_func) new_subst_effect(call_effect subs)))))
         .U_Typed(u_expr u_type)
             let. I_Expr(i_expr_data i_expr_type i_expr_effect i_expr_file_pos) u_expr→i_expr(u_expr context)
             unify_type(this_type i_expr_type file_pos)
@@ -663,7 +695,7 @@ fun. u_func_param→i_func_param(∈.(u_func_param U_FuncParam) ∈.(context I_C
     .U_FuncParamMut(name file_pos)
         let. tv new_type_var()
         let. var_effect new_effect_name(Some(name))
-        *.(I_FuncParamMut(tv file_pos) list.(VarBinding(name list¡ list¡ tv MutVB(var_effect))))
+        *.(I_FuncParamMut(tv var_effect file_pos) list.(VarBinding(name list¡ list¡ tv MutVB(var_effect))))
 
 fun. u_func_params→i_func_params(∈.(u_func_params List(U_FuncParam)) ∈.(context I_Context))
     let. *.(i_func_params bindings_) unzip(map(u_func_params λ.(fp: u_func_param→i_func_param(fp context))))
@@ -1005,7 +1037,7 @@ fun. u_pattern→i_pattern(∈.(u_pattern U_Pattern) ∈.(context I_Context))
 fun. u_func_param_type→i_func_param_type(∈.(u_param_type U_FuncParamType) ∈.(context I_Context))
     case. u_param_type
     .U_FuncParamConstType(u_type) I_FuncParamConstType(new_type_var_with_type(u_type→i_type(u_type context)))
-    .U_FuncParamMutType(u_type) I_FuncParamMutType(new_type_var_with_type(u_type→i_type(u_type context)))
+    .U_FuncParamMutType(u_type) I_FuncParamMutType(new_type_var_with_type(u_type→i_type(u_type context)) new_effect_name(None))
 
 fun. u_type→i_type(∈.(u_type U_Type) ∈.(context I_Context))
     let. U_Type(type_data file_pos) u_type

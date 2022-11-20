@@ -238,3 +238,10 @@ fun. ∀, T U: find_assoc(∈.(xs List(*.(T U))) ∈.(x T) ∈.(=T ⇒.(T T : Bo
             else, *¡
         .Some(_) *¡
     found_i
+
+fun. ∀, T U: get_assoc(∈.(xs List(*.(T U))) ∈.(x T) ∈.(=T ⇒.(T T : Bool)))
+    case. find_assoc(xs x =T)
+    .None None
+    .Some(i)
+        let. *.(_ y) get(xs i)
+        Some(y)

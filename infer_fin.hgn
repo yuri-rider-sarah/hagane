@@ -64,6 +64,12 @@ fun. t_pattern_type(∈.(pattern T_Pattern))
     let. T_Pattern(_ type _) pattern
     type
 
+fun. apply_subs(ens subs)
+    map‡ ens λ. en:
+        case. get_assoc(subs en =effect_name)
+        .Some(en′) en′
+        .None en
+
 let. mut, effect_var_name_decomp list¡
 
 fun. decompose_effect_vars()
@@ -72,6 +78,7 @@ fun. decompose_effect_vars()
         .EffectUnset(file_pos) error(AmbiguousEffect file_pos)
         .EffectNamed(en) list.(en)
         .EffectSum(_) list¡
+        .EffectSubst(_ _) list¡
     let. mut, visited list¡
     let. mut, loop ⊤
     fun. rec(∈.(i Int))
@@ -92,14 +99,22 @@ fun. decompose_effect_vars()
                     set. loop ⊤
                     put(~!effect_var_name_decomp i decomp)
                 else, *¡
+            .EffectSubst(EffectVar(evi) subs)
+                rec(evi)
+                let. decomp apply_subs(get(effect_var_name_decomp evi) subs)
+                let. diff \(decomp get(effect_var_name_decomp i) =effect_name)
+                if. ≠(len(diff) 0)
+                    set. loop ⊤
+                    put(~!effect_var_name_decomp i decomp)
+                else, *¡
             ._ *¡
         else, *¡
     while. loop
         set. visited repeat(len(effect_vars) ⊥)
         set. loop ⊥
         for_ι(len(effect_vars) rec)
-    for‡ equal_effects λ. *.(EffectVar(evi1) EffectVar(evi2) err file_pos):
-        if. ¬(=list(get(effect_var_name_decomp evi1) get(effect_var_name_decomp evi2) =effect_name))
+    for‡ equal_effects λ. *.(EffectVar(evi1) EffectVar(evi2) subs err file_pos):
+        if. ¬(=list(apply_subs(get(effect_var_name_decomp evi1) subs) get(effect_var_name_decomp evi2) =effect_name))
             error(err file_pos)
         else, *¡
 
@@ -153,7 +168,7 @@ fun. i_func_param→t_func_param(∈.(i_param I_FuncParam) ∈.(context T_Contex
     .I_FuncParamConst(i_pattern)
         let. *.(t_pattern bindings) i_pattern→t_pattern(i_pattern context)
         *.(T_FuncParamConst(t_pattern) bindings)
-    .I_FuncParamMut(tv file_pos) *.(T_FuncParamMut(type_var→t_type(tv context file_pos)) 1)
+    .I_FuncParamMut(tv _ file_pos) *.(T_FuncParamMut(type_var→t_type(tv context file_pos)) 1)
 
 fun. i_func_params→t_func_params(∈.(i_params List(I_FuncParam)) ∈.(context T_Context))
     let. *.(t_func_params bindings) unzip(map(i_params λ.(p: i_func_param→t_func_param(p context))))
@@ -186,6 +201,9 @@ fun. i_expr→t_expr(∈.(i_expr I_Expr) ∈.(context T_Context))
             let. *.(t_params bindings) i_func_params→t_func_params(i_params context)
             let. mut, context′ context
             for_ι‡ bindings λ. _: set. context′ t_add_var_binding(context′ None)
+            for‡ i_params λ. param: case. param
+                .I_FuncParamConst(_) *¡
+                .I_FuncParamMut(_ en _) set. context′ t_add_effect(context′ en)
             T_Lambda(t_params i_expr→t_expr(i_body context′))
         .I_Case(i_expr i_cases)
             let. t_expr i_expr→t_expr(i_expr context)
@@ -259,7 +277,10 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
                     let. *.(t_params bindings) i_func_params→t_func_params(i_params context′)
                     let. mut, context″ context′
                     for_ι‡ bindings λ. _: set. context″ t_add_var_binding(context″ None)
-                    *.(t_params i_expr→t_expr(i_body context′))
+                    for‡ i_params λ. param: case. param
+                        .I_FuncParamConst(_) *¡
+                        .I_FuncParamMut(_ en _) set. context″ t_add_effect(context″ en)
+                    *.(t_params i_expr→t_expr(i_body context″))
                 T_Fun(len(type_params) t_defs)
             .I_Extern(name type)
                 set. context t_add_var_binding(context None)
@@ -292,7 +313,7 @@ fun. i_pattern→t_pattern(∈.(i_pattern I_Pattern) ∈.(context T_Context))
 fun. i_param_type→t_param_type(∈.(i_param_type I_FuncParamType) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos))
     case. i_param_type
     .I_FuncParamConstType(tv) T_FuncParamConstType(type_var→t_type′(tv context err file_pos))
-    .I_FuncParamMutType(tv) T_FuncParamMutType(type_var→t_type′(tv context err file_pos))
+    .I_FuncParamMutType(tv _) T_FuncParamMutType(type_var→t_type′(tv context err file_pos))
 
 fun. type_var→t_type′(∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Error) ∈.(file_pos FilePos))
     let. TypeVar(tvi) tv
@@ -302,7 +323,11 @@ fun. type_var→t_type′(∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Erro
     .I_Named(name type_args) T_Named(t_locate_type_in_context(name context file_pos) map(type_args λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
     .I_TupleType(tvs) T_TupleType(map(tvs λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
     .I_Function(params ret effect)
-        check_effect(effect context file_pos)
+        let. mut, context′ context
+        for‡ params λ. param: case. param
+            .I_FuncParamConstType(_) *¡
+            .I_FuncParamMutType(_ en) set. context′ t_add_effect(context′ en)
+        check_effect(effect context′ file_pos)
         T_Function(map(params λ.(param: i_param_type→t_param_type(param context err file_pos))) type_var→t_type′(ret context err file_pos))
 
 fun. type_var→t_type(∈.(tv TypeVar) ∈.(context T_Context) ∈.(file_pos FilePos))

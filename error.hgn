@@ -26,7 +26,7 @@ fun. partial_type→string(∈.(type PartialType))
     .P_TupleType(types) concat‡ list.
         "*.(" intercalate(map(types partial_type→string) " ") ")"
     .P_Function(params ret eff) concat‡ list.
-        "⇒.(" concat(map(params λ.(p: ++(partial_param_type→string(p) " ")))) ": " partial_type→string(ret) "ε, ?E" int→string(eff) ")"
+        "⇒.(" concat(map(params λ.(p: ++(partial_param_type→string(p) " ")))) ": " partial_type→string(ret) " ε, ?E" int→string(eff) ")"
 
 type. Error
     UnexpectedChar(Option(Int))
