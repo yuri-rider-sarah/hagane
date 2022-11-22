@@ -245,3 +245,8 @@ fun. ∀, T U: get_assoc(∈.(xs List(*.(T U))) ∈.(x T) ∈.(=T ⇒.(T T : Boo
     .Some(i)
         let. *.(_ y) get(xs i)
         Some(y)
+
+fun. ∀, T U: opt_map(∈.(opt Option(T)) ∈.(f ⇒.(T : U)))
+    case. opt
+    .None None
+    .Some(x) Some(f(x))
