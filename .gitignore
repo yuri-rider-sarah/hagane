@@ -1,5 +1,5 @@
 *.o
 _hagane
-hagane-0.2.1
+hagane-0.3
 char_types_data.h
 program_main.h
