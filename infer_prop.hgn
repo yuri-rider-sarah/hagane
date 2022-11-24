@@ -1062,7 +1062,19 @@ fun. u_type→i_type(∈.(u_type U_Type) ∈.(context I_Context))
     .U_TupleType(u_types)
         let. i_types map(u_types λ.(t: new_type_var_with_type(u_type→i_type(t context))))
         I_TupleType(i_types)
-    .U_Function(u_params u_ret)
+    .U_Function(u_params u_ret u_effects)
         let. i_params map(u_params λ.(pt: u_func_param_type→i_func_param_type(pt context)))
         let. i_ret new_type_var_with_type(u_type→i_type(u_ret context))
-        I_Function(i_params i_ret empty_effect)
+        let. i_effect case. u_effects
+            .Some(u_effects) new_sum_effect(map(u_effects λ.(e: new_named_effect(u_effect→effect_name(e context)))))
+            .None empty_effect
+        I_Function(i_params i_ret i_effect)
+
+fun. u_effect→effect_name(∈.(u_effect U_Effect) ∈.(context I_Context))
+    let. U_Effect(u_effect_data file_pos) u_effect
+    case. u_effect_data
+    .U_VarEffect(name)
+        let. vi locate_var(name context file_pos)
+        case. variable_effect_name(vi context)
+        .Some(en) en
+        .None error(EffectOfConst(name) file_pos)

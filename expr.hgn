@@ -42,9 +42,14 @@ type. U_FuncParamType
 type. U_TypeData
     U_Named(List(Int) List(U_Type))
     U_TupleType(List(U_Type))
-    U_Function(List(U_FuncParamType) U_Type)
+    U_Function(List(U_FuncParamType) U_Type Option(List(U_Effect)))
 
 type. U_Type U_Type(U_TypeData FilePos)
+
+type. U_EffectData
+    U_VarEffect(List(Int))
+
+type. U_Effect U_Effect(U_EffectData FilePos)
 
 type. U_PatternData
     U_IntLiteralPattern(Int)
@@ -130,7 +135,9 @@ fun. r_expr→u_type(∈.(expr R_Expr))
             ._ error(InvalidType file_pos)
         .R_Special("⇒" clauses) case. group_clauses(clauses)
             .ClauseGrouping(params list.(ClauseGroup(ColonSep list.(ret))))
-                U_Function(map(params r_expr→u_func_param_type) r_expr→u_type(ret))
+                U_Function(map(params r_expr→u_func_param_type) r_expr→u_type(ret) None)
+            .ClauseGrouping(params list.(ClauseGroup(ColonSep list.(ret)) ClauseGroup(NamedSep("ε") effects)))
+                U_Function(map(params r_expr→u_func_param_type) r_expr→u_type(ret) Some(map(effects λ.(e: r_expr→u_effect(e InvalidType file_pos)))))
             ._ error(InvalidType file_pos)
         ._ error(InvalidType file_pos)
     U_Type(type_data file_pos)
@@ -420,3 +427,11 @@ fun. r_exprs→u_statements(∈.(r_exprs List(R_Expr)))
         )
         push(~!u_statements U_Statement(u_expr_data file_pos))
     u_statements
+
+fun. r_expr→u_effect(∈.(r_expr R_Expr) ∈.(err Error) ∈.(file_pos FilePos))
+    let. R_Expr(r_expr_data file_pos) r_expr
+    case. r_expr_data
+    .R_Special("~" list.(ExprClause(R_Expr(R_Ident(name) _))))
+        U_Effect(U_VarEffect(name) file_pos)
+    ._
+        error(err file_pos)
