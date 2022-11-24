@@ -1,5 +1,5 @@
 ※ 4
-fun. f(a b c d e) ⇒, Int
+fun. f(a b c d e) ∈, Int
     d
 
 print_int(f(1 2 3 4 5))
