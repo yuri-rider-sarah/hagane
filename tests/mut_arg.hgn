@@ -5,6 +5,6 @@ fun. f(~!n)
     set. n +(n 1)
     print_int(n)
 
-let. mut, x 0
+var. x 0
 f(~!x)
 f(~!x)

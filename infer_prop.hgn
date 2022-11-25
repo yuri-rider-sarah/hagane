@@ -5,7 +5,7 @@ type. I_FuncParam
 type. I_StatementData
     I_ExprStatement(I_Expr)
     I_Let(I_Pattern I_Expr)
-    I_LetMut(I_Expr EffectName)
+    I_Var(I_Expr EffectName)
     I_Fun(List(TypeName) List(*.(List(I_FuncParam) I_Expr)))
     I_TypeStatement(TypeName List(TypeName) List(List(TypeVar)))
     I_Extern(List(Int) TypeVar)
@@ -743,7 +743,7 @@ fun. u_free_vars(U_Expr(expr_data _))
                 let. fvs \(u_free_vars(expr) shadowed_vars)
                 set. shadowed_vars ++(shadowed_vars u_bound_vars(pat))
                 fvs
-            .U_LetMut(name expr)
+            .U_Var(name expr)
                 let. fvs \(u_free_vars(expr) shadowed_vars)
                 push(~!shadowed_vars name)
                 fvs
@@ -840,11 +840,11 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
             for‡ bindings λ. binding:
                 set. context i_add_let_binding(context binding)
             *.(list.(I_Statement(I_Let(i_pattern i_expr) i_expr_effect(i_expr) file_pos)) list.(EffectAdd(i_expr_effect(i_expr))))
-        .U_LetMut(name u_expr)
+        .U_Var(name u_expr)
             let. i_expr u_expr→i_expr(u_expr context)
             let. var_effect new_effect_name(Some(name))
             set. context i_add_let_binding(context VarBinding(name list¡ list¡ i_expr_type(i_expr) MutVB(var_effect)))
-            *.(list.(I_Statement(I_LetMut(i_expr var_effect) i_expr_effect(i_expr) file_pos)) list.(EffectAdd(i_expr_effect(i_expr)) EffectBlock(var_effect)))
+            *.(list.(I_Statement(I_Var(i_expr var_effect) i_expr_effect(i_expr) file_pos)) list.(EffectAdd(i_expr_effect(i_expr)) EffectBlock(var_effect)))
         .U_Fun(u_defs)
             let. fun_types map(u_defs λ.(_: new_type_var()))
             let. call_graph get_call_graph(u_defs)

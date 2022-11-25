@@ -1,6 +1,6 @@
 ※-cfail
 
 let. f
-    let. mut, x 0
+    var. x 0
     λ.: set. x 1
 let. _ f

@@ -585,7 +585,7 @@ fun. free_vars(∈.(expr F_Expr) ∈.(length Int))
                 case. statement
                 .F_ExprStatement(expr) rec(expr)
                 .F_Let(_ expr _) rec(expr)
-                .F_LetMut(expr _) rec(expr)
+                .F_Var(expr _) rec(expr)
                 .F_Fun(defs) for(defs λ.(*.(_ expr _): rec(expr)))
                 .F_TypeStatement(_) *¡
                 .F_Extern(_ _ _) *¡
@@ -887,7 +887,7 @@ fun. codegen_statements(∈.(statements List(F_Statement)) ∈.(context C_Contex
                 codegen_var_rc_incr(var)
                 set. context c_add_let_binding(context var)
             codegen_rc_decr(val f_type→c_type(f_type))
-        .F_LetMut(expr f_type)
+        .F_Var(expr f_type)
             set. context c_add_let_binding(context C_MutVar(codegen_create_mut_var(codegen_expr(expr context)) f_type→c_type(f_type)))
         .F_Fun(defs)
             let. C_Context(vars) context

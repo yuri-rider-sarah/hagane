@@ -5,7 +5,7 @@ type. F_FuncParam
 type. F_Statement
     F_ExprStatement(F_Expr)
     F_Let(F_Pattern F_Expr F_Type)
-    F_LetMut(F_Expr F_Type)
+    F_Var(F_Expr F_Type)
     F_Fun(List(*.(List(F_FuncParam) F_Expr F_Type)))
     F_TypeStatement(Int)
     F_Extern(List(Int) F_Type FilePos)
@@ -135,9 +135,9 @@ fun. m_statements→f_statements(∈.(m_statements List(M_Statement)) ∈.(conte
             let. *.(f_pattern bindings) m_pattern→f_pattern(m_pattern context)
             set. context f_add_var_bindings(context bindings 1)
             list.(F_Let(f_pattern f_expr m_type→f_type(m_type)))
-        .M_LetMut(m_expr m_type)
+        .M_Var(m_expr m_type)
             set. context f_add_var_bindings(context 1 1)
-            list.(F_LetMut(m_expr→f_expr(m_expr context) m_type→f_type(m_type)))
+            list.(F_Var(m_expr→f_expr(m_expr context) m_type→f_type(m_type)))
         .M_Fun(id)
             let. M_FunDef(t_defs _ instances) get(m_funs id)
             let. mut, context1 context

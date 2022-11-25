@@ -6,7 +6,7 @@
 ※ 9
 ※ 2
 ※ 2
-let. mut, a list¡
+var. a list¡
 push(~!a 1)
 push(~!a 4)
 push(~!a 9)

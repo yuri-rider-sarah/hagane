@@ -6,13 +6,13 @@
 ※ 0
 
 fun. ∀, T U: map(∈.(a List(T)) ∈.(f ⇒.(T : U)))
-    let. mut, a′ list¡
+    var. a′ list¡
     while. <(len(a′) len(a))
         push(~!a′ f(get(a len(a′))))
     a′
 
 fun. ∀, T: foreach(∈.(a List(T)) ∈.(f ⇒.(T : *.())))
-    let. mut, i 0
+    var. i 0
     while. <(i len(a))
         f(get(a i))
         set. i +(i 1)
@@ -28,7 +28,7 @@ fun. square(∈.(n Int)) *(n n)
 fun. bool→int(∈.(b Bool))
     if.(b then, 1 else, 0)
 
-let. mut, a list¡
+var. a list¡
 push(~!a 1)
 push(~!a 2)
 push(~!a 3)

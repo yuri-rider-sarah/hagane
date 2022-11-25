@@ -2,10 +2,10 @@
 ※ tests/argv.hgn.out
 let. argc get_argc()
 print_int(argc)
-let. mut, i 0
+var. i 0
 while. <(i argc)
     let. argv_len get_argv_len(i)
-    let. mut, j 0
+    var. j 0
     while. <(j argv_len)
         print_byte(get_argv_byte(i j))
         set. j +(j 1)

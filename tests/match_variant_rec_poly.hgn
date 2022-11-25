@@ -5,7 +5,7 @@ type. ∀, T: List
     Cons(T List(T))
     Nil
 
-let. mut, l Cons(1 Cons(2 Cons(3 Nil)))
+var. l Cons(1 Cons(2 Cons(3 Nil)))
 while.
     case. l
     .Cons(h t)

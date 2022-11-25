@@ -1,5 +1,5 @@
 ※ 1
-let. mut, x 0
+var. x 0
 if. =(x 1)
 	set. x 3
 	print_int(2)

@@ -1,8 +1,8 @@
 ※ 3025
-let. mut, n 0
-let. mut, x 0
+var. n 0
+var. x 0
 while. ≤(x 10)
-    let. mut, y 0
+    var. y 0
     while. ≤(y 10)
         set. n +(n *(x y))
         set. y +(y 1)

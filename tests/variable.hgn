@@ -1,6 +1,6 @@
 ※ 11
-let. mut, x 1
-let. mut, y 2
+var. x 1
+var. y 2
 set. y 3
 set. x +(x y)
 set. y +(x y)
