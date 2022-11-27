@@ -58,13 +58,13 @@ type. M_TypeDef M_TypeDef‡
     List(*.(List(M_Type) List(List(M_Type))))
 
 let. mut, m_var_prims
-    let. I_Context(i_vars _) empty_i_context
+    let. I_Context(i_vars _ _) empty_i_context
     map_ι(len(i_vars) λ.(_: list¡))
 
 let. mut, m_funs list¡
 
 let. mut, m_type_prims
-    let. I_Context(_ i_types) empty_i_context
+    let. I_Context(_ i_types _) empty_i_context
     map_ι(len(i_types) λ.(_: list¡))
 
 let. mut, m_type_defs list¡

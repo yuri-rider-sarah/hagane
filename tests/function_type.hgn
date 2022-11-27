@@ -1,5 +1,7 @@
 ※ 1
+※ 3
 let. print_int′ ∈.(print_int ⇒.(Int : *.()))
-let. print_int′ ∈.(print_int ⇒.(Int : *.() ε,))
+let. print_int″ ∈.(print_int ⇒.(Int : *.() ε,))
 
 print_int′(1)
+print_int″(3)

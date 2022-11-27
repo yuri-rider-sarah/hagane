@@ -1,0 +1,8 @@
+※ 1
+effect. E
+
+var. x 1 ε, E
+
+let. f ∈.(λ.(: x) ⇒.(: Int ε, E))
+
+print_int(f())

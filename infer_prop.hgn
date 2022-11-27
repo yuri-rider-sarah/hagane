@@ -10,6 +10,7 @@ type. I_StatementData
     I_TypeStatement(TypeName List(TypeName) List(List(TypeVar)))
     I_Extern(List(Int) TypeVar)
     I_Set(Int I_Expr)
+    I_EffectStatement(EffectName)
 
 type. I_Statement I_Statement(I_StatementData EffectVar FilePos)
 
@@ -119,9 +120,14 @@ fun. type_name_string(∈.(tn TypeName))
 
 let. mut, type_variables list¡
 
+type. EffectNameKind
+    EffectNameNone
+    EffectNameSome(List(Int))
+    EffectNameVar(List(Int))
+
 let. mut, effect_names list¡
 
-fun. new_effect_name(∈.(name Option(List(Int))))
+fun. new_effect_name(∈.(name EffectNameKind))
     push(~!effect_names name)
     EffectName(-(len(effect_names) 1))
 
@@ -183,8 +189,9 @@ fun. set_effect(∈.(ev EffectVar) ∈.(data EffectVarData))
 fun. effect_name_string(∈.(en EffectName))
     let. EffectName(eni) en
     case. get(effect_names eni)
-    .Some(name) name
-    .None ++("?EG" int→string(eni))
+    .EffectNameNone ++("?EG" int→string(eni))
+    .EffectNameSome(name) name
+    .EffectNameVar(name) ++("~!" name)
 
 fun. params_effects(∈.(params List(I_FuncParam)))
     map_opt‡ params λ. param: case. param
@@ -360,6 +367,7 @@ type. VarBinding VarBinding(List(Int) List(TypeName) List(EffectName) TypeVar Va
 type. I_Context I_Context‡
     List(VarBinding) ※ vars
     List(TypeName)   ※ types
+    List(EffectName) ※ effects
 
 let. empty_effect new_sum_effect(list¡)
 let. bool_tv new_type_var_with_type(I_Named(bool_type list¡))
@@ -370,7 +378,7 @@ let. cmp_tv new_type_var_with_type(I_Function(list.(I_FuncParamConstType(int_tv)
 let. t_type new_type_name(None 0)
 let. t_tv new_type_var_with_type(I_Named(t_type list¡))
 let. list_tv new_type_var_with_type(I_Named(list_type list.(t_tv)))
-let. e_effect new_effect_name(None)
+let. e_effect new_effect_name(EffectNameNone)
 let. e_ev new_named_effect(e_effect)
 
 let. builtin_types list.(int_type bool_type list_type)
@@ -404,10 +412,11 @@ let. empty_i_context I_Context‡
         VarBinding("get_argv_byte" list¡ list¡ new_type_var_with_type(I_Function(list.(I_FuncParamConstType(int_tv) I_FuncParamConstType(int_tv)) int_tv empty_effect)) ConstVB)
         VarBinding("unreachable" list.(t_type) list¡ new_type_var_with_type(I_Function(list¡ t_tv empty_effect)) ConstVB)
     builtin_types
+    list¡
 
 fun. locate_var_opt(∈.(name List(Int)) ∈.(context I_Context))
     let. mut, found_i None
-    let. I_Context(vars _) context
+    let. I_Context(vars _ _) context
     for_ι‡ len(vars) λ. i:
         let. VarBinding(name′ _ _ monotype _) get(vars i)
         if. =list(name name′ =)
@@ -422,7 +431,7 @@ fun. locate_var(∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos FileP
 
 fun. type_from_name(∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos FilePos))
     let. mut, type None
-    let. I_Context(_ types) context
+    let. I_Context(_ types _) context
     for‡ types λ. tn:
         let. TypeName(tni) tn
         let. *.(name′ _) get(named_types tni)
@@ -436,30 +445,49 @@ fun. type_from_name(∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos F
     .Some(t) t
     .None error(UnboundType(name) file_pos)
 
+fun. effect_from_name(∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos FilePos))
+    let. mut, effect None
+    let. I_Context(_ _ effects) context
+    for‡ effects λ. en:
+        let. EffectName(eni) en
+        case. get(effect_names eni)
+        .EffectNameSome(name′)
+            if. =list(name′ name =)
+                set. effect Some(en)
+            else, *¡
+        ._ *¡
+    case. effect
+    .Some(e) e
+    .None error(UnboundEffect(name) file_pos)
+
 fun. i_add_let_binding(∈.(context I_Context) ∈.(var VarBinding))
-    let. I_Context(vars types) context
-    I_Context(++(vars list.(var)) types)
+    let. I_Context(vars types effects) context
+    I_Context(++(vars list.(var)) types effects)
 
 fun. i_add_type_binding(∈.(context I_Context) ∈.(type TypeName))
-    let. I_Context(vars types) context
-    I_Context(vars ++(types list.(type)))
+    let. I_Context(vars types effects) context
+    I_Context(vars ++(types list.(type)) effects)
+
+fun. i_add_effect(∈.(context I_Context) ∈.(effect EffectName))
+    let. I_Context(vars types effects) context
+    I_Context(vars types ++(effects list.(effect)))
 
 fun. variable_is_mut(∈.(vi Int) ∈.(context I_Context))
-    let. I_Context(vars _) context
+    let. I_Context(vars _ _) context
     let. VarBinding(_ _ _ _ kind) get(vars vi)
     case. kind
     .MutVB(_) ⊤
     ._ ⊥
 
 fun. variable_is_ctor(∈.(vi Int) ∈.(context I_Context))
-    let. I_Context(vars _) context
+    let. I_Context(vars _ _) context
     let. VarBinding(_ _ _ _ kind) get(vars vi)
     case. kind
     .CtorVB ⊤
     ._ ⊥
 
 fun. variable_is_nullary_ctor(∈.(vi Int) ∈.(context I_Context))
-    let. I_Context(vars _) context
+    let. I_Context(vars _ _) context
     let. VarBinding(_ _ _ TypeVar(tvi) kind) get(vars vi)
     case. *.(kind get(type_variables tvi))
     .*.(_ I_Function(_ _ _)) ⊥
@@ -467,12 +495,12 @@ fun. variable_is_nullary_ctor(∈.(vi Int) ∈.(context I_Context))
     ._ ⊥
 
 fun. variable_type(∈.(vi Int) ∈.(context I_Context))
-    let. I_Context(vars _) context
+    let. I_Context(vars _ _) context
     let. VarBinding(_ type_params effect_params monotype _) get(vars vi)
     *.(type_params effect_params monotype)
 
 fun. variable_effect_name(∈.(vi Int) ∈.(context I_Context))
-    let. I_Context(vars _) context
+    let. I_Context(vars _ _) context
     let. VarBinding(_ _ _ _ kind) get(vars vi)
     case. kind
     .MutVB(en) Some(en)
@@ -561,14 +589,14 @@ fun. instantiate_params(∈.(type_params List(TypeName)) ∈.(effect_params List
             tv
 
 fun. context_referenced_types(∈.(context I_Context))
-    let. I_Context(vars _) context
+    let. I_Context(vars _ _) context
     dedup(concat(map(vars λ.(var:
         let. VarBinding(_ _ _ type _) var
         type_referenced_types(type)
     ))) =type_var)
 
 fun. context_referenced_effects(∈.(context I_Context))
-    let. I_Context(vars _) context
+    let. I_Context(vars _ _) context
     dedup(concat(map(vars λ.(var:
         let. VarBinding(_ _ _ type _) var
         type_referenced_effects(type)
@@ -610,7 +638,7 @@ fun. u_expr→i_expr(∈.(expr U_Expr) ∈.(context I_Context))
                 .I_FuncArgConst(expr) I_FuncParamConstType(i_expr_type(expr))
                 .I_FuncArgMut(vi)
                     let. *.(_ _ var_type) variable_type(vi context)
-                    let. param_effect new_effect_name(None)
+                    let. param_effect new_effect_name(EffectNameNone)
                     let. arg_effect case. variable_effect_name(vi context)
                         .Some(en) en
                         .None internal_error("Variable is not mutable")
@@ -694,7 +722,7 @@ fun. u_func_param→i_func_param(∈.(u_func_param U_FuncParam) ∈.(context I_C
         *.(I_FuncParamConst(i_pattern) bindings)
     .U_FuncParamMut(name file_pos)
         let. tv new_type_var()
-        let. var_effect new_effect_name(Some(name))
+        let. var_effect new_effect_name(EffectNameVar(name))
         *.(I_FuncParamMut(tv var_effect file_pos) list.(VarBinding(name list¡ list¡ tv MutVB(var_effect))))
 
 fun. u_func_params→i_func_params(∈.(u_func_params List(U_FuncParam)) ∈.(context I_Context))
@@ -743,7 +771,7 @@ fun. u_free_vars(U_Expr(expr_data _))
                 let. fvs \(u_free_vars(expr) shadowed_vars)
                 set. shadowed_vars ++(shadowed_vars u_bound_vars(pat))
                 fvs
-            .U_Var(name expr)
+            .U_Var(name expr _)
                 let. fvs \(u_free_vars(expr) shadowed_vars)
                 push(~!shadowed_vars name)
                 fvs
@@ -756,6 +784,7 @@ fun. u_free_vars(U_Expr(expr_data _))
                 push(~!shadowed_vars name)
                 list¡
             .U_Set(_ expr) \(u_free_vars(expr) shadowed_vars)
+            .U_EffectStatement(_) list¡
     .U_Lambda(params body) \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)))
     .U_Case(matched cases) concat(++(map(cases λ.(*.(pat expr): \(u_free_vars(expr) u_bound_vars(pat)))) list.(u_free_vars(matched))))
     .U_ListLiteral(subexprs) concat(map(subexprs u_free_vars))
@@ -840,9 +869,11 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
             for‡ bindings λ. binding:
                 set. context i_add_let_binding(context binding)
             *.(list.(I_Statement(I_Let(i_pattern i_expr) i_expr_effect(i_expr) file_pos)) list.(EffectAdd(i_expr_effect(i_expr))))
-        .U_Var(name u_expr)
+        .U_Var(name u_expr var_effect_name)
             let. i_expr u_expr→i_expr(u_expr context)
-            let. var_effect new_effect_name(Some(name))
+            let. var_effect case. var_effect_name
+                .Some(var_effect_name) effect_from_name(var_effect_name context file_pos)
+                .None new_effect_name(EffectNameVar(name))
             set. context i_add_let_binding(context VarBinding(name list¡ list¡ i_expr_type(i_expr) MutVB(var_effect)))
             *.(list.(I_Statement(I_Var(i_expr var_effect) i_expr_effect(i_expr) file_pos)) list.(EffectAdd(i_expr_effect(i_expr)) EffectBlock(var_effect)))
         .U_Fun(u_defs)
@@ -904,7 +935,7 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                             error(MutRecPolyDifferentType(name1 name2) file_pos)
                         else, *¡
                     let. effect_names map‡ effect_params λ. ev:
-                        let. en new_effect_name(None)
+                        let. en new_effect_name(EffectNameNone)
                         set_effect(ev EffectNamed(en))
                         en
                     for‡ component λ. i:
@@ -946,7 +977,7 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                             error(MutRecPolyDifferentType(name1 name2) file_pos)
                         else, *¡
                     let. effect_names map‡ effect_params λ. ev:
-                        let. en new_effect_name(None)
+                        let. en new_effect_name(EffectNameNone)
                         set_effect(ev EffectNamed(en))
                         en
                     for‡ component λ. i:
@@ -984,6 +1015,10 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
             let. i_expr u_expr→i_expr(u_expr context)
             unify_type(i_expr_type(i_expr) var_type i_expr_file_pos(i_expr))
             *.(list.(I_Statement(I_Set(vi i_expr) i_expr_effect(i_expr) file_pos)) list.(EffectAdd(i_expr_effect(i_expr)) EffectAdd(variable_effect(vi context))))
+        .U_EffectStatement(name)
+            let. en new_effect_name(EffectNameSome(name))
+            set. context i_add_effect(context en)
+            *.(list.(I_Statement(I_EffectStatement(en) empty_effect file_pos)) list¡)
         )
     set_type(this_type last_expr_type file_pos)
     *.(concat(i_statements_) new_compound_effect(concat(effect_components_)))
@@ -1045,7 +1080,7 @@ fun. u_pattern→i_pattern(∈.(u_pattern U_Pattern) ∈.(context I_Context))
 fun. u_func_param_type→i_func_param_type(∈.(u_param_type U_FuncParamType) ∈.(context I_Context))
     case. u_param_type
     .U_FuncParamConstType(u_type) I_FuncParamConstType(new_type_var_with_type(u_type→i_type(u_type context)))
-    .U_FuncParamMutType(u_type) I_FuncParamMutType(new_type_var_with_type(u_type→i_type(u_type context)) new_effect_name(None))
+    .U_FuncParamMutType(u_type) I_FuncParamMutType(new_type_var_with_type(u_type→i_type(u_type context)) new_effect_name(EffectNameNone))
 
 fun. u_type→i_type(∈.(u_type U_Type) ∈.(context I_Context))
     let. U_Type(type_data file_pos) u_type
@@ -1073,6 +1108,8 @@ fun. u_type→i_type(∈.(u_type U_Type) ∈.(context I_Context))
 fun. u_effect→effect_name(∈.(u_effect U_Effect) ∈.(context I_Context))
     let. U_Effect(u_effect_data file_pos) u_effect
     case. u_effect_data
+    .U_NamedEffect(name)
+        effect_from_name(name context file_pos)
     .U_VarEffect(name)
         let. vi locate_var(name context file_pos)
         case. variable_effect_name(vi context)

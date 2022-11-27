@@ -5,11 +5,12 @@ type. U_FuncParam
 type. U_StatementData
     U_ExprStatement(U_Expr)
     U_Let(U_Pattern U_Expr)
-    U_Var(List(Int) U_Expr)
+    U_Var(List(Int) U_Expr Option(List(Int)))
     U_Fun(List(*.(List(Int) Option(List(List(Int))) List(U_FuncParam) Option(U_Type) U_Expr)))
     U_TypeStatement(List(Int) List(List(Int)) List(*.(List(Int) List(U_Type))))
     U_Extern(List(Int) U_Type)
     U_Set(List(Int) U_Expr)
+    U_EffectStatement(List(Int))
 
 type. U_Statement U_Statement(U_StatementData FilePos)
 
@@ -47,6 +48,7 @@ type. U_TypeData
 type. U_Type U_Type(U_TypeData FilePos)
 
 type. U_EffectData
+    U_NamedEffect(List(Int))
     U_VarEffect(List(Int))
 
 type. U_Effect U_Effect(U_EffectData FilePos)
@@ -362,7 +364,10 @@ fun. r_exprs→u_statements(∈.(r_exprs List(R_Expr)))
             ."var" case. group_clauses(clauses)
                 .ClauseGrouping(name+body list¡)
                     let. *.(name body) split_off′(name+body)
-                    U_Var(r_expr→string′(name) block→u_expr′(body))
+                    U_Var(r_expr→string′(name) block→u_expr′(body) None)
+                .ClauseGrouping(name+body list.(ClauseGroup(NamedSep("ε") list.(effect))))
+                    let. *.(name body) split_off′(name+body)
+                    U_Var(r_expr→string′(name) block→u_expr′(body) Some(r_expr→string′(effect)))
                 ._ invalid_expr()
             ."fun"
                 let. mut, defs list.(parse_fun_clauses(clauses file_pos))
@@ -424,6 +429,10 @@ fun. r_exprs→u_statements(∈.(r_exprs List(R_Expr)))
                         ._ invalid_expr()
                     U_Set(name block→u_expr′(body))
                 ._ invalid_expr()
+            ."effect" case. clauses
+                .list.(ExprClause(R_Expr(R_Ident(name) _)))
+                    U_EffectStatement(name)
+                ._ invalid_expr()
             ._ U_ExprStatement(U_Expr(clauses→expr_data(kw clauses file_pos) file_pos))
         ._ U_ExprStatement(r_expr→u_expr(r_expr))
         )
@@ -433,6 +442,8 @@ fun. r_exprs→u_statements(∈.(r_exprs List(R_Expr)))
 fun. r_expr→u_effect(∈.(r_expr R_Expr) ∈.(err Error) ∈.(file_pos FilePos))
     let. R_Expr(r_expr_data file_pos) r_expr
     case. r_expr_data
+    .R_Ident(name)
+        U_Effect(U_NamedEffect(name) file_pos)
     .R_Special("~" list.(ExprClause(R_Expr(R_Ident(name) _))))
         U_Effect(U_VarEffect(name) file_pos)
     ._

@@ -245,11 +245,11 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
                 let. type_params_base len(ctx_types)
                 set. context t_add_type_binding(context type map_ι(len(type_params) λ.(i: +(type_params_base i))) t_variants)
             ._ *¡
-    map‡ i_statements λ. i_statement:
+    concat‡ map‡ i_statements λ. i_statement:
         let. I_Statement(i_statement_data effect file_pos) i_statement
         check_effect(effect context file_pos)
-        let. t_statement_data case. i_statement_data
-            .I_ExprStatement(i_expr) T_ExprStatement(i_expr→t_expr(i_expr context))
+        let. t_statements_data case. i_statement_data
+            .I_ExprStatement(i_expr) list.(T_ExprStatement(i_expr→t_expr(i_expr context)))
             .I_Let(i_pattern i_expr)
                 let. *.(t_pattern bindings) i_pattern→t_pattern(i_pattern context)
                 let. t_expr i_expr→t_expr(i_expr context)
@@ -257,18 +257,18 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
                 then, error(InexhaustivePatterns file_pos)
                 else, *¡
                 for_ι‡ bindings λ. _: set. context t_add_var_binding(context None)
-                T_Let(t_pattern t_expr)
+                list.(T_Let(t_pattern t_expr))
             .I_Var(i_expr en)
                 set. context t_add_var_binding(context None)
                 set. context t_add_effect(context en)
-                T_Var(i_expr→t_expr(i_expr context))
+                list.(T_Var(i_expr→t_expr(i_expr context)))
             .I_TypeStatement(type type_params i_variants)
                 let. mut, context′ context
                 for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type list¡ list.(list¡)))
                 let. t_variants map‡ ι*(i_variants) λ. *.(i i_param_types):
                     set. context t_add_var_binding(context Some(i))
                     map(i_param_types λ.(i_type: type_var→t_type(i_type context′ file_pos)))
-                T_TypeStatement(len(type_params) t_variants)
+                list.(T_TypeStatement(len(type_params) t_variants))
             .I_Fun(type_params i_defs)
                 for‡ i_defs λ. _: set. context t_add_var_binding(context None)
                 let. mut, context′ context
@@ -281,12 +281,15 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
                         .I_FuncParamConst(_) *¡
                         .I_FuncParamMut(_ en _) set. context″ t_add_effect(context″ en)
                     *.(t_params i_expr→t_expr(i_body context″))
-                T_Fun(len(type_params) t_defs)
+                list.(T_Fun(len(type_params) t_defs))
             .I_Extern(name type)
                 set. context t_add_var_binding(context None)
-                T_Extern(name type_var→t_type(type context file_pos))
-            .I_Set(vi i_expr) T_Set(vi i_expr→t_expr(i_expr context))
-        T_Statement(t_statement_data file_pos)
+                list.(T_Extern(name type_var→t_type(type context file_pos)))
+            .I_Set(vi i_expr) list.(T_Set(vi i_expr→t_expr(i_expr context)))
+            .I_EffectStatement(en)
+                set. context t_add_effect(context en)
+                list¡
+        map(t_statements_data λ.(sd: T_Statement(sd file_pos)))
 
 fun. i_patterns→t_patterns(∈.(i_patterns List(I_Pattern)) ∈.(context T_Context))
     let. *.(t_patterns bindings) unzip(map(i_patterns λ.(p: i_pattern→t_pattern(p context))))
