@@ -34,6 +34,7 @@ type. Error
     InvalidExpr(Option(List(Int)))
     InvalidPattern
     InvalidType
+    InvalidEffect
     UnboundVariable(List(Int))
     UnboundType(List(Int))
     UnboundEffect(List(Int))
@@ -51,6 +52,7 @@ type. Error
     AmbiguousEffect
     LeakedType(List(Int))
     LeakedEffect(List(Int))
+    NotASubeffect(List(List(Int)) List(List(Int)))
     InvalidExternType(List(Int))
     MutRecPolyDifferentType(List(Int) List(Int))
 
@@ -71,6 +73,7 @@ fun. error_string(∈.(err Error))
     .InvalidExpr(Some(kw)) concat(list.("Invalid " kw " expression"))
     .InvalidPattern "Invalid pattern"
     .InvalidType "Invalid type"
+    .InvalidEffect "Invalid effect"
     .UnboundVariable(name) ++("Unbound variable: " name)
     .UnboundType(name) ++("Unbound type: " name)
     .UnboundEffect(name) ++("Unbound effect: " name)
@@ -88,6 +91,7 @@ fun. error_string(∈.(err Error))
     .AmbiguousEffect "Ambiguous effect"
     .LeakedType(name) ++("Inferred type contains leaked type " name)
     .LeakedEffect(name) ++("Inferred effect contains leaked effect " name)
+    .NotASubeffect(eff1 eff2) concat(list.("Effect " intercalate(eff1 " ") " is not a subeffect of " intercalate(eff2 " ")))
     .InvalidExternType(name) ++("Invalid extern type for variable " name)
     .MutRecPolyDifferentType(name1 name2) concat(list.("Mutually recursive functions " name1 " and " name2 " are polymorphic over different types"))
 

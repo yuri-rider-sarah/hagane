@@ -94,6 +94,9 @@ fun. ∀, T: ∈(∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
 fun. ∀, T: ∉(∈.(x T) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
     ¬(∈(x ys =T))
 
+fun. ∀, T: ⊆(∈.(xs List(T)) ∈.(ys List(T)) ∈.(=T ⇒.(T T : Bool)))
+    ∀(xs λ.(x: ∈(x ys =T)))
+
 fun. ∀, T: dedup(∈.(xs List(T)) ∈.(=T ⇒.(T T : Bool)))
     let. mut, r list¡
     for‡ xs λ. x:

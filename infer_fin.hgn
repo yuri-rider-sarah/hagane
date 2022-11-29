@@ -117,6 +117,10 @@ fun. decompose_effect_vars()
         if. ¬(=list(apply_subs(get(effect_var_name_decomp evi1) subs) get(effect_var_name_decomp evi2) =effect_name))
             error(err file_pos)
         else, *¡
+    for‡ contained_effects λ. *.(EffectVar(evi1) EffectVar(evi2) file_pos):
+        if. ¬(⊆(get(effect_var_name_decomp evi1) get(effect_var_name_decomp evi2) =effect_name))
+            error(NotASubeffect(map(get(effect_var_name_decomp evi1) effect_name_string) map(get(effect_var_name_decomp evi2) effect_name_string)) file_pos)
+        else, *¡
 
 type. T_Context T_Context‡
     List(Option(Int))

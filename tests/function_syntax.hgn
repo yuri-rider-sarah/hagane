@@ -1,5 +1,12 @@
 ※ 4
-fun. f(a b c d e) ∈, Int
+※ 5
+effect. E
+
+fun. f(a b c d e) ∈, Int ε, :
     d
 
+fun. g(a b c d e) ∈, Int ε, E:
+    e
+
 print_int(f(1 2 3 4 5))
+print_int(g(1 2 3 4 5))
