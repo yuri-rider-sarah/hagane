@@ -1,0 +1,9 @@
+※ 6
+
+fun. ∀, T: ∀ε, E: call(∈.(f ⇒.(: T ε, E))) ∈, T ε, E:
+    f()
+
+fun. f() ∈, Int ε, :
+    6
+
+print_int(call(f))

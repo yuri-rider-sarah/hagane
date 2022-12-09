@@ -1,0 +1,39 @@
+※ 2
+※ 5
+※ 10
+※ 0
+※ 1
+※ 0
+
+fun. ∀, T U: ∀ε, E: map(∈.(a List(T)) ∈.(f ⇒.(T : U ε, E))) ∈, List(U) ε, E:
+    var. a′ list¡
+    while. <(len(a′) len(a))
+        push(~!a′ f(get(a len(a′))))
+    a′
+
+fun. ∀, T: foreach(∈.(a List(T)) ∈.(f ⇒.(T : *.())))
+    var. i 0
+    while. <(i len(a))
+        f(get(a i))
+        set. i +(i 1)
+    *.()
+
+fun. ∀, T U V: ∘(∈.(f ⇒.(U : V)) ∈.(g ⇒.(T : U)))
+    λ.(∈.(x T): f(g(x)))
+
+fun. succ(∈.(n Int)) +(n 1)
+
+fun. square(∈.(n Int)) *(n n)
+
+fun. bool→int(∈.(b Bool))
+    if.(b then, 1 else, 0)
+
+var. a list¡
+push(~!a 1)
+push(~!a 2)
+push(~!a 3)
+let. b map(a ∘(succ square))
+let. c map(a ∘(bool→int λ.(∈.(n Int) ⇒, =(%(n 2) 0))))
+
+foreach(b print_int)
+foreach(c print_int)

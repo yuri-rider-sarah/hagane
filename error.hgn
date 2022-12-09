@@ -55,6 +55,7 @@ type. Error
     NotASubeffect(List(List(Int)) List(List(Int)))
     InvalidExternType(List(Int))
     MutRecPolyDifferentType(List(Int) List(Int))
+    MutRecPolyDifferentEffect(List(Int) List(Int))
 
 fun. string_error(∈.(str List(Int)) ∈.(internal Int))
     vector_string_error(utf8_encode(list→vector(str)) internal)
@@ -94,6 +95,7 @@ fun. error_string(∈.(err Error))
     .NotASubeffect(eff1 eff2) concat(list.("Effect " intercalate(eff1 " ") " is not a subeffect of " intercalate(eff2 " ")))
     .InvalidExternType(name) ++("Invalid extern type for variable " name)
     .MutRecPolyDifferentType(name1 name2) concat(list.("Mutually recursive functions " name1 " and " name2 " are polymorphic over different types"))
+    .MutRecPolyDifferentEffect(name1 name2) concat(list.("Mutually recursive functions " name1 " and " name2 " are polymorphic over different effects"))
 
 fun. error(∈.(err Error) ∈.(file_pos FilePos))
     string_error(concat(list.(file_pos_string(file_pos) ": " error_string(err))) 0)

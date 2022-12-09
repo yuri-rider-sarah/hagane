@@ -6,7 +6,7 @@ type. I_StatementData
     I_ExprStatement(I_Expr)
     I_Let(I_Pattern I_Expr)
     I_Var(I_Expr EffectName)
-    I_Fun(List(TypeName) List(*.(List(I_FuncParam) I_Expr)))
+    I_Fun(List(TypeName) List(EffectName) List(*.(List(I_FuncParam) I_Expr)))
     I_TypeStatement(TypeName List(TypeName) List(List(TypeVar)))
     I_Extern(List(Int) TypeVar)
     I_Set(Int I_Expr)
@@ -165,10 +165,7 @@ fun. new_subst_effect(∈.(ev EffectVar) ∈.(subs List(*.(EffectName EffectName
 let. mut, equal_effects list¡
 let. mut, contained_effects list¡
 
-fun. unify_effect(∈.(ev1 EffectVar) ∈.(ev2 EffectVar) ∈.(params1 List(EffectName)) ∈.(params2 List(EffectName)) ∈.(err Error) ∈.(file_pos FilePos))
-    let. subs case. zip(params1 params2)
-        .Some(subs) subs
-        .None internal_error("params1 and params2 have different lengths")
+fun. unify_effect(∈.(ev1 EffectVar) ∈.(ev2 EffectVar) ∈.(subs List(*.(EffectName EffectName))) ∈.(err Error) ∈.(file_pos FilePos))
     let. EffectVar(evi1) ev1
     let. EffectVar(evi2) ev2
     case. *.(get(effect_vars evi1) get(effect_vars evi2))
@@ -176,6 +173,10 @@ fun. unify_effect(∈.(ev1 EffectVar) ∈.(ev2 EffectVar) ∈.(params1 List(Effe
         put(~!effect_vars evi1 EffectSubst(ev2 map(subs λ.(*.(x y): *.(y x)))))
     .*.(_ EffectUnset(_))
         put(~!effect_vars evi2 EffectSubst(ev1 subs))
+    .*.(EffectSum(list.(EffectAdd(ev1′))) _)
+        unify_effect(ev1′ ev2 subs err file_pos)
+    .*.(_ EffectSum(list.(EffectAdd(ev2′))))
+        unify_effect(ev1 ev2′ subs err file_pos)
     ._
         push(~!equal_effects *.(ev1 ev2 subs err file_pos))
 
@@ -270,6 +271,40 @@ fun. type_referenced_effects(∈.(tv TypeVar))
     let. mut, visited list¡
     dedup(type_referenced_effects′(tv ~!visited) =effect_var)
 
+fun. effect_referenced_effect_names′(∈.(ev EffectVar) ~!visited)
+    if. ∉(ev visited =effect_var)
+        push(~!visited ev)
+        let. EffectVar(evi) ev
+        case. get(effect_vars evi)
+        .EffectUnset(_) list¡
+        .EffectNamed(en) list.(en)
+        .EffectSum(components) concat‡ map‡ components λ. comp: case. comp
+            .EffectAdd(ev′) effect_referenced_effect_names′(ev′ ~!visited)
+            .EffectBlock(_) list¡
+        .EffectSubst(ev′ subs) map‡ effect_referenced_effect_names′(ev′ ~!visited) λ. en:
+            case. get_assoc(subs en =effect_name)
+            .Some(en′) en′
+            .None en
+    else, list¡
+
+fun. func_param_type_referenced_effect_names′(∈.(fpt I_FuncParamType) ~!visited)
+    case. fpt
+    .I_FuncParamConstType(t) type_referenced_effect_names′(t ~!visited)
+    .I_FuncParamMutType(t _) type_referenced_effect_names′(t ~!visited)
+
+fun. type_referenced_effect_names′(∈.(tv TypeVar) ~!visited)
+    let. TypeVar(tvi) tv
+    case. get(type_variables tvi)
+    .I_Any list¡
+    .I_Equal(tv′) type_referenced_effect_names′(tv′ ~!visited)
+    .I_Named(_ args) concat(map(args λ.(t: type_referenced_effect_names′(t ~!visited))))
+    .I_TupleType(subtypes) concat(map(subtypes λ.(t: type_referenced_effect_names′(t ~!visited))))
+    .I_Function(params ret eff) concat(++(map(params λ.(t: func_param_type_referenced_effect_names′(t ~!visited))) list.(type_referenced_effect_names′(ret ~!visited) effect_referenced_effect_names′(eff ~!visited))))
+
+fun. type_referenced_effect_names(∈.(tv TypeVar))
+    let. mut, visited list¡
+    dedup(type_referenced_effect_names′(tv ~!visited) =effect_name)
+
 fun. new_type_var_with_type(∈.(type I_Type))
     push(~!type_variables type)
     TypeVar(-(len(type_variables) 1))
@@ -328,7 +363,10 @@ fun. unify_type_value′(∈.(t1 I_Type) ∈.(t2 I_Type) ∈.(err Error) ∈.(fi
         .None error(err file_pos)
         .Some(*¡) *¡
         unify_type′(ret1 ret2 err file_pos)
-        unify_effect(eff1 eff2 param_types_effects(params1) param_types_effects(params2) err file_pos)
+        let. subs case. zip(param_types_effects(params1) param_types_effects(params2))
+            .Some(subs) subs
+            .None internal_error("params1 and params2 have different lengths")
+        unify_effect(eff1 eff2 subs err file_pos)
     ._ error(err file_pos)
 
 fun. unify_type′(∈.(tv1 TypeVar) ∈.(tv2 TypeVar) ∈.(err Error) ∈.(file_pos FilePos))
@@ -549,11 +587,14 @@ fun. substitute_names_in_effect(∈.(effect_subs List(*.(EffectName EffectVar)))
                     .EffectAdd(ev) EffectAdd(substitute_names_in_effect(effect_subs ev ~!visited))
                     .EffectBlock(en) EffectBlock(en)
                 ev′
-        .EffectSubst(ev subs)
-            let. ev′ new_unset_effect(FilePos("" 0 0))
-            push(~!visited *.(ev ev′))
-            set_effect(ev′ EffectSubst(substitute_names_in_effect(effect_subs ev ~!visited) subs))
-            ev′
+        .EffectSubst(sub_ev subs)
+            case. get_assoc(visited ev =effect_var)
+            .Some(ev′) ev′
+            .None
+                let. ev′ new_unset_effect(FilePos("" 0 0))
+                push(~!visited *.(ev ev′))
+                set_effect(ev′ EffectSubst(substitute_names_in_effect(effect_subs sub_ev ~!visited) subs))
+                ev′
 
 fun. substitute_names_in_param_type(∈.(type_subs List(*.(TypeName TypeVar))) ∈.(effect_subs List(*.(EffectName EffectVar))) ∈.(pt I_FuncParamType) ~!visited)
     case. pt
@@ -780,8 +821,8 @@ fun. u_free_vars(U_Expr(expr_data _))
                 push(~!shadowed_vars name)
                 fvs
             .U_Fun(defs)
-                let. fvs \(concat(map(defs λ.(*.(_ _ params _ _ body): \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)))))) shadowed_vars)
-                set. shadowed_vars ++(shadowed_vars map(defs λ.(*.(name _ _ _ _ _): name)))
+                let. fvs \(concat(map(defs λ.(*.(_ _ _ params _ _ body): \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)))))) shadowed_vars)
+                set. shadowed_vars ++(shadowed_vars map(defs λ.(*.(name _ _ _ _ _ _): name)))
                 fvs
             .U_TypeStatement(_ _ _) list¡
             .U_Extern(name _)
@@ -794,11 +835,11 @@ fun. u_free_vars(U_Expr(expr_data _))
     .U_ListLiteral(subexprs) concat(map(subexprs u_free_vars))
     .U_StringLiteral(_) list¡
 
-fun. get_call_graph(∈.(defs List(*.(List(Int) Option(List(List(Int))) List(U_FuncParam) Option(U_Type) Option(List(U_Effect)) U_Expr))))
-    map‡ defs λ. *.(_ _ params _ _ body):
+fun. get_call_graph(∈.(defs List(*.(List(Int) Option(List(List(Int))) Option(List(List(Int))) List(U_FuncParam) Option(U_Type) Option(List(U_Effect)) U_Expr))))
+    map‡ defs λ. *.(_ _ _ params _ _ body):
         let. free_vars \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)) =list_int)
         filter‡ ι(len(defs)) λ. i:
-            let. *.(name _ _ _ _ _) get(defs i)
+            let. *.(name _ _ _ _ _ _) get(defs i)
             ∈(name free_vars =list_int)
 
 fun. get_sccs(∈.(graph List(List(Int))))
@@ -887,22 +928,29 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
             let. fun_statements map‡ components λ. component:
                 let. mut, context′ context
                 for‡ component λ. i:
-                    let. *.(name _ _ _ _ _) get(u_defs i)
+                    let. *.(name _ _ _ _ _ _) get(u_defs i)
                     set. context′ i_add_let_binding(context′ VarBinding(name list¡ list¡ get(fun_types i) ConstVB))
-                let. *.(_ type_param_names _ _ _ _) get(u_defs get(component 0))
+                let. *.(_ type_param_names effect_param_names _ _ _ _) get(u_defs get(component 0))
                 for‡ component λ. i:
-                    let. *.(_ type_param_names′ _ _ _ _) get(u_defs i)
-                    let. equal case. *.(type_param_names type_param_names′)
+                    let. *.(_ type_param_names′ effect_param_names′ _ _ _ _) get(u_defs i)
+                    let. *.(name1 _ _ _ _ _ _) get(u_defs get(component 0))
+                    let. *.(name2 _ _ _ _ _ _) get(u_defs i)
+                    let. types_equal case. *.(type_param_names type_param_names′)
                         .*.(None None) ⊤
                         .*.(Some(names) Some(names′)) =list(names names′ =list_int)
                         ._ ⊥
-                    if. ¬(equal)
-                        let. *.(name1 _ _ _ _ _) get(u_defs get(component 0))
-                        let. *.(name2 _ _ _ _ _) get(u_defs i)
+                    let. effects_equal case. *.(effect_param_names effect_param_names′)
+                        .*.(None None) ⊤
+                        .*.(Some(names) Some(names′)) =list(names names′ =list_int)
+                        ._ ⊥
+                    if. ¬(types_equal)
                         error(MutRecPolyDifferentType(name1 name2) file_pos)
                     else, *¡
+                    if. ¬(effects_equal)
+                        error(MutRecPolyDifferentEffect(name1 name2) file_pos)
+                    else, *¡
                 fun. get_i_defs() map‡ component λ. i:
-                    let. *.(_ _ u_params u_ret_type u_effects u_body) get(u_defs i)
+                    let. *.(_ _ _ u_params u_ret_type u_effects u_body) get(u_defs i)
                     let. *.(i_params bindings) u_func_params→i_func_params(u_params context′)
                     let. mut, context″ context′
                     for‡ bindings λ. binding:
@@ -918,7 +966,7 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                     unify_type(i_expr_type(i_body) i_ret_type i_expr_file_pos(i_body))
                     unify_subeffect(i_expr_effect(i_body) i_effect i_expr_file_pos(i_body))
                     *.(i_params i_body)
-                let. *.(i_defs type_params) case. type_param_names
+                fun. get_i_defs_and_type_params() case. type_param_names
                     .Some(type_param_names)
                         let. type_params map‡ type_param_names λ. name:
                             let. tn new_type_name(Some(name) 0)
@@ -942,8 +990,8 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                         let. type_param_vars get(fun_type_params 0)
                         for‡ ι*(fun_type_params) λ. *.(i2 type_param_vars′):
                             if. ¬(is_permutation(type_param_vars type_param_vars′ =type_var))
-                                let. *.(name1 _ _ _ _ _) get(u_defs get(component 0))
-                                let. *.(name2 _ _ _ _ _) get(u_defs get(component i2))
+                                let. *.(name1 _ _ _ _ _ _) get(u_defs get(component 0))
+                                let. *.(name2 _ _ _ _ _ _) get(u_defs get(component i2))
                                 error(MutRecPolyDifferentType(name1 name2) file_pos)
                             else, *¡
                         let. type_params map‡ type_param_vars λ. tv:
@@ -951,22 +999,43 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                             set_type(tv I_Named(tn list¡) file_pos)
                             tn
                         *.(i_defs type_params)
-                let. fun_effect_params map(component λ.(i: \(type_referenced_effects(get(fun_types i)) context_referenced_effects(context) =effect_var)))
-                let. effect_params get(fun_effect_params 0)
-                for‡ ι*(fun_effect_params) λ. *.(i2 effect_params′):
-                    if. ¬(is_permutation(effect_params effect_params′ =effect_var))
-                        let. *.(name1 _ _ _ _ _) get(u_defs get(component 0))
-                        let. *.(name2 _ _ _ _ _) get(u_defs get(component i2))
-                        error(MutRecPolyDifferentType(name1 name2) file_pos)
-                    else, *¡
-                let. effect_names map‡ effect_params λ. ev:
-                    let. en new_effect_name(EffectNameNone)
-                    set_effect(ev EffectNamed(en))
-                    en
+                let. *.(i_defs type_params effect_params) case. effect_param_names
+                    .Some(effect_param_names)
+                        let. effect_params map‡ effect_param_names λ. name:
+                            let. en new_effect_name(EffectNameSome(name))
+                            set. context′ i_add_effect(context′ en)
+                            en
+                        let. *.(i_defs type_params) get_i_defs_and_type_params()
+                        for‡ component λ. i:
+                            let. unused_effect_params \(effect_params type_referenced_effect_names(get(fun_types i)) =effect_name)
+                            if. ≠(len(unused_effect_params) 0)
+                                let. EffectName(eni) get(unused_effect_params 0)
+                                let. unused_effect get(effect_names eni)
+                                let. unused_name case. unused_effect
+                                    .EffectNameSome(name) name
+                                    ._ internal_error("unused_effect is not EffectNameSome")
+                                error(UnusedTypeParam(unused_name) file_pos)
+                            else, *¡
+                        *.(i_defs type_params effect_params)
+                    .None
+                        let. *.(i_defs type_params) get_i_defs_and_type_params()
+                        let. fun_effect_params map(component λ.(i: \(type_referenced_effects(get(fun_types i)) context_referenced_effects(context) =effect_var)))
+                        let. effect_param_vars get(fun_effect_params 0)
+                        for‡ ι*(fun_effect_params) λ. *.(i2 effect_param_vars′):
+                            if. ¬(is_permutation(effect_param_vars effect_param_vars′ =effect_var))
+                                let. *.(name1 _ _ _ _ _ _) get(u_defs get(component 0))
+                                let. *.(name2 _ _ _ _ _ _) get(u_defs get(component i2))
+                                error(MutRecPolyDifferentType(name1 name2) file_pos)
+                            else, *¡
+                        let. effect_params map‡ effect_param_vars λ. ev:
+                            let. en new_effect_name(EffectNameNone)
+                            set_effect(ev EffectNamed(en))
+                            en
+                        *.(i_defs type_params effect_params)
                 for‡ component λ. i:
-                    let. *.(name _ _ _ _ _) get(u_defs i)
-                    set. context i_add_let_binding(context VarBinding(name type_params effect_names get(fun_types i) ConstVB))
-                I_Statement(I_Fun(type_params i_defs) empty_effect file_pos)
+                    let. *.(name _ _ _ _ _ _) get(u_defs i)
+                    set. context i_add_let_binding(context VarBinding(name type_params effect_params get(fun_types i) ConstVB))
+                I_Statement(I_Fun(type_params effect_params i_defs) empty_effect file_pos)
             *.(fun_statements list¡)
         .U_TypeStatement(name type_param_names u_variants)
             let. mut, context′ context

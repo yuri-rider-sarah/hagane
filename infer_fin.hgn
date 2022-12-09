@@ -273,10 +273,11 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
                     set. context t_add_var_binding(context Some(i))
                     map(i_param_types λ.(i_type: type_var→t_type(i_type context′ file_pos)))
                 list.(T_TypeStatement(len(type_params) t_variants))
-            .I_Fun(type_params i_defs)
+            .I_Fun(type_params effect_params i_defs)
                 for‡ i_defs λ. _: set. context t_add_var_binding(context None)
                 let. mut, context′ context
                 for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type list¡ list.(list¡)))
+                for‡ effect_params λ. eff: set.(context′ t_add_effect(context′ eff))
                 let. t_defs map‡ i_defs λ. *.(i_params i_body):
                     let. *.(t_params bindings) i_func_params→t_func_params(i_params context′)
                     let. mut, context″ context′
