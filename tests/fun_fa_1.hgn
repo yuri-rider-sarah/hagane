@@ -5,20 +5,20 @@
 ※ 1
 ※ 0
 
-fun. ∀, T U: map(∈.(a List(T)) ∈.(f ⇒.(T : U)))
+fun. ∀, T U: map(∈.(a List(T)) ∈.(f ⇒.(T : U))) ∈, List(U)
     var. a′ list¡
     while. <(len(a′) len(a))
         push(~!a′ f(get(a len(a′))))
     a′
 
-fun. ∀, T: foreach(∈.(a List(T)) ∈.(f ⇒.(T : *.())))
+fun. ∀, T: foreach(∈.(a List(T)) ∈.(f ⇒.(T : *.()))) ∈, *¡
     var. i 0
     while. <(i len(a))
         f(get(a i))
         set. i +(i 1)
     *.()
 
-fun. ∀, T U V: ∘(∈.(f ⇒.(U : V)) ∈.(g ⇒.(T : U)))
+fun. ∀, T U V: ∘(∈.(f ⇒.(U : V)) ∈.(g ⇒.(T : U))) ∈, ⇒.(T : V)
     λ.(∈.(x T): f(g(x)))
 
 fun. succ(∈.(n Int)) +(n 1)
