@@ -44,6 +44,7 @@ type. U_TypeData
     U_Named(List(Int) List(U_Type) List(List(U_Effect)))
     U_TupleType(List(U_Type))
     U_Function(List(U_FuncParamType) U_Type Option(List(U_Effect)))
+    U_WildcardType
 
 type. U_Type U_Type(U_TypeData FilePos)
 
@@ -147,6 +148,11 @@ fun. r_expr→u_type(∈.(expr R_Expr) ∈.(complete Bool))
             .ClauseGrouping(params list.(ClauseGroup(ColonSep list.(ret)) ClauseGroup(NamedSep("ε") effects)))
                 U_Function(map(params λ.(e: r_expr→u_func_param_type(e complete))) r_expr→u_type(ret complete) Some(map(effects r_expr→u_effect)))
             ._ error(InvalidType file_pos)
+        .R_Wildcard
+            if. complete
+                error(IncompleteType file_pos)
+            else,
+                U_WildcardType
         ._ error(InvalidType file_pos)
     U_Type(type_data file_pos)
 

@@ -1160,6 +1160,8 @@ fun. u_type→i_type(∈.(u_type U_Type) ∈.(context I_Context))
             .Some(u_effects) new_sum_effect(map(u_effects λ.(e: new_named_effect(u_effect→effect_name(e context)))))
             .None empty_effect
         I_Function(i_params i_ret i_effect)
+    .U_WildcardType
+        I_Equal(new_type_var())
 
 fun. u_effect→effect_name(∈.(u_effect U_Effect) ∈.(context I_Context))
     let. U_Effect(u_effect_data file_pos) u_effect
