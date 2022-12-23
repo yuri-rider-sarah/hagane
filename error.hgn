@@ -55,6 +55,7 @@ type. Error
     InvalidExpr(Option(List(Int)))
     InvalidPattern
     InvalidType
+    IncompleteType
     InvalidEffect
     UnboundVariable(List(Int))
     UnboundType(List(Int))
@@ -96,6 +97,7 @@ fun. error_string(∈.(err Error) ∈.(decomp Option(List(List(EffectName)))))
     .InvalidExpr(Some(kw)) concat(list.("Invalid " kw " expression"))
     .InvalidPattern "Invalid pattern"
     .InvalidType "Invalid type"
+    .IncompleteType "Incomplete type"
     .InvalidEffect "Invalid effect"
     .UnboundVariable(name) ++("Unbound variable: " name)
     .UnboundType(name) ++("Unbound type: " name)
