@@ -1,0 +1,15 @@
+※ 5
+
+type. ∀, T U: ∀ε, E: Fun
+    Fun(⇒.(T : U ε, E))
+
+fun. ∀, T U: ∀ε, E: invoke_fun(∈.(Fun(f) Fun(T U ε, E)) ∈.(x T)) ∈, U ε, E:
+    f(x)
+
+let. fun1 Fun(λ.(n: +(n 1)))
+let. fun2 Fun(print_int)
+
+fun. print_succ′(∈.(n Int)) ∈, *¡ ε,:
+    invoke_fun(fun2 invoke_fun(fun1 n))
+
+print_succ′(4)

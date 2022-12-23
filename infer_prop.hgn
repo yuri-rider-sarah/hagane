@@ -7,7 +7,7 @@ type. I_StatementData
     I_Let(I_Pattern I_Expr)
     I_Var(I_Expr EffectName)
     I_Fun(List(TypeName) List(EffectName) List(*.(List(I_FuncParam) I_Expr)))
-    I_TypeStatement(TypeName List(TypeName) List(List(TypeVar)))
+    I_TypeStatement(TypeName List(TypeName) List(EffectName) List(List(TypeVar)))
     I_Extern(List(Int) TypeVar)
     I_Set(Int I_Expr)
     I_EffectStatement(EffectName)
@@ -47,7 +47,6 @@ type. I_Pattern I_Pattern(I_PatternData TypeVar FilePos)
 type. TypeName TypeName(Int)
 type. TypeVar TypeVar(Int)
 
-type. EffectName EffectName(Int)
 type. EffectVar EffectVar(Int)
 
 fun. =type_var(∈.(tv1 TypeVar) ∈.(tv2 TypeVar))
@@ -77,7 +76,7 @@ type. I_FuncParamType
 type. I_Type
     I_Any
     I_Equal(TypeVar)
-    I_Named(TypeName List(TypeVar))
+    I_Named(TypeName List(TypeVar) List(EffectVar))
     I_TupleType(List(TypeVar))
     I_Function(List(I_FuncParamType) TypeVar EffectVar)
 
@@ -103,29 +102,22 @@ fun. i_pattern_file_pos(∈.(pattern I_Pattern))
 
 let. mut, named_types list¡
 
-fun. new_type_name(∈.(name Option(List(Int))) ∈.(params Int))
-    push(~!named_types *.(name params))
+fun. new_type_name(∈.(name Option(List(Int))) ∈.(type_params Int) ∈.(effect_params Int))
+    push(~!named_types *.(name type_params effect_params))
     TypeName(-(len(named_types) 1))
 
-let. int_type new_type_name(Some("Int") 0)
-let. bool_type new_type_name(Some("Bool") 0)
-let. list_type new_type_name(Some("List") 1)
+let. int_type new_type_name(Some("Int") 0 0)
+let. bool_type new_type_name(Some("Bool") 0 0)
+let. list_type new_type_name(Some("List") 1 0)
 
 fun. type_name_string(∈.(tn TypeName))
     let. TypeName(tni) tn
-    let. *.(name _) get(named_types tni)
+    let. *.(name _ _) get(named_types tni)
     case. name
     .Some(name) name
     .None ++("?G" int→string(tni))
 
 let. mut, type_variables list¡
-
-type. EffectNameKind
-    EffectNameNone
-    EffectNameSome(List(Int))
-    EffectNameVar(List(Int))
-
-let. mut, effect_names list¡
 
 fun. new_effect_name(∈.(name EffectNameKind))
     push(~!effect_names name)
@@ -177,6 +169,10 @@ fun. unify_effect(∈.(ev1 EffectVar) ∈.(ev2 EffectVar) ∈.(subs List(*.(Effe
         unify_effect(ev1′ ev2 subs err file_pos)
     .*.(_ EffectSum(list.(EffectAdd(ev2′))))
         unify_effect(ev1 ev2′ subs err file_pos)
+    .*.(EffectSubst(ev1′ list¡) _)
+        unify_effect(ev1′ ev2 subs err file_pos)
+    .*.(_ EffectSubst(ev2′ list¡))
+        unify_effect(ev1 ev2′ subs err file_pos)
     ._
         push(~!equal_effects *.(ev1 ev2 subs err file_pos))
 
@@ -190,13 +186,6 @@ fun. set_effect(∈.(ev EffectVar) ∈.(data EffectVarData))
         put(~!effect_vars evi data)
     ._
         internal_error("Tried to set effect that was already set")
-
-fun. effect_name_string(∈.(en EffectName))
-    let. EffectName(eni) en
-    case. get(effect_names eni)
-    .EffectNameNone ++("?EG" int→string(eni))
-    .EffectNameSome(name) name
-    .EffectNameVar(name) ++("~!" name)
 
 fun. params_effects(∈.(params List(I_FuncParam)))
     map_opt‡ params λ. param: case. param
@@ -218,7 +207,7 @@ fun. type_referenced_types′(∈.(tv TypeVar))
     case. get(type_variables tvi)
     .I_Any list.(tv)
     .I_Equal(tv′) type_referenced_types′(tv′)
-    .I_Named(_ args) concat(map(args type_referenced_types′))
+    .I_Named(_ args _) concat(map(args type_referenced_types′))
     .I_TupleType(types) concat(map(types type_referenced_types′))
     .I_Function(params ret _) concat(++(map(params func_param_type_referenced_types) list.(type_referenced_types′(ret))))
 
@@ -234,7 +223,7 @@ fun. type_referenced_type_names′(∈.(tv TypeVar))
     case. get(type_variables tvi)
     .I_Any list¡
     .I_Equal(tv′) type_referenced_type_names′(tv′)
-    .I_Named(tn args) ++(concat(map(args type_referenced_type_names′)) list.(tn))
+    .I_Named(tn args _) ++(concat(map(args type_referenced_type_names′)) list.(tn))
     .I_TupleType(types) concat(map(types type_referenced_type_names′))
     .I_Function(params ret _) concat(++(map(params func_param_type_referenced_type_names) list.(type_referenced_type_names′(ret))))
 
@@ -263,7 +252,7 @@ fun. type_referenced_effects′(∈.(tv TypeVar) ~!visited)
     case. get(type_variables tvi)
     .I_Any list¡
     .I_Equal(tv′) type_referenced_effects′(tv′ ~!visited)
-    .I_Named(_ args) concat(map(args λ.(t: type_referenced_effects′(t ~!visited))))
+    .I_Named(_ type_args effect_args) concat(++(map(type_args λ.(t: type_referenced_effects′(t ~!visited))) map(effect_args λ.(e: effect_referenced_effects′(e ~!visited)))))
     .I_TupleType(subtypes) concat(map(subtypes λ.(t: type_referenced_effects′(t ~!visited))))
     .I_Function(params ret eff) concat(++(map(params λ.(t: func_param_type_referenced_effects′(t ~!visited))) list.(type_referenced_effects′(ret ~!visited) effect_referenced_effects′(eff ~!visited))))
 
@@ -297,7 +286,7 @@ fun. type_referenced_effect_names′(∈.(tv TypeVar) ~!visited)
     case. get(type_variables tvi)
     .I_Any list¡
     .I_Equal(tv′) type_referenced_effect_names′(tv′ ~!visited)
-    .I_Named(_ args) concat(map(args λ.(t: type_referenced_effect_names′(t ~!visited))))
+    .I_Named(_ type_args effect_args) concat(++(map(type_args λ.(t: type_referenced_effect_names′(t ~!visited))) map(effect_args λ.(e: effect_referenced_effect_names′(e ~!visited)))))
     .I_TupleType(subtypes) concat(map(subtypes λ.(t: type_referenced_effect_names′(t ~!visited))))
     .I_Function(params ret eff) concat(++(map(params λ.(t: func_param_type_referenced_effect_names′(t ~!visited))) list.(type_referenced_effect_names′(ret ~!visited) effect_referenced_effect_names′(eff ~!visited))))
 
@@ -329,7 +318,7 @@ fun. i_type→partial_type(∈.(t I_Type) ∈.(tvi Int))
     case. t
     .I_Any P_Var(tvi)
     .I_Equal(tv′) type_var→partial_type(tv′)
-    .I_Named(tn args) P_Applied(type_name_string(tn) map(args type_var→partial_type))
+    .I_Named(tn type_args effect_args) P_Applied(type_name_string(tn) map(type_args type_var→partial_type) map(effect_args λ.(EffectVar(evi): evi)))
     .I_TupleType(types) P_TupleType(map(types type_var→partial_type))
     .I_Function(params ret EffectVar(evi)) P_Function(map(params i_func_param_type→partial_param_type) type_var→partial_type(ret) evi)
 
@@ -349,10 +338,14 @@ fun. unify_type_value′(∈.(t1 I_Type) ∈.(t2 I_Type) ∈.(err Error) ∈.(fi
     .*.(_ I_Any) *¡
     .*.(I_Equal(tv1) _) set_type′(tv1 t2 err file_pos)
     .*.(_ I_Equal(tv2)) set_type′(tv2 t1 err file_pos)
-    .*.(I_Named(TypeName(n1) args1) I_Named(TypeName(n2) args2))
-        if. =(n1 n2) case. for2(args1 args2 λ.(tv1 tv2: unify_type′(tv1 tv2 err file_pos)))
-            .None error(err file_pos)
-            .Some(*¡) *¡
+    .*.(I_Named(TypeName(n1) type_args1 effect_args1) I_Named(TypeName(n2) type_args2 effect_args2))
+        if. =(n1 n2)
+            case. for2(type_args1 type_args2 λ.(tv1 tv2: unify_type′(tv1 tv2 err file_pos)))
+                .None error(err file_pos)
+                .Some(*¡) *¡
+            case. for2(effect_args1 effect_args2 λ.(ev1 ev2: unify_effect(ev1 ev2 list¡ err file_pos)))
+                .None error(err file_pos)
+                .Some(*¡) *¡
         else, error(err file_pos)
     .*.(I_TupleType(types1) I_TupleType(types2))
         case. for2(types1 types2 λ.(tv1 tv2: unify_type′(tv1 tv2 err file_pos)))
@@ -412,14 +405,14 @@ type. I_Context I_Context‡
     List(EffectName) ※ effects
 
 let. empty_effect new_sum_effect(list¡)
-let. bool_tv new_type_var_with_type(I_Named(bool_type list¡))
-let. int_tv new_type_var_with_type(I_Named(int_type list¡))
+let. bool_tv new_type_var_with_type(I_Named(bool_type list¡ list¡))
+let. int_tv new_type_var_with_type(I_Named(int_type list¡ list¡))
 let. unit_tv new_type_var_with_type(I_TupleType(list¡))
 let. arith_tv new_type_var_with_type(I_Function(list.(I_FuncParamConstType(int_tv) I_FuncParamConstType(int_tv)) int_tv empty_effect))
 let. cmp_tv new_type_var_with_type(I_Function(list.(I_FuncParamConstType(int_tv) I_FuncParamConstType(int_tv)) bool_tv empty_effect))
-let. t_type new_type_name(None 0)
-let. t_tv new_type_var_with_type(I_Named(t_type list¡))
-let. list_tv new_type_var_with_type(I_Named(list_type list.(t_tv)))
+let. t_type new_type_name(None 0 0)
+let. t_tv new_type_var_with_type(I_Named(t_type list¡ list¡))
+let. list_tv new_type_var_with_type(I_Named(list_type list.(t_tv) list¡))
 let. e_effect new_effect_name(EffectNameNone)
 let. e_ev new_named_effect(e_effect)
 
@@ -476,7 +469,7 @@ fun. type_from_name(∈.(name List(Int)) ∈.(context I_Context) ∈.(file_pos F
     let. I_Context(_ types _) context
     for‡ types λ. tn:
         let. TypeName(tni) tn
-        let. *.(name′ _) get(named_types tni)
+        let. *.(name′ _ _) get(named_types tni)
         case. name′
         .Some(name′)
             if. =list(name′ name =)
@@ -606,7 +599,7 @@ fun. substitute_names(∈.(type_subs List(*.(TypeName TypeVar))) ∈.(effect_sub
     let. type case. get(type_variables tvi)
         .I_Any I_Equal(tv)
         .I_Equal(tv′) I_Equal(substitute_names(type_subs effect_subs tv′ ~!visited))
-        .I_Named(tn list¡)
+        .I_Named(tn list¡ list¡)
             let. TypeName(tni) tn
             let. mut, tvi′ None
             for‡ type_subs λ. sub:
@@ -616,8 +609,10 @@ fun. substitute_names(∈.(type_subs List(*.(TypeName TypeVar))) ∈.(effect_sub
                 else, *¡
             case. tvi′
             .Some(tvi′) I_Equal(TypeVar(tvi′))
-            .None I_Named(tn list¡)
-        .I_Named(tn args) I_Named(tn map(args λ.(t: substitute_names(type_subs effect_subs t ~!visited))))
+            .None I_Named(tn list¡ list¡)
+        .I_Named(tn type_args effect_args) I_Named‡ tn
+            map(type_args λ.(t: substitute_names(type_subs effect_subs t ~!visited)))
+            map(effect_args λ.(e: substitute_names_in_effect(effect_subs e ~!visited)))
         .I_TupleType(types) I_TupleType(map(types λ.(t: substitute_names(type_subs effect_subs t ~!visited))))
         .I_Function(params ret eff)
             I_Function(map(params λ.(t: substitute_names_in_param_type(type_subs effect_subs t ~!visited))) substitute_names(type_subs effect_subs ret ~!visited) substitute_names_in_effect(effect_subs eff ~!visited))
@@ -662,7 +657,7 @@ fun. u_expr→i_expr(∈.(expr U_Expr) ∈.(context I_Context))
     let. U_Expr(u_expr_data file_pos) expr
     let. *.(i_expr_data this_effect) case. u_expr_data
         .U_IntLiteral(n)
-            set_type(this_type I_Named(int_type list¡) file_pos)
+            set_type(this_type I_Named(int_type list¡ list¡) file_pos)
             *.(I_IntLiteral(n) empty_effect)
         .U_Ident(name)
             let. vi locate_var(name context file_pos)
@@ -701,7 +696,7 @@ fun. u_expr→i_expr(∈.(expr U_Expr) ∈.(context I_Context))
                 let. *.(u_cond u_body) u_case
                 let. i_cond u_expr→i_expr(u_cond context)
                 let. i_body u_expr→i_expr(u_body context)
-                set_type(i_expr_type(i_cond) I_Named(bool_type list¡) i_expr_file_pos(i_cond))
+                set_type(i_expr_type(i_cond) I_Named(bool_type list¡ list¡) i_expr_file_pos(i_cond))
                 unify_type(this_type i_expr_type(i_body) file_pos)
                 *.(i_cond i_body)
             let. i_else u_expr→i_expr(u_else context)
@@ -710,7 +705,7 @@ fun. u_expr→i_expr(∈.(expr U_Expr) ∈.(context I_Context))
         .U_While(u_cond u_body)
             let. i_cond u_expr→i_expr(u_cond context)
             let. i_body u_expr→i_expr(u_body context)
-            set_type(i_expr_type(i_cond) I_Named(bool_type list¡) i_expr_file_pos(i_cond))
+            set_type(i_expr_type(i_cond) I_Named(bool_type list¡ list¡) i_expr_file_pos(i_cond))
             set_type(i_expr_type(i_body) I_TupleType(list¡) i_expr_file_pos(i_cond))
             set_type(this_type I_TupleType(list¡) file_pos)
             *.(I_While(i_cond i_body) new_sum_effect(list.(i_expr_effect(i_cond) i_expr_effect(i_body))))
@@ -740,23 +735,23 @@ fun. u_expr→i_expr(∈.(expr U_Expr) ∈.(context I_Context))
             *.(I_Case(i_expr i_cases) new_sum_effect(++(list.(i_expr_effect(i_expr)) map(i_cases λ.(*.(_ i_body): i_expr_effect(i_body))))))
         .U_And(u_exprs)
             let. i_exprs map(u_exprs λ.(u_expr: u_expr→i_expr(u_expr context)))
-            for‡ i_exprs λ. i_expr: set_type(i_expr_type(i_expr) I_Named(bool_type list¡) i_expr_file_pos(i_expr))
-            set_type(this_type I_Named(bool_type list¡) file_pos)
+            for‡ i_exprs λ. i_expr: set_type(i_expr_type(i_expr) I_Named(bool_type list¡ list¡) i_expr_file_pos(i_expr))
+            set_type(this_type I_Named(bool_type list¡ list¡) file_pos)
             *.(I_And(i_exprs) new_sum_effect(map(i_exprs i_expr_effect)))
         .U_Or(u_exprs)
             let. i_exprs map(u_exprs λ.(u_expr: u_expr→i_expr(u_expr context)))
-            for‡ i_exprs λ. i_expr: set_type(i_expr_type(i_expr) I_Named(bool_type list¡) i_expr_file_pos(i_expr))
-            set_type(this_type I_Named(bool_type list¡) file_pos)
+            for‡ i_exprs λ. i_expr: set_type(i_expr_type(i_expr) I_Named(bool_type list¡ list¡) i_expr_file_pos(i_expr))
+            set_type(this_type I_Named(bool_type list¡ list¡) file_pos)
             *.(I_Or(i_exprs) new_sum_effect(map(i_exprs i_expr_effect)))
         .U_ListLiteral(u_exprs)
             let. i_exprs map(u_exprs λ.(u_expr: u_expr→i_expr(u_expr context)))
             let. elem_type new_type_var()
-            set_type(this_type I_Named(list_type list.(elem_type)) file_pos)
+            set_type(this_type I_Named(list_type list.(elem_type) list¡) file_pos)
             for‡ i_exprs λ. i_expr: unify_type(i_expr_type(i_expr) elem_type i_expr_file_pos(i_expr))
             *.(I_ListLiteral(i_exprs elem_type) new_sum_effect(map(i_exprs i_expr_effect)))
         .U_StringLiteral(s)
-            let. elem_type new_type_var_with_type(I_Named(int_type list¡))
-            set_type(this_type I_Named(list_type list.(elem_type)) file_pos)
+            let. elem_type new_type_var_with_type(I_Named(int_type list¡ list¡))
+            set_type(this_type I_Named(list_type list.(elem_type) list¡) file_pos)
             *.(I_ListLiteral(map(s λ.(c: I_Expr(I_IntLiteral(c) elem_type empty_effect file_pos))) int_tv) empty_effect)
     I_Expr(i_expr_data this_type this_effect file_pos)
 
@@ -824,7 +819,7 @@ fun. u_free_vars(U_Expr(expr_data _))
                 let. fvs \(concat(map(defs λ.(*.(_ _ _ params _ _ body): \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)))))) shadowed_vars)
                 set. shadowed_vars ++(shadowed_vars map(defs λ.(*.(name _ _ _ _ _ _): name)))
                 fvs
-            .U_TypeStatement(_ _ _) list¡
+            .U_TypeStatement(_ _ _ _) list¡
             .U_Extern(name _)
                 push(~!shadowed_vars name)
                 list¡
@@ -888,8 +883,8 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
         .U_Statement(U_ExprStatement(_) _)
             set. num_expr_statements +(num_expr_statements 1)
             list¡
-        .U_Statement(U_TypeStatement(name type_params _) _)
-            let. tn new_type_name(Some(name) len(type_params))
+        .U_Statement(U_TypeStatement(name type_params effect_params _) _)
+            let. tn new_type_name(Some(name) len(type_params) len(effect_params))
             set. context i_add_type_binding(context tn)
             list.(tn)
         ._ list¡
@@ -969,7 +964,7 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                 fun. get_i_defs_and_type_params() case. type_param_names
                     .Some(type_param_names)
                         let. type_params map‡ type_param_names λ. name:
-                            let. tn new_type_name(Some(name) 0)
+                            let. tn new_type_name(Some(name) 0 0)
                             set. context′ i_add_type_binding(context′ tn)
                             tn
                         let. i_defs get_i_defs()
@@ -977,7 +972,7 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                             let. unused_type_params \(type_params type_referenced_type_names(get(fun_types i)) =type_name)
                             if. ≠(len(unused_type_params) 0)
                                 let. TypeName(tni) get(unused_type_params 0)
-                                let. *.(unused_name _) get(named_types tni)
+                                let. *.(unused_name _ _) get(named_types tni)
                                 let. unused_name case. unused_name
                                     .Some(name) name
                                     .None internal_error("unused_name is None")
@@ -995,8 +990,8 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                                 error(MutRecPolyDifferentType(name1 name2) file_pos)
                             else, *¡
                         let. type_params map‡ type_param_vars λ. tv:
-                            let. tn new_type_name(None 0)
-                            set_type(tv I_Named(tn list¡) file_pos)
+                            let. tn new_type_name(None 0 0)
+                            set_type(tv I_Named(tn list¡ list¡) file_pos)
                             tn
                         *.(i_defs type_params)
                 let. *.(i_defs type_params effect_params) case. effect_param_names
@@ -1037,23 +1032,29 @@ fun. u_statements→i_statements(∈.(statements List(U_Statement)) ∈.(context
                     set. context i_add_let_binding(context VarBinding(name type_params effect_params get(fun_types i) ConstVB))
                 I_Statement(I_Fun(type_params effect_params i_defs) empty_effect file_pos)
             *.(fun_statements list¡)
-        .U_TypeStatement(name type_param_names u_variants)
+        .U_TypeStatement(name type_param_names effect_param_names u_variants)
             let. mut, context′ context
             let. type_params map‡ type_param_names λ. name:
-                let. tn new_type_name(Some(name) 0)
-                set. context′ i_add_type_binding(context tn)
+                let. tn new_type_name(Some(name) 0 0)
+                set. context′ i_add_type_binding(context′ tn)
                 tn
+            let. effect_params map‡ effect_param_names λ. name:
+                let. en new_effect_name(EffectNameSome(name))
+                set. context′ i_add_effect(context′ en)
+                en
             let. type_name get(type_names next_type_name)
             set. next_type_name +(next_type_name 1)
-            let. type I_Named(type_name map(type_params λ.(tn: new_type_var_with_type(I_Named(tn list¡)))))
+            let. type I_Named‡ type_name
+                map(type_params λ.(tn: new_type_var_with_type(I_Named(tn list¡ list¡))))
+                map(effect_params λ.(en: new_named_effect(en)))
             let. type_tv new_type_var_with_type(type)
             let. i_variants map‡ u_variants λ. variant:
                 let. *.(variant_name u_params) variant
                 let. i_params map(u_params λ.(t: new_type_var_with_type(u_type→i_type(t context′))))
                 let. ctor_type if.(>(len(i_params) 0) new_type_var_with_type(I_Function(map(i_params λ.(t: I_FuncParamConstType(t))) type_tv empty_effect)) type_tv)
-                set. context i_add_let_binding(context VarBinding(variant_name type_params list¡ ctor_type CtorVB))
+                set. context i_add_let_binding(context VarBinding(variant_name type_params effect_params ctor_type CtorVB))
                 i_params
-            *.(list.(I_Statement(I_TypeStatement(type_name type_params i_variants) empty_effect file_pos)) list¡)
+            *.(list.(I_Statement(I_TypeStatement(type_name type_params effect_params i_variants) empty_effect file_pos)) list¡)
         .U_Extern(name u_type)
             let. type new_type_var_with_type(u_type→i_type(u_type context))
             set. context i_add_let_binding(context VarBinding(name list¡ list¡ type ConstVB))
@@ -1085,7 +1086,7 @@ fun. u_pattern→i_pattern(∈.(u_pattern U_Pattern) ∈.(context I_Context))
     let. U_Pattern(u_pattern_data file_pos) u_pattern
     let. *.(i_pattern_data bindings) case. u_pattern_data
         .U_IntLiteralPattern(n)
-            set_type(this_type I_Named(int_type list¡) file_pos)
+            set_type(this_type I_Named(int_type list¡ list¡) file_pos)
             *.(I_IntLiteralPattern(n) list¡)
         .U_IdentPattern(name)
             case. locate_var_opt(name context)
@@ -1118,7 +1119,7 @@ fun. u_pattern→i_pattern(∈.(u_pattern U_Pattern) ∈.(context I_Context))
         .U_ListPattern(u_patterns)
             let. *.(i_patterns bindings) u_patterns→i_patterns(u_patterns context)
             let. elem_type new_type_var()
-            set_type(this_type I_Named(list_type list.(elem_type)) file_pos)
+            set_type(this_type I_Named(list_type list.(elem_type) list¡) file_pos)
             for‡ i_patterns λ. i_pattern: unify_type(i_pattern_type(i_pattern) elem_type file_pos)
             *.(I_ListPattern(i_patterns elem_type) bindings)
         .U_TypedPattern(u_pattern u_type)
@@ -1137,15 +1138,18 @@ fun. u_func_param_type→i_func_param_type(∈.(u_param_type U_FuncParamType) �
 fun. u_type→i_type(∈.(u_type U_Type) ∈.(context I_Context))
     let. U_Type(type_data file_pos) u_type
     case. type_data
-    .U_Named(name u_args)
+    .U_Named(name u_type_args u_effect_args)
         let. tn type_from_name(name context file_pos)
         let. TypeName(tni) tn
-        let. *.(_ arity) get(named_types tni)
-        if. ≠(arity len(u_args))
-            error(IncorrectTypeArity(len(u_args) arity) file_pos)
+        let. *.(_ type_arity effect_arity) get(named_types tni)
+        if. ≠(type_arity len(u_type_args))
+            error(IncorrectTypeArity(len(u_type_args) type_arity) file_pos)
+        if, ≠(effect_arity len(u_effect_args))
+            error(IncorrectTypeArity(len(u_effect_args) effect_arity) file_pos)
         else, *¡
-        let. i_args map(u_args λ.(t: new_type_var_with_type(u_type→i_type(t context))))
-        I_Named(tn i_args)
+        let. i_type_args map(u_type_args λ.(t: new_type_var_with_type(u_type→i_type(t context))))
+        let. i_effect_args map(u_effect_args λ.(es: new_sum_effect(map(es λ.(e: new_named_effect(u_effect→effect_name(e context)))))))
+        I_Named(tn i_type_args i_effect_args)
     .U_TupleType(u_types)
         let. i_types map(u_types λ.(t: new_type_var_with_type(u_type→i_type(t context))))
         I_TupleType(i_types)

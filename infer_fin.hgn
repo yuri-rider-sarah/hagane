@@ -115,7 +115,7 @@ fun. decompose_effect_vars()
         for_ι(len(effect_vars) rec)
     for‡ equal_effects λ. *.(EffectVar(evi1) EffectVar(evi2) subs err file_pos):
         if. ¬(=list(apply_subs(get(effect_var_name_decomp evi1) subs) get(effect_var_name_decomp evi2) =effect_name))
-            error(err file_pos)
+            error_with_effects(err file_pos effect_var_name_decomp)
         else, *¡
     for‡ contained_effects λ. *.(EffectVar(evi1) EffectVar(evi2) file_pos):
         if. ¬(⊆(get(effect_var_name_decomp evi1) get(effect_var_name_decomp evi2) =effect_name))
@@ -235,15 +235,15 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
         let. mut, context′ context
         for‡ i_statements λ. i_statement:
             case. i_statement
-            .I_Statement(I_TypeStatement(type _ _) _ _)
+            .I_Statement(I_TypeStatement(type _ _ _) _ _)
                 set. context′ t_add_type_binding(context′ type list¡ list.(list¡))
             ._ *¡
         for‡ i_statements λ. i_statement:
             case. i_statement
-            .I_Statement(I_TypeStatement(type type_params i_variants) _ file_pos)
+            .I_Statement(I_TypeStatement(type type_params effect_params i_variants) _ file_pos)
                 let. mut, context″ context′
-                for‡ type_params λ. type:
-                    set. context″ t_add_type_binding(context″ type list¡ list.(list¡))
+                for‡ type_params λ. type: set. context″ t_add_type_binding(context″ type list¡ list.(list¡))
+                for‡ effect_params λ. eff: set. context″ t_add_effect(context″ eff)
                 let. t_variants map(i_variants λ.(type_vars: map(type_vars λ.(tv: type_var→t_type(tv context″ file_pos)))))
                 let. T_Context(_ ctx_types _) context′
                 let. type_params_base len(ctx_types)
@@ -266,9 +266,10 @@ fun. i_statements→t_statements(∈.(i_statements List(I_Statement)) ∈.(conte
                 set. context t_add_var_binding(context None)
                 set. context t_add_effect(context en)
                 list.(T_Var(i_expr→t_expr(i_expr context)))
-            .I_TypeStatement(type type_params i_variants)
+            .I_TypeStatement(type type_params effect_params i_variants)
                 let. mut, context′ context
-                for‡ type_params λ. type: set.(context′ t_add_type_binding(context′ type list¡ list.(list¡)))
+                for‡ type_params λ. type: set. context′ t_add_type_binding(context′ type list¡ list.(list¡))
+                for‡ effect_params λ. eff: set. context′ t_add_effect(context′ eff)
                 let. t_variants map‡ ι*(i_variants) λ. *.(i i_param_types):
                     set. context t_add_var_binding(context Some(i))
                     map(i_param_types λ.(i_type: type_var→t_type(i_type context′ file_pos)))
@@ -328,7 +329,9 @@ fun. type_var→t_type′(∈.(tv TypeVar) ∈.(context T_Context) ∈.(err Erro
     case. get(type_variables tvi)
     .I_Any error(err file_pos)
     .I_Equal(tv′) type_var→t_type′(tv′ context err file_pos)
-    .I_Named(name type_args) T_Named(t_locate_type_in_context(name context file_pos) map(type_args λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
+    .I_Named(name type_args effect_args)
+        for(effect_args λ.(effect: check_effect(effect context file_pos)))
+        T_Named(t_locate_type_in_context(name context file_pos) map(type_args λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
     .I_TupleType(tvs) T_TupleType(map(tvs λ.(tv′: type_var→t_type′(tv′ context err file_pos))))
     .I_Function(params ret effect)
         let. mut, context′ context

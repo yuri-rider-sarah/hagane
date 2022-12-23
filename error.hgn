@@ -8,25 +8,46 @@ type. PartialParamType
 
 type. PartialType
     P_Var(Int)
-    P_Applied(List(Int) List(PartialType))
+    P_Applied(List(Int) List(PartialType) List(Int))
     P_TupleType(List(PartialType))
     P_Function(List(PartialParamType) PartialType Int)
 
-fun. partial_param_type→string(∈.(pt PartialParamType))
-    case. pt
-    .P_FuncParamConstType(t) partial_type→string(t)
-    .P_FuncParamMutType(t) concat(list.("~.(" partial_type→string(t) ")"))
+type. EffectName EffectName(Int)
 
-fun. partial_type→string(∈.(type PartialType))
+type. EffectNameKind
+    EffectNameNone
+    EffectNameSome(List(Int))
+    EffectNameVar(List(Int))
+
+let. mut, effect_names ∈.(list¡ List(EffectNameKind))
+
+fun. effect_name_string(∈.(en EffectName))
+    let. EffectName(eni) en
+    case. get(effect_names eni)
+    .EffectNameNone ++("?EG" int→string(eni))
+    .EffectNameSome(name) name
+    .EffectNameVar(name) ++("~!" name)
+
+fun. partial_effect→string(∈.(eff Int) ∈.(decomp Option(List(List(EffectName)))))
+    case. decomp
+    .None ++("?E" int→string(eff))
+    .Some(decomp) intercalate(map(get(decomp eff) effect_name_string) " ")
+
+fun. partial_param_type→string(∈.(pt PartialParamType) ∈.(decomp Option(List(List(EffectName)))))
+    case. pt
+    .P_FuncParamConstType(t) partial_type→string(t decomp)
+    .P_FuncParamMutType(t) concat(list.("~.(" partial_type→string(t decomp) ")"))
+
+fun. partial_type→string(∈.(type PartialType) ∈.(decomp Option(List(List(EffectName)))))
     case. type
     .P_Var(n) ++("?" int→string(n))
-    .P_Applied(name list¡) name
-    .P_Applied(name types) concat‡ list.
-        name "(" intercalate(map(types partial_type→string) " ") ")"
+    .P_Applied(name list¡ list¡) name
+    .P_Applied(name types effects) concat‡ list.
+        name "(" intercalate(map(types λ.(t: partial_type→string(t decomp))) " ") concat(map(effects λ.(eff: ++(" ε, " partial_effect→string(eff decomp))))) ")"
     .P_TupleType(types) concat‡ list.
-        "*.(" intercalate(map(types partial_type→string) " ") ")"
+        "*.(" intercalate(map(types λ.(t: partial_type→string(t decomp))) " ") ")"
     .P_Function(params ret eff) concat‡ list.
-        "⇒.(" concat(map(params λ.(p: ++(partial_param_type→string(p) " ")))) ": " partial_type→string(ret) " ε, ?E" int→string(eff) ")"
+        "⇒.(" concat(map(params λ.(p: ++(partial_param_type→string(p decomp) " ")))) ": " partial_type→string(ret decomp) " ε, " partial_effect→string(eff decomp) ")"
 
 type. Error
     UnexpectedChar(Option(Int))
@@ -39,6 +60,7 @@ type. Error
     UnboundType(List(Int))
     UnboundEffect(List(Int))
     IncorrectTypeArity(Int Int)
+    IncorrectEffectArity(Int Int)
     ConflictingType(PartialType PartialType)
     CyclicalType
     AssignToConst(List(Int))
@@ -65,7 +87,7 @@ fun. file_pos_string(∈.(file_pos FilePos))
     let. FilePos(file_name line col) file_pos
     concat(list.(file_name ":" int→string(line) ":" int→string(col)))
 
-fun. error_string(∈.(err Error))
+fun. error_string(∈.(err Error) ∈.(decomp Option(List(List(EffectName)))))
     case. err
     .UnexpectedChar(Some(c)) concat(list.("Unexpected character: " list.(c) " (" int→string(c) ")"))
     .UnexpectedChar(None) "Unexpected end of file"
@@ -79,7 +101,8 @@ fun. error_string(∈.(err Error))
     .UnboundType(name) ++("Unbound type: " name)
     .UnboundEffect(name) ++("Unbound effect: " name)
     .IncorrectTypeArity(n1 n2) concat(list.("Incorrect number of type arguments: expected " int→string(n1) ", got " int→string(n2)))
-    .ConflictingType(t1 t2) concat(list.("Conflicting type: expected " partial_type→string(t1) ", got " partial_type→string(t2)))
+    .IncorrectEffectArity(n1 n2) concat(list.("Incorrect number of effect arguments: expected " int→string(n1) ", got " int→string(n2)))
+    .ConflictingType(t1 t2) concat(list.("Conflicting type: expected " partial_type→string(t1 decomp) ", got " partial_type→string(t2 decomp)))
     .CyclicalType "Cyclical type"
     .AssignToConst(name) ++("Assignment to constant variable " name)
     .PassConstVariableAsMut(name) concat(list.("Constant variable " name " passed as mutable argument"))
@@ -88,7 +111,7 @@ fun. error_string(∈.(err Error))
     .NotACtor(name) ++(name " is not a constructor")
     .InexhaustivePatterns "Inexhaustive patterns"
     .UnusedTypeParam(name) ++("Unused type parameter " name)
-    .AmbiguousType(t) ++("Ambiguous type " partial_type→string(t))
+    .AmbiguousType(t) ++("Ambiguous type " partial_type→string(t decomp))
     .AmbiguousEffect "Ambiguous effect"
     .LeakedType(name) ++("Inferred type contains leaked type " name)
     .LeakedEffect(name) ++("Inferred effect contains leaked effect " name)
@@ -98,7 +121,10 @@ fun. error_string(∈.(err Error))
     .MutRecPolyDifferentEffect(name1 name2) concat(list.("Mutually recursive functions " name1 " and " name2 " are polymorphic over different effects"))
 
 fun. error(∈.(err Error) ∈.(file_pos FilePos))
-    string_error(concat(list.(file_pos_string(file_pos) ": " error_string(err))) 0)
+    string_error(concat(list.(file_pos_string(file_pos) ": " error_string(err None))) 0)
+
+fun. error_with_effects(∈.(err Error) ∈.(file_pos FilePos) ∈.(decomp List(List(EffectName))))
+    string_error(concat(list.(file_pos_string(file_pos) ": " error_string(err Some(decomp)))) 0)
 
 fun. internal_error(∈.(err List(Int)))
     string_error(++("Internal compiler error: " err) 1)

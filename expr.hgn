@@ -7,7 +7,7 @@ type. U_StatementData
     U_Let(U_Pattern U_Expr)
     U_Var(List(Int) U_Expr Option(List(Int)))
     U_Fun(List(*.(List(Int) Option(List(List(Int))) Option(List(List(Int))) List(U_FuncParam) Option(U_Type) Option(List(U_Effect)) U_Expr)))
-    U_TypeStatement(List(Int) List(List(Int)) List(*.(List(Int) List(U_Type))))
+    U_TypeStatement(List(Int) List(List(Int)) List(List(Int)) List(*.(List(Int) List(U_Type))))
     U_Extern(List(Int) U_Type)
     U_Set(List(Int) U_Expr)
     U_EffectStatement(List(Int))
@@ -41,7 +41,7 @@ type. U_FuncParamType
     U_FuncParamMutType(U_Type)
 
 type. U_TypeData
-    U_Named(List(Int) List(U_Type))
+    U_Named(List(Int) List(U_Type) List(List(U_Effect)))
     U_TupleType(List(U_Type))
     U_Function(List(U_FuncParamType) U_Type Option(List(U_Effect)))
 
@@ -124,14 +124,17 @@ fun. r_expr→u_func_param_type(∈.(r_expr R_Expr))
 fun. r_expr→u_type(∈.(expr R_Expr))
     let. R_Expr(expr_data file_pos) expr
     let. type_data case. expr_data
-        .R_Ident(name) U_Named(name list¡)
+        .R_Ident(name) U_Named(name list¡ list¡)
         .R_Apply(R_Expr(R_Ident(base) _) params)
             if. =(len(params) 0)
                 error(InvalidType file_pos)
             else, *¡
-            U_Named‡ base map‡ params λ. param: case. param
-                .ExprClause(expr) r_expr→u_type(expr)
+            let. ClauseGrouping(type_args effect_args) group_clauses(params)
+            let. type_args map(type_args r_expr→u_type)
+            let. effect_args map‡ effect_args λ. arg: case. arg
+                .ClauseGroup(NamedSep("ε") effects) map(effects r_expr→u_effect)
                 ._ error(InvalidType file_pos)
+            U_Named(base type_args effect_args)
         .R_Special("*" clauses) U_TupleType‡ map‡ clauses λ. clause: case. clause
             .ExprClause(expr) r_expr→u_type(expr)
             ._ error(InvalidType file_pos)
@@ -387,8 +390,8 @@ fun. r_exprs→u_statements(∈.(r_exprs List(R_Expr)))
                     else,
                 read_fun_loop()
                 U_Fun(defs)
-            ."type" case. group_clauses(clauses)
-                .ClauseGrouping(name+variants list¡)
+            ."type"
+                fun. get_name_and_variants(name+variants)
                     let. *.(name variant_exprs) split_off′(name+variants)
                     let. variants map‡ variant_exprs λ. expr:
                         case. expr
@@ -403,24 +406,18 @@ fun. r_exprs→u_statements(∈.(r_exprs List(R_Expr)))
                         .R_Expr(R_Ident(variant_name) _)
                             *.(variant_name list¡)
                         ._ error(InvalidExpr(Some(kw)) file_pos)
-                    U_TypeStatement(r_expr→string′(name) list¡ variants)
-                .ClauseGrouping(list¡ list.(ClauseGroup(NamedSep("∀") type_params) ClauseGroup(ColonSep name+variants)))
-                    let. *.(name variant_exprs) split_off′(name+variants)
-                    let. variants map‡ variant_exprs λ. expr:
-                        case. expr
-                        .R_Expr(R_Apply(R_Expr(R_Ident(variant_name) _) params) _)
-                            if. >(len(params) 0)
-                                *.
-                                    variant_name
-                                    map‡ params λ. param: case. param
-                                        .ExprClause(expr) r_expr→u_type(expr)
-                                        ._ error(InvalidExpr(Some(kw)) file_pos)
-                            else, error(InvalidExpr(Some(kw)) file_pos)
-                        .R_Expr(R_Ident(variant_name) _)
-                            *.(variant_name list¡)
-                        ._ error(InvalidExpr(Some(kw)) file_pos)
-                    U_TypeStatement(r_expr→string′(name) map(type_params r_expr→string′) variants)
-                ._ invalid_expr()
+                    *.(r_expr→string′(name) variants)
+                case. group_clauses(clauses)
+                    .ClauseGrouping(name+variants list¡)
+                        let. *.(name variants) get_name_and_variants(name+variants)
+                        U_TypeStatement(name list¡ list¡ variants)
+                    .ClauseGrouping(list¡ list.(ClauseGroup(NamedSep("∀") type_params) ClauseGroup(ColonSep name+variants)))
+                        let. *.(name variants) get_name_and_variants(name+variants)
+                        U_TypeStatement(name map(type_params r_expr→string′) list¡ variants)
+                    .ClauseGrouping(list¡ list.(ClauseGroup(NamedSep("∀") type_params) ClauseGroup(ColonSep list¡) ClauseGroup(NamedSep("∀ε") effect_params) ClauseGroup(ColonSep name+variants)))
+                        let. *.(name variants) get_name_and_variants(name+variants)
+                        U_TypeStatement(name map(type_params r_expr→string′) map(effect_params r_expr→string′) variants)
+                    ._ invalid_expr()
             ."extern" case. group_clauses(clauses)
                 .ClauseGrouping(list.(R_Expr(R_Ident(name) _) type) list¡)
                     U_Extern(name r_expr→u_type(type))
