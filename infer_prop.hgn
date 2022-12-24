@@ -712,13 +712,21 @@ fun. u_expr→i_expr(∈.(expr U_Expr) ∈.(context I_Context))
         .U_Do(u_statements)
             let. *.(i_statements effect) u_statements→i_statements(u_statements context this_type file_pos)
             *.(I_Do(i_statements) effect)
-        .U_Lambda(u_params u_body)
+        .U_Lambda(u_params u_ret_type u_effects u_body)
             let. *.(i_params bindings) u_func_params→i_func_params(u_params context)
             let. mut, context′ context
             for‡ bindings λ. binding:
                 set. context′ i_add_let_binding(context′ binding)
             let. i_body u_expr→i_expr(u_body context′)
-            set_type(this_type I_Function(map(i_params i_func_param_type) i_expr_type(i_body) i_expr_effect(i_body)) file_pos)
+            let. i_ret_type case. u_ret_type
+                .Some(u_ret_type) new_type_var_with_type(u_type→i_type(u_ret_type context′))
+                .None i_expr_type(i_body)
+            let. i_effect case. u_effects
+                .Some(u_effects) new_sum_effect(map(u_effects λ.(e: new_named_effect(u_effect→effect_name(e context′)))))
+                .None i_expr_effect(i_body)
+            set_type(this_type I_Function(map(i_params i_func_param_type) i_ret_type i_effect) file_pos)
+            unify_type(i_expr_type(i_body) i_ret_type i_expr_file_pos(i_body))
+            unify_subeffect(i_expr_effect(i_body) i_effect i_expr_file_pos(i_body))
             *.(I_Lambda(i_params i_body) i_expr_effect(i_body))
         .U_Case(u_expr u_cases)
             let. i_expr u_expr→i_expr(u_expr context)
@@ -825,7 +833,7 @@ fun. u_free_vars(U_Expr(expr_data _))
                 list¡
             .U_Set(_ expr) \(u_free_vars(expr) shadowed_vars)
             .U_EffectStatement(_) list¡
-    .U_Lambda(params body) \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)))
+    .U_Lambda(params _ _ body) \(u_free_vars(body) concat(map(params u_bound_vars_in_func_param)))
     .U_Case(matched cases) concat(++(map(cases λ.(*.(pat expr): \(u_free_vars(expr) u_bound_vars(pat)))) list.(u_free_vars(matched))))
     .U_ListLiteral(subexprs) concat(map(subexprs u_free_vars))
     .U_StringLiteral(_) list¡

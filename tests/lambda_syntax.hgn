@@ -1,0 +1,12 @@
+※ 4
+※ 5
+effect. E
+
+let. f λ. a b c d e: ∈, Int ε, :
+    d
+
+let. g λ. a b c d e: ∈, Int ε, E:
+    e
+
+print_int(f(1 2 3 4 5))
+print_int(g(1 2 3 4 5))

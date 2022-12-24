@@ -1,0 +1,7 @@
+※-cfail
+var. x 0
+
+let. f λ. a b c d e: ∈, Int ε, :
+    x
+
+print_int(f(1 2 3 4 5))

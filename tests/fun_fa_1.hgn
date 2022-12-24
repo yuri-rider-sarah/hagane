@@ -33,7 +33,7 @@ push(~!a 1)
 push(~!a 2)
 push(~!a 3)
 let. b map(a ∘(succ square))
-let. c map(a ∘(bool→int λ.(∈.(n Int) ⇒, =(%(n 2) 0))))
+let. c map(a ∘(bool→int λ.(∈.(n Int): =(%(n 2) 0))))
 
 foreach(b print_int)
 foreach(c print_int)
